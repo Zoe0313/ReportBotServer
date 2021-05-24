@@ -65,7 +65,7 @@ Report the passing ETA bug, or p0 bug, at the assignee in team channel.
 healthNannyRoleReminder: A shell script which rotates the nannys every week, and
 announce who is the nanny at the start of a working week.
 
-####Pending Triaged Bug Reminder
+#### Pending Triaged Bug Reminder
 
 healthNannyBugReminder: A reminder which will notify the nanny every hour for the
 new in-coming bugs. The principle is also based on the diff.
