@@ -1,0 +1,37 @@
+# slackbot dockerfile
+FROM eamonwoortman/alpine-python-curl-zip
+
+RUN python -m pip install --upgrade pip
+
+RUN pip install requests && \
+    pip install certifi  && \
+    pip install urllib3 && \
+    pip install bs4 && \
+    pip install datetime
+
+RUN mkdir -p /slackbot
+# under slackbot directory, copy the source code to /slackbot/bugzilla
+
+COPY ./ /slackbot/
+
+ENV PYTHONPATH /slackbot
+
+WORKDIR /slackbot
+
+RUN chmod +x job
+# Configure the cron
+# Copy file to the cron.d directory
+COPY ./cron /etc/cron.d/cron
+
+# Give execution rights on the cron job
+RUN chmod 0644 /etc/cron.d/cron
+
+# Apply cron job
+RUN crontab /etc/cron.d/cron
+
+# Create the log file to be able to run tail
+RUN touch /var/log/cron.log
+
+# Start the cron
+CMD crond && tail -f /var/log/cron.log
+# CMD '/bin/sh'
