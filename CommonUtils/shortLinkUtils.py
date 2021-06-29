@@ -1,4 +1,4 @@
-import botConst
+from CommonUtils import botConst
 import json
 import certifi
 import urllib3
@@ -39,5 +39,5 @@ if __name__ == '__main__':
    print(shortUrl)
    # https://via.vmw.com/ETHN This is really google.
    # Do not run above main function frequently, this is a waste
-   # to the DB of the via server, because every it generates a
+   # to the DB of the via server, because every time it generates a
    # new short url for you.

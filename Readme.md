@@ -77,3 +77,8 @@ newBugReminderBeforeRelease: A reminder which will be enabled when we are
 approaching a new vSphere release, all bugs being set fixed by <That release
 version> need to be triaged immediately and fixed ASAP.
 
+## Divide the services by dependencies
+
+### Bugzilla Related
+
+###

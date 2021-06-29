@@ -1,4 +1,4 @@
-import botConst
+from CommonUtils import botConst
 import requests
 
 
