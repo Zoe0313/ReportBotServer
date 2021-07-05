@@ -1,0 +1,6 @@
+{
+   "id" : "SlackbotHealthReport",
+   "reportType" : "SLACK_BOT_HEALTH_REPORT",
+   "scheduling" : "0 17 * * *",
+   "channelIds" : ["C026LRRM7T4"]
+}

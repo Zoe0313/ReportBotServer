@@ -1,6 +1,7 @@
 import json
 from BaseReport import ReportType, BaseConfig, ReportConfig
 from P4CheckinReport import P4CheckinReportConfig, P4CheckinReportGenerator
+from SlackbotHealthReport import SlackbotHealthReportConfig, SlackbotHealthReportGenerator
 
 def LoadBaseConfig():
    f = open('baseConfig.json')
@@ -19,14 +20,20 @@ def LoadReportConfig(id):
 def LoadReportType(typ):
    if typ == "P4_CHECKIN_REPORT":
       return ReportType.P4_CHECKIN_REPORT
+   if typ == "SLACK_BOT_HEALTH_REPORT":
+      return ReportType.SLACK_BOT_HEALTH_REPORT
 
 def LoadReportTemplate(data):
    typ = LoadReportType(data["reportType"])
    if typ == ReportType.P4_CHECKIN_REPORT:
       reportTemplate = P4CheckinReportConfig(data)
+   if typ == ReportType.SLACK_BOT_HEALTH_REPORT:
+      reportTemplate = SlackbotHealthReportConfig(data)
 
    return reportTemplate
 
 def GetReportGenerator(botConfig, reportConfig):
    if reportConfig.reportTemplate.reportType == ReportType.P4_CHECKIN_REPORT:
       return P4CheckinReportGenerator(botConfig, reportConfig)
+   if reportConfig.reportTemplate.reportType == ReportType.SLACK_BOT_HEALTH_REPORT:
+      return SlackbotHealthReportGenerator(botConfig, reportConfig)   

@@ -8,20 +8,23 @@ CONTENT_TYPE_URLENCODE = "Content-type: application/x-www-form-urlencoded"
 AUTH = "xoxb-2154537752-833403957187-yPWkRumT1Ayc3jq76H4TsviU"
 
 class NotificationService():
-   def __init__(self, botConfig, reportConfig, isTest):
+   def __init__(self, botConfig, reportConfig=None, isTest=True, isMaintainer=False):
       self.name = ""
       self.slack_post_url = botConfig.slackPostUrl
       self.slack_lookup_url = botConfig.slackLookupUrl
       self.slack_imopen_url = botConfig.slackImopenUrl
       self.user_id = ""
-
-      # update channel id
-      if isTest:
-         self.targetChannelId = [botConfig.testChannelId]
+      
+      if isMaintainer:
+         self.targetChannelId = [botConfig.maintainerChannelId]
       else:
-         self.targetChannelId = reportConfig.channelId
-         if botConfig.testChannelId not in self.targetChannelId:
-            self.targetChannelId.append(botConfig.testChannelId)
+         # update channel id
+         if isTest:
+            self.targetChannelId = [botConfig.testChannelId]
+         else:
+            self.targetChannelId = reportConfig.channelId
+            if botConfig.testChannelId not in reportConfig.channelId:
+               self.targetChannelId.append(botConfig.testChannelId)
 
       self.channel_id = botConfig.testChannelId
       self.userValid = False
@@ -29,6 +32,7 @@ class NotificationService():
    
    def SendMessage(self, message):
       for channel in self.targetChannelId:
+         self.channel_id = channel
          self.sendMessage(message)
 
    def setup(self, name):

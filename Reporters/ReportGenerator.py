@@ -1,5 +1,6 @@
 import argparse
 import json
+import traceback
 from BaseReport import ReportType, BaseConfig
 from NotificationService import NotificationService
 from ReportGeneratorUtil import LoadBaseConfig, LoadReportConfig, GetReportGenerator
@@ -34,7 +35,17 @@ def main():
       notification.SendMessage(message)
 
    except Exception as ex:
-      raise
+      try:
+         notification = NotificationService(botConfig, isMaintainer=True)
+         message = "<!here> `Runtime Error`\n"
+         message += "ReportId: " + args.id + "\n"
+         message += "Trackback ```" + traceback.format_exc() + "```\n"
+         message = message.replace("'", "")
+         message = message.replace('"', "")
+         notification.SendMessage(message)
+      except Exception as ex:
+         #TODO: slack notification failure
+         raise
 
 
 if __name__ == "__main__":

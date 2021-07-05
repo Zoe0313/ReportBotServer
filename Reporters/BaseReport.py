@@ -3,7 +3,8 @@ from enum import Enum
 class ReportType(Enum):
    BUGZILLA_BUG_TABLE_BY_COMPONENT = 1,
    BUGZILLA_NANNY_REPORT = 2,
-   P4_CHECKIN_REPORT = 3
+   P4_CHECKIN_REPORT = 3,
+   SLACK_BOT_HEALTH_REPORT = 4
 
 class BaseConfig():
    def __init__(self, data):
@@ -11,7 +12,8 @@ class BaseConfig():
       self.slackPostUrl = "https://slack.com/api/chat.postMessage"
       self.slackLookupUrl = "https://slack.com/api/users.lookupByEmail?email=%s@vmware.com"
       self.slackImopenUrl = "https://slack.com/api/im.open"
-      self.testChannelId = "GQV757T6K"
+      self.testChannelId = "C020QKAGMSQ"
+      self.maintainerChannelId = "C026LRRM7T4"
  
       # bot account info
       self.bearerAuth = "Authorization: Bearer xoxb-2154537752-833403957187-yPWkRumT1Ayc3jq76H4TsviU"
