@@ -36,13 +36,16 @@ def main():
 
    except Exception as ex:
       try:
-         notification = NotificationService(botConfig, isMaintainer=True)
          message = "<!here> `Runtime Error`\n"
          message += "ReportId: " + args.id + "\n"
          message += "Trackback ```" + traceback.format_exc() + "```\n"
          message = message.replace("'", "")
          message = message.replace('"', "")
-         notification.SendMessage(message)
+         if args.test:
+            print(message)
+         else:
+            notification = NotificationService(botConfig, isMaintainer=True)
+            notification.SendMessage(message)
       except Exception as ex:
          #TODO: slack notification failure
          raise

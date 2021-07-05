@@ -4,7 +4,8 @@ class ReportType(Enum):
    BUGZILLA_BUG_TABLE_BY_COMPONENT = 1,
    BUGZILLA_NANNY_REPORT = 2,
    P4_CHECKIN_REPORT = 3,
-   SLACK_BOT_HEALTH_REPORT = 4
+   SLACK_BOT_HEALTH_REPORT = 4,
+   SVS_PASS_RATE_REPORT = 5
 
 class BaseConfig():
    def __init__(self, data):
@@ -36,7 +37,10 @@ class BaseConfig():
       self.p4Pwdbase64 = "cDhNLjhUeiFAUzQhODYuUUNvcw=="
  
       # svs info
- 
+      self.svs20QueryURL = "https://svs.eng.vmware.com/api/v1.1/testsuites/?runs=20&branch=main&name__in="
+      self.svs50QueryURL = "https://svs.eng.vmware.com/api/v1.1/testsuites/?runs=50&branch=main&name__in="
+      self.svs100QueryURL = "https://svs.eng.vmware.com/api/v1.1/testsuites/?runs=100&branch=main&name__in="
+      self.svsUserLink = "https://devhub.eng.vmware.com/legacy/#/svs/testsuite/%s?runs=%s&branch=main"
       # nanny info
  
       # short url info
