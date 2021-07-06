@@ -1,6 +1,5 @@
-from CommonUtils import botConst
+from botconst import SERVICE_ACCOUNT, SERVICE_PASSWORD
 import requests
-
 
 class BugzillaUtils(object):
 
@@ -12,8 +11,8 @@ class BugzillaUtils(object):
    @classmethod
    def getBugzillaApiSession(cls):
       payload = {
-         "Bugzilla_login": botConst.Bugzilla_Username,
-         "Bugzilla_password": botConst.Bugzilla_Password
+         "Bugzilla_login": SERVICE_ACCOUNT,
+         "Bugzilla_password": SERVICE_PASSWORD
       }
       session = requests.session()
       login_url = "https://bugzilla.eng.vmware.com/"

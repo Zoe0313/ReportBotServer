@@ -1,8 +1,9 @@
-from CommonUtils import botConst
+from botconst import VIA_API, CONTENT_TYPE_JSON
+from tokens import Token
 import json
 import certifi
 import urllib3
-
+import sys
 
 class ShortLinkUtils(object):
    # We don't want to call the via API to get the short link every time,
@@ -26,9 +27,9 @@ class ShortLinkUtils(object):
       encoded_body = json.dumps(
          {"longUrl": url, "userLabel": "string"}).encode('utf-8')
       res = http.request(
-         'POST', botConst.VIA_API,
-         headers={'Content-Type': botConst.CONTENT_TYPE_JSON,
-                  "X-HeaderKey": botConst.VIA_TOKEN},
+         'POST', VIA_API,
+         headers={'Content-Type': CONTENT_TYPE_JSON,
+                  "X-HeaderKey": Token.VIA_TOKEN},
          body=encoded_body)
       r = json.loads(res.data.decode('utf-8'))
       return r.get('shortUrl')
