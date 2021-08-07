@@ -1,5 +1,56 @@
-.DS_Store
-.vscode
-*/__pycache__/
+# Credit to https://github.com/github/gitignore
+# Combined temp files created common used tools/languages
+
+# logs
 **/*.log
+
+# kubeconfig credentials
 ci/kubeconfig
+
+# macOS related temporary files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+
+# vscode related temporary files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+
+# Python related temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+
+# Vim related temporary files
+# Swap
+[._]*.s[a-v][a-z]
+!*.svg  # comment out if you don't need vector files
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
+# Persistent undo
+[._]*.un~
