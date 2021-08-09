@@ -6,7 +6,9 @@ import { ReportHistory } from '../../src/model/report-history.js'
 import { formatDate } from './utils.js'
 import { exec } from 'child_process'
 import { WebClient } from '@slack/web-api'
+import path from 'path'
 
+const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
 
@@ -66,7 +68,7 @@ const commonHandler = async (report) => {
     }
     switch (report.reportType) {
         case 'bugzilla':
-            const scriptPath = '/Users/ysixuan/Projects/git/slackbot/bugzilla/reportGenerator.py'
+            const scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
             await handleExecCommand(`python3 ${scriptPath} --title '${report.title}' --url '${report.reportLink}'`, report)
             break
         case 'perforce': 

@@ -3,6 +3,7 @@
 
 # logs
 **/*.log
+**/log/
 
 # kubeconfig credentials
 ci/kubeconfig
@@ -11,7 +12,6 @@ ci/kubeconfig
 .DS_Store
 .AppleDouble
 .LSOverride
-
 
 # vscode related temporary files
 .vscode/*
@@ -24,7 +24,6 @@ ci/kubeconfig
 # Local History for Visual Studio Code
 .history/
 
-
 # Python related temporary files
 __pycache__/
 *.py[cod]
@@ -32,7 +31,6 @@ __pycache__/
 
 # C extensions
 *.so
-
 
 # Vim related temporary files
 # Swap
