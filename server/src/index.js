@@ -7,9 +7,13 @@ import {
     main_service, create_report_service, manage_report_service, report_history_service
 } from './bolt_service/index.js'
 import { mongo_database } from './database-adapter.js'
+import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
+import { registerSchedule } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 
 mongo_database(async () => {
+    const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
+    reports.forEach(report => registerSchedule(report))
 })
 
 const receiver = new bolt.ExpressReceiver({ signingSecret: process.env.SLACK_SIGNING_SECRET })

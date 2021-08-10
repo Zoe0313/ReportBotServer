@@ -1,6 +1,7 @@
 import { load_blocks, format_date, format_date_time, getConversationsName } from '../utils.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
+import { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation } from '../scheduler-adapter.js'
 import _ from 'lodash'
 import { performance } from 'perf_hooks'
 
@@ -319,6 +320,7 @@ export function manage_report_service(app) {
         if (!id) return
         try {
             await ReportConfiguration.deleteOne({ _id: id })
+            unregisterSchedule(id)
             // await client.chat.postMessage({
             //     channel: body.user.id,
             //     blocks: [],
@@ -442,6 +444,7 @@ export function manage_report_service(app) {
         try {
             await ReportConfiguration.updateOne({ _id: id}, report)
             const newReport = await ReportConfiguration.findById(id)
+            registerSchedule(newReport)
             console.log(`Edit successful. report id ${id}`)
             // await client.chat.postMessage({
             //     channel: body.user.id,
@@ -553,6 +556,11 @@ export function manage_report_service(app) {
         if (!id) return
         await ReportConfiguration.updateOne({ _id: id }, { status })
         const report = await ReportConfiguration.findById(id)
+        if (report.status === 'ENABLED') {
+            registerSchedule(report)
+        } else {
+            unregisterSchedule(id)
+        }
         await listReports(true, ts, ack, body, client)
     })
 }

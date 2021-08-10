@@ -1,5 +1,6 @@
 import { load_blocks } from '../utils.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
+import { registerSchedule } from '../scheduler-adapter.js'
 
 export function create_report_service(app) {
 
@@ -162,6 +163,7 @@ export function create_report_service(app) {
             console.log(`report : ${report}`)
             report.status = REPORT_STATUS.ENABLED
             await report.save()
+            registerSchedule(report)
             const blocks = load_blocks('done-create')
             await client.chat.update({
                 channel: body.channel.id,
