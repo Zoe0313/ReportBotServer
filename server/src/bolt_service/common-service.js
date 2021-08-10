@@ -1,6 +1,6 @@
-import { load_blocks } from '../utils.js'
+import { loadBlocks } from '../utils.js'
 
-export function main_service(app) {
+export function commonService(app) {
 
     // Reply in channel
     app.event('app_mention', async ({ event, say }) => {
@@ -15,7 +15,7 @@ export function main_service(app) {
                     'type': 'home',
                     'private_metadata': event['channel'],
                     'callback_id': 'home_view',
-                    'blocks': load_blocks('welcome'),
+                    'blocks': loadBlocks('welcome'),
                 }
             })
         } catch(e) {
@@ -26,7 +26,7 @@ export function main_service(app) {
     // Hi page
     app.message(/^(hi|hello|hey)/i, async ({ event, say }) => {
         await say({
-            blocks: load_blocks('welcome'),
+            blocks: loadBlocks('welcome'),
             text: 'Select an action'
         })
     })

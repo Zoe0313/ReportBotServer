@@ -3,7 +3,7 @@ dotenv.config()
 
 import schedule from 'node-schedule'
 import { ReportHistory } from '../../src/model/report-history.js'
-import { format_date } from './utils.js'
+import { formatDate } from './utils.js'
 import { exec } from 'child_process'
 import { WebClient } from '@slack/web-api'
 
@@ -109,14 +109,14 @@ const registerSchedule = function(report) {
     let rule = null
     switch (repeatConfig.repeatType) {
         case 'not_repeat':
-            const date = format_date(repeatConfig.date) + ' ' + repeatConfig.time
+            const date = formatDate(repeatConfig.date) + ' ' + repeatConfig.time
             job = schedule.scheduleJob(date, function (report) {
                 commonHandler(report)
             }.bind(null, report))
             break
         case 'hourly': 
             rule = new schedule.RecurrenceRule()
-            rule.minute = repeatConfig.minsOfHour;
+            rule.minute = repeatConfig.minsOfHour
             job = schedule.scheduleJob({ ...dateRange, rule }, function (report) {
                 commonHandler(report)
             }.bind(null, report))

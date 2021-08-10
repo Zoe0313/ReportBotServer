@@ -4,7 +4,7 @@ import _ from 'lodash'
 
 const blocksCache = {}
 
-export function load_blocks(name) {
+export function loadBlocks(name) {
     if (name.endsWith('null') || name.endsWith('undefined')) 
         return []
     if (blocksCache[name]) {
@@ -16,7 +16,7 @@ export function load_blocks(name) {
     }
 }
 
-export function format_date(date) {
+export function formatDate(date) {
     if (date == null) 
         return ''
     try {
@@ -27,7 +27,7 @@ export function format_date(date) {
     }
 }
 
-export function format_date_time(date) {
+export function formatDateTime(date) {
     if (date == null) 
         return ''
     try {

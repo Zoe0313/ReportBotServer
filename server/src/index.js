@@ -4,15 +4,15 @@ dotenv.config()
 import bolt from '@slack/bolt'
 import express from 'express'
 import { 
-    main_service, create_report_service, manage_report_service, report_history_service
+    commonService, createReportService, manageReportService, reportHistoryService
 } from './bolt_service/index.js'
-import { register_api_routers } from './api_service/index.js'
-import { mongo_database } from './database-adapter.js'
+import { registerApiRouters } from './api_service/index.js'
+import { connectMongoDatabase } from './database-adapter.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import { registerSchedule } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 
-mongo_database(async () => {
+connectMongoDatabase(async () => {
     const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
     reports.forEach(report => registerSchedule(report))
 })
@@ -38,13 +38,13 @@ app.use(async ({ body, next }) => {
     console.log(`${user} did ${type} took ${(t1 - t0)} milliseconds.`)
 })
 
-main_service(app)
-create_report_service(app)
-manage_report_service(app)
-report_history_service(app)
+commonService(app)
+createReportService(app)
+manageReportService(app)
+reportHistoryService(app)
 
-register_api_routers(receiver, app)
+registerApiRouters(receiver, app)
 
 app.start()
-receiver.start(process.env.PORT || 3000);
+receiver.start(process.env.PORT || 3000)
 console.log('⚡️ Bolt app is running!')

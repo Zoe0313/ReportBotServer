@@ -1,7 +1,7 @@
 import moment from 'moment-timezone'
 
 
-export function format_date(date) {
+export function formatDate(date) {
     if (date == null) 
         return ''
     try {
@@ -12,7 +12,7 @@ export function format_date(date) {
     }
 }
 
-export function format_date_time(date) {
+export function formatDateTime(date) {
     if (date == null) 
         return ''
     try {

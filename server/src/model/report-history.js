@@ -12,6 +12,6 @@ const ReportHistorySchema = new mongoose.Schema({
     result: { type: Boolean, immutable: true }
 }, { timestamps: true })
 
-const ReportHistory = mongoose.model('ReportHistory', ReportHistorySchema);
+const ReportHistory = mongoose.model('ReportHistory', ReportHistorySchema)
 
 export { ReportHistory }

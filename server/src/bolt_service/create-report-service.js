@@ -1,8 +1,8 @@
-import { load_blocks } from '../utils.js'
+import { loadBlocks } from '../utils.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { registerSchedule } from '../scheduler-adapter.js'
 
-export function create_report_service(app) {
+export function createReportService(app) {
 
     // New report message configuration
     app.action({
@@ -12,8 +12,8 @@ export function create_report_service(app) {
         console.log('open create report config modal')
         if (ack) await ack()
         try {
-            const reportModalBasic = load_blocks('modal/report-basic')
-            const reportModalTime = load_blocks('modal/report-time')
+            const reportModalBasic = loadBlocks('modal/report-basic')
+            const reportModalTime = loadBlocks('modal/report-time')
             const blocks = reportModalBasic.concat(reportModalTime)
             await client.views.open({
                 trigger_id: body.trigger_id,
@@ -47,10 +47,10 @@ export function create_report_service(app) {
             console.log(`select report type ${reportType} of report scheduler`)
             console.log(`select repeat type ${repeatType} of report scheduler`)
             
-            const reportModalBasic = load_blocks('modal/report-basic')
-            const reportModalReportType = load_blocks(`report_type/${reportType}`)
-            const reportModalTime = load_blocks('modal/report-time')
-            const reportModalRepeatType = load_blocks(`repeat_type/${repeatType}`)
+            const reportModalBasic = loadBlocks('modal/report-basic')
+            const reportModalReportType = loadBlocks(`report_type/${reportType}`)
+            const reportModalTime = loadBlocks('modal/report-time')
+            const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
             const blocks = reportModalBasic.concat(reportModalReportType)
                 .concat(reportModalTime).concat(reportModalRepeatType)
             await client.views.update({    
@@ -127,7 +127,7 @@ export function create_report_service(app) {
         try {
             const saved = await report.save()
             console.log(`Create successful. saved report id ${saved._id}`)
-            const blocks = load_blocks('precheck-report')
+            const blocks = loadBlocks('precheck-report')
             // create inited status report
             blocks.find(block => block.block_id === 'block_create_last')
                 .elements.forEach(element => element.value = saved._id)
@@ -164,7 +164,7 @@ export function create_report_service(app) {
             report.status = REPORT_STATUS.ENABLED
             await report.save()
             registerSchedule(report)
-            const blocks = load_blocks('done-create')
+            const blocks = loadBlocks('done-create')
             await client.chat.update({
                 channel: body.channel.id,
                 ts,

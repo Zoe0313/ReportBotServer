@@ -1,6 +1,6 @@
-import { create_report_service } from './create-report-service.js'
-import { manage_report_service } from './manage-report-service.js'
-import { report_history_service } from './report-history-service.js'
-import { main_service } from './main.js'
+import { createReportService } from './create-report-service.js'
+import { manageReportService } from './manage-report-service.js'
+import { reportHistoryService } from './report-history-service.js'
+import { commonService } from './common-service.js'
 
-export { create_report_service, manage_report_service, report_history_service, main_service }
+export { createReportService, manageReportService, reportHistoryService, commonService }

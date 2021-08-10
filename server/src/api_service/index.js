@@ -1,7 +1,7 @@
 import { ReportConfiguration } from '../model/report-configuration.js'
 import { registerSchedule, unregisterSchedule } from '../scheduler-adapter.js'
 
-export function register_api_routers(receiver, app) {
+export function registerApiRouters(receiver, app) {
     receiver.router.get('/health', (req, res) => {
         if (app.receiver.client.badConnection) {
             res.status(500).send('Internal Server Error')

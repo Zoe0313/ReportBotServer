@@ -1,4 +1,4 @@
-import { load_blocks, format_date_time, getConversationsName } from '../utils.js'
+import { loadBlocks, formatDateTime, getConversationsName } from '../utils.js'
 import { ReportHistory } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
 import { ReportConfiguration } from '../model/report-configuration.js'
@@ -29,7 +29,7 @@ const saveState = async (state) => {
 
 const limit = 5
 
-export function report_history_service(app) {
+export function reportHistoryService(app) {
     const listReportHistories = async (isUpdate, ts, ack, body, client) => {
         console.log('display or update list, ts ' + ts)
         const state = await getState(ts)
@@ -70,7 +70,7 @@ export function report_history_service(app) {
             ])
             state.count = count
             // list filter
-            const listFilter = load_blocks('report_history/list-filter')
+            const listFilter = loadBlocks('report_history/list-filter')
             listFilter[2].block_id = state.filterBlockId.toString()
             listFilter[2].elements[0].options = allReportConfigurations.map(report => ({
                 "text": {
@@ -80,10 +80,10 @@ export function report_history_service(app) {
                 "value": report._id
             }))
             // list header
-            const listHeader = load_blocks('report_history/list-header')
+            const listHeader = loadBlocks('report_history/list-header')
             listHeader[1].text.text = `There are *${count} report histories* in your account after conditions applied.`
             // list item detail
-            let listItemDetail = load_blocks('report_history/list-item-detail')
+            let listItemDetail = loadBlocks('report_history/list-item-detail')
             const selectedHistory = await ReportHistory.findOne({ ...filters, _id: state.selectedId })
             if (state.selectedId == null || selectedHistory == null) {
                 state.selectedId == null
@@ -97,15 +97,15 @@ export function report_history_service(app) {
                 console.log(reportUsers)
                 listItemDetail[0].text.text = `*Title: ${selectedHistory.title}*`
                 listItemDetail[1].fields[0].text += selectedHistory.reportType
-                listItemDetail[1].fields[1].text += format_date_time(selectedHistory.sentTime)
+                listItemDetail[1].fields[1].text += formatDateTime(selectedHistory.sentTime)
                 listItemDetail[1].fields[2].text += conversations
                 listItemDetail[1].fields[3].text += reportUsers
                 listItemDetail[2].text.text += selectedHistory.content.substr(0, 1000)
             }
             // list items
-            const listItemTemplate = load_blocks('report_history/list-item-template')[0]
+            const listItemTemplate = loadBlocks('report_history/list-item-template')[0]
             const listItems = reportHistories.map(history => {
-                const content = `*${history.title} - ${history.reportType}*\nSent at ${format_date_time(history.sentTime)}`
+                const content = `*${history.title} - ${history.reportType}*\nSent at ${formatDateTime(history.sentTime)}`
                 const listItem = _.cloneDeep(listItemTemplate)
                 listItem.text.text = content
                 listItem.accessory.value = history._id
@@ -115,7 +115,7 @@ export function report_history_service(app) {
                 return listItem
             })
             // list pagination
-            let listPagination = load_blocks('report_history/list-pagination')
+            let listPagination = loadBlocks('report_history/list-pagination')
             const listPaginationElements = []
             if (state.page > 1) {
                 listPaginationElements.push(listPagination[0].elements[0])

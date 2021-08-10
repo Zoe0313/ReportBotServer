@@ -1,10 +1,5 @@
 import mongoose from 'mongoose'
 
-// page: 1,
-// channel: null,
-// selected: null,
-// filterBlockId: 1 // dynamic block id to implement clear filters
-
 const ReportHistoryStateSchema = new mongoose.Schema({
     ts: { type: String },
     page: { type: Number, required: true },
@@ -16,6 +11,6 @@ const ReportHistoryStateSchema = new mongoose.Schema({
 
 ReportHistoryStateSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 7 })
 
-const ReportHistoryState = mongoose.model('ReportHistoryState', ReportHistoryStateSchema);
+const ReportHistoryState = mongoose.model('ReportHistoryState', ReportHistoryStateSchema)
 
 export { ReportHistoryState }

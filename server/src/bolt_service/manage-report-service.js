@@ -1,4 +1,4 @@
-import { load_blocks, format_date, format_date_time, getConversationsName } from '../utils.js'
+import { loadBlocks, formatDate, formatDateTime, getConversationsName } from '../utils.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
 import { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation } from '../scheduler-adapter.js'
@@ -26,7 +26,7 @@ function displayTimeSetting(report) {
     const repeatConfig = report.repeatConfig
     const dayOfWeekStr = repeatConfig.dayOfWeek ? repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ') : 'Empty'
     switch (repeatConfig.repeatType) {
-        case 'not_repeat': return `Not Repeat - ${format_date(repeatConfig.date)} ${repeatConfig.time}`
+        case 'not_repeat': return `Not Repeat - ${formatDate(repeatConfig.date)} ${repeatConfig.time}`
         case 'hourly': return `Hourly - ${repeatConfig.minsOfHour} mins of every hour`
         case 'daily': return `Daily - ${repeatConfig.time} of every day`
         case 'weekly': return `Weekly - ${dayOfWeekStr} - ${repeatConfig.time}`
@@ -63,7 +63,7 @@ function setTimeSettingInitialValue(report, findBlockById) {
     const repeatConfig = report.repeatConfig
     switch (repeatConfig.repeatType) {
         case 'not_repeat': 
-            findBlockById('block_date').element.initial_date = format_date(repeatConfig.date)
+            findBlockById('block_date').element.initial_date = formatDate(repeatConfig.date)
             findBlockById('block_time').element.initial_time = repeatConfig.time
             break
         case 'hourly': 
@@ -111,7 +111,7 @@ const saveState = async (state) => {
 
 const limit = 5
 
-export function manage_report_service(app) {
+export function manageReportService(app) {
     const listReports = async (isUpdate, ts, ack, body, client) => {
         console.log('display or update list, ts ' + ts)
         const state = await getState(ts)
@@ -132,10 +132,10 @@ export function manage_report_service(app) {
             state.count = count
             const reportConfigurations = await ReportConfiguration.find(filter).skip(offset).limit(limit)
             // list header
-            const listHeader = load_blocks('report/list-header')
+            const listHeader = loadBlocks('report/list-header')
             listHeader[1].text.text = `There are *${count} reports* in your account.`
             // list item detail
-            let listItemDetail = load_blocks('report/list-item-detail')
+            let listItemDetail = loadBlocks('report/list-item-detail')
             const report = await ReportConfiguration.findById(state.selectedId)
             if (state.selectedId == null || report == null) {
                 state.selectedId == null
@@ -147,15 +147,15 @@ export function manage_report_service(app) {
                 ])
                 console.log(conversations)
                 console.log(reportUsers)
-                const nextReportSendingTime = format_date_time(new Date(await nextInvocation(report._id)))
+                const nextReportSendingTime = formatDateTime(new Date(await nextInvocation(report._id)))
                 console.log(nextReportSendingTime)
                 listItemDetail[0].text.text = `*Title: ${report.title}*`
                 listItemDetail[1].fields[0].text += report.reportType
                 listItemDetail[1].fields[1].text += REPORT_STATUS_DISPLAY[report.status]
                 listItemDetail[1].fields[2].text += conversations
                 listItemDetail[1].fields[3].text += reportUsers
-                listItemDetail[1].fields[4].text += format_date(report.startDate)
-                listItemDetail[1].fields[5].text += format_date(report.endDate)
+                listItemDetail[1].fields[4].text += formatDate(report.startDate)
+                listItemDetail[1].fields[5].text += formatDate(report.endDate)
                 listItemDetail[1].fields[6].text += displayTimeSetting(report)
                 listItemDetail[1].fields[7].text += nextReportSendingTime
 
@@ -164,7 +164,7 @@ export function manage_report_service(app) {
                 listItemDetail[2].elements[2].value = report._id
             }
             // list items
-            const listItemTemplate = load_blocks('report/list-item-template')[0]
+            const listItemTemplate = loadBlocks('report/list-item-template')[0]
             const listItems = reportConfigurations.map(report => {
                 const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':x:'
                 const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report)}`
@@ -177,7 +177,7 @@ export function manage_report_service(app) {
                 return listItem
             })
             // list pagination
-            let listPagination = load_blocks('report/list-pagination')
+            let listPagination = loadBlocks('report/list-pagination')
             const listPaginationElements = []
             if (state.page > 1) {
                 listPaginationElements.push(listPagination[0].elements[0])
@@ -286,7 +286,7 @@ export function manage_report_service(app) {
         if (!id) return
         try {
             const report = await ReportConfiguration.findById(id)
-            const blocks = load_blocks('modal/delete')
+            const blocks = loadBlocks('modal/delete')
             blocks[0].text.text += `*${report.title}*`
             await ack()
             await client.views.open({
@@ -351,18 +351,18 @@ export function manage_report_service(app) {
             console.log('open edit report config modal')
             console.log(report)
 
-            const reportModalBasic = load_blocks('modal/report-basic')
-            const reportModalReportType = load_blocks(`report_type/${report.reportType}`)
-            const reportModalTime = load_blocks('modal/report-time')
-            const reportModalRepeatType = load_blocks(`repeat_type/${report.repeatConfig.repeatType}`)
+            const reportModalBasic = loadBlocks('modal/report-basic')
+            const reportModalReportType = loadBlocks(`report_type/${report.reportType}`)
+            const reportModalTime = loadBlocks('modal/report-time')
+            const reportModalRepeatType = loadBlocks(`repeat_type/${report.repeatConfig.repeatType}`)
             const blocks = reportModalBasic.concat(reportModalReportType)
                 .concat(reportModalTime).concat(reportModalRepeatType)
             const findBlockById = (blockId) => blocks.find(block => block.block_id === blockId)
             findBlockById('block_title').element.initial_value = report.title
             findBlockById('block_conversation').element.initial_conversations = report.conversations
             findBlockById('block_report_users').element.initial_users = report.reportUsers
-            findBlockById('block_start_date').element.initial_date = format_date(report.startDate)
-            findBlockById('block_end_date').element.initial_date = format_date(report.endDate)
+            findBlockById('block_start_date').element.initial_date = formatDate(report.startDate)
+            findBlockById('block_end_date').element.initial_date = formatDate(report.endDate)
             
             const reportTypeBlock = findBlockById('block_report_type')
             reportTypeBlock.element.action_id = 'action_report_type_edit'
@@ -495,10 +495,10 @@ export function manage_report_service(app) {
             console.log(`select report type ${reportType} of report scheduler`)
             console.log(`select repeat type ${repeatType} of report scheduler`)
 
-            const reportModalBasic = load_blocks('modal/report-basic')
-            const reportModalReportType = load_blocks(`report_type/${reportType}`)
-            const reportModalTime = load_blocks('modal/report-time')
-            const reportModalRepeatType = load_blocks(`repeat_type/${repeatType}`)
+            const reportModalBasic = loadBlocks('modal/report-basic')
+            const reportModalReportType = loadBlocks(`report_type/${reportType}`)
+            const reportModalTime = loadBlocks('modal/report-time')
+            const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
             const blocks = reportModalBasic.concat(reportModalReportType)
                 .concat(reportModalTime).concat(reportModalRepeatType)
             const findBlockById = (blockId) => blocks.find(block => block.block_id === blockId)

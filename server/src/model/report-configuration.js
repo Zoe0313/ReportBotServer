@@ -32,6 +32,6 @@ const ReportConfigurationSchema = new mongoose.Schema({
     }
 }, { timestamps: true })
 
-const ReportConfiguration = mongoose.model('ReportConfiguration', ReportConfigurationSchema);
+const ReportConfiguration = mongoose.model('ReportConfiguration', ReportConfigurationSchema)
 
 export { ReportConfiguration, REPORT_STATUS }
