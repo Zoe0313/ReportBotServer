@@ -1,0 +1,32 @@
+{
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": ":ok_hand: You just created a new report!",
+				"emoji": true
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Your report has been created as \"*Running*\" status."
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":slack: Any question please contact us <fakeLink.toEmployeeProfile.com|#vSlackbot Shanghai>"
+			}
+		}
+	]
+}

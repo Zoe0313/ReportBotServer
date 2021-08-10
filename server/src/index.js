@@ -3,6 +3,7 @@ dotenv.config()
 
 import bolt from '@slack/bolt'
 import express from 'express'
+import { main_service, create_report_service } from './bolt_service/index.js'
 import { mongo_database } from './database-adapter.js'
 import { performance } from 'perf_hooks'
 
@@ -30,6 +31,8 @@ app.use(async ({ body, next }) => {
     console.log(`${user} did ${type} took ${(t1 - t0)} milliseconds.`)
 })
 
+main_service(app)
+create_report_service(app)
 
 app.start()
 receiver.start(process.env.PORT || 3000);

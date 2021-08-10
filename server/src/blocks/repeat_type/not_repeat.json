@@ -1,0 +1,48 @@
+{
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "The second step, you need to set up the reccurence time for your new report"
+			}
+		},
+		{
+			"block_id": "block_date",
+			"type": "input",
+			"element": {
+				"type": "datepicker",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select a date",
+					"emoji": true
+				},
+				"action_id": "action_date"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Label",
+				"emoji": true
+			}
+		},
+		{
+			"block_id": "block_time",
+			"type": "input",
+			"label": {
+				"type": "plain_text",
+				"text": ":clock2: Select a time for your report",
+				"emoji": true
+			},
+			"element": {
+				"type": "timepicker",
+				"initial_time": "08:00",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select time for daily report",
+					"emoji": true
+				},
+				"action_id": "action_time"
+			}
+		}
+	]
+}

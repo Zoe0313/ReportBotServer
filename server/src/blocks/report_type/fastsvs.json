@@ -1,0 +1,21 @@
+{
+	"blocks": [
+		{
+			"type": "input",
+			"block_id": "block_report_link",
+			"element": {
+				"type": "plain_text_input",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Fastsvs link"
+				},
+				"action_id": "action_report_link"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Report Link",
+				"emoji": true
+			}
+		}
+	]
+}

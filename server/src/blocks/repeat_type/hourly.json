@@ -1,0 +1,27 @@
+{
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Hourly report additional setting"
+			}
+		},
+		{
+			"block_id": "block_mins_of_hour",
+			"type": "input",
+			"label": {
+				"type": "plain_text",
+				"text": "Minutes of per hour"
+			},		
+			"element": {
+				"type": "plain_text_input",		
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Valid input: 0 - 59"
+				},
+				"action_id": "action_mins_of_hour"
+			}
+		}
+	]
+}

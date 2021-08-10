@@ -1,0 +1,30 @@
+{
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Daily report additional setting"
+			}
+		},
+		{
+			"block_id": "block_time",
+			"type": "input",
+			"label": {
+				"type": "plain_text",
+				"text": ":clock2: Send the report every:",
+				"emoji": true
+			},
+			"element": {
+				"type": "timepicker",
+				"initial_time": "08:00",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "time setting",
+					"emoji": true
+				},
+				"action_id": "action_time"
+			}
+		}
+	]
+}

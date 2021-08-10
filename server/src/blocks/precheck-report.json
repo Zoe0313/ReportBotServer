@@ -1,0 +1,74 @@
+{
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Step 3: Precheck and create your new report request",
+				"emoji": true
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*This section is to show new report sample*"
+			}
+		},
+		{
+			"block_id": "block_create_last",
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Create",
+						"emoji": true
+					},
+					"style": "primary",
+					"action_id": "action_create_done"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Save",
+						"emoji": true
+					},
+					"action_id": "action_create_save"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Cancel",
+						"emoji": true
+					},
+					"style": "danger",
+					"action_id": "action_create_cancel"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":mega: Notice: Once you create the report, it will be reported to the target conversations at the recurrence. \n:mega: Or save your report as a draft. You can edit or delete through *Manage my reports*."
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": ":slack: Any question please contact us <fakeLink.toEmployeeProfile.com|#vSlackbot Shanghai>"
+			}
+		}
+	]
+}
