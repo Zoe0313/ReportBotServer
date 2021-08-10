@@ -1,0 +1,17 @@
+{
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "There are *10 reports* in your account."
+			}
+		},
+		{
+			"type": "divider"
+		}
+	]
+}
