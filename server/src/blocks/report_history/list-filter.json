@@ -1,0 +1,86 @@
+{
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Filter report histories by conditions"
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "Clear Filters"
+				},
+				"action_id": "action_clear_filters"
+			}
+		},
+		{
+			"block_id": "block_history_filter",
+			"type": "actions",
+			"elements": [
+				{
+					"type": "static_select",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select report configuration",
+						"emoji": true
+					},
+					"options": [
+						{
+							"text": {
+								"type": "plain_text",
+								"text": "All"
+							},
+							"value": "all"
+						}
+					],
+					"action_id": "action_filter_by_report"
+				},
+				{
+					"type": "conversations_select",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select conversation",
+						"emoji": true
+					},
+					"filter": {
+						"exclude_external_shared_channels": true,
+						"exclude_bot_users": true
+					},
+					"action_id": "action_filter_by_conversation"
+				},
+				{
+					"type": "users_select",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select user",
+						"emoji": true
+					},
+					"action_id": "action_filter_by_report_user"
+				},
+				{
+					"type": "datepicker",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select start sent time",
+						"emoji": true
+					},
+					"action_id": "action_filter_by_start_date"
+				},
+				{
+					"type": "datepicker",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select end sent time",
+						"emoji": true
+					},
+					"action_id": "action_filter_by_end_date"
+				}
+			]
+		}
+	]
+}
