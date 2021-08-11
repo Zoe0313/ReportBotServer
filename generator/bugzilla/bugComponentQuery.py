@@ -9,7 +9,6 @@ import logging
 import sys
 from datetime import datetime
 from bs4 import BeautifulSoup
-from threading import Thread
 sys.path.append('../')
 PATH = "./log/"
 if not os.path.exists(PATH):
@@ -17,9 +16,6 @@ if not os.path.exists(PATH):
 
 logging.basicConfig(filename=PATH+'bcq.log', level=logging.DEBUG)
 logger = logging.getLogger('bugzillaquery')
-
-bug_url = "https://via.vmw.com/EPVj"
-unclosed_url = "https://via.vmw.com/EPVk"
 
 def getHtmlContent(url, session, timeout=30):
    res = session.get(url, headers=dict(referer=url))
@@ -42,16 +38,22 @@ def login():
    logger.debug(result)
    return session
 
-http = urllib3.PoolManager(ca_certs=certifi.where())
-
 def getShortUrl(url):
+   http = urllib3.PoolManager(ca_certs=certifi.where())
    encoded_body = json.dumps({"longUrl": url, "userLabel": "string"}).encode('utf-8')
-   res = http.request('POST', "https://via-api.vmware.com/via-console/app-api/v1/vialink",
-                      headers={'Content-Type': 'application/json',
-                               "X-HeaderKey": "%241%24Yfai%2FUQF%24egNLEHGRocRPuPuzq3tsE%2F"},
-                      body=encoded_body)
-   r = json.loads(res.data.decode('utf-8'))
-   return r.get('shortUrl')
+   data = None
+   try:
+      res = http.request('POST', "https://via-api.vmware.com/via-console/app-api/v1/vialink",
+                        headers={'Content-Type': 'application/json',
+                                 "X-HeaderKey": "%241%24Yfai%2FUQF%24egNLEHGRocRPuPuzq3tsE%2F"},
+                        body=encoded_body)
+      data = res.data.decode('utf-8')
+      r = json.loads(data)  
+      return r.get('shortUrl')
+   except:
+      logger.debug("url: " + url)
+      logger.debug("data: " + data)
+      return None
 
 def loadShortUrlDict(fileName):
    with open(fileName, 'r') as file:
@@ -62,49 +64,11 @@ def saveShortUrlDict(fileName, component2shortUrl):
    with open(fileName, 'w') as file:
       json.dump(component2shortUrl, file)
 
-class HtmlContentThread(Thread):
-   def __init__(self, url, session, component):
-      super(HtmlContentThread, self).__init__()
-      self.url = url
-      self.session = session
-      self.component = component
-   
-   def run(self):
-      self.result = getHtmlContent(self.url, self.session)
-   
-   def getResult(self):
-      try:
-         return self.component, self.result
-      except Exception:
-         return None
-
-class ShortUrlThread(Thread):
-   def __init__(self, url, component):
-      super(ShortUrlThread, self).__init__()
-      self.url = url
-      self.component = component
-   
-   def run(self):
-      self.result = getShortUrl(self.url)
-   
-   def getResult(self):
-      try:
-         return self.component, self.result
-      except Exception:
-         return None
-
 def fillTheDict(queryDict, countDict, countTask=False):
    try:
       session = login()
-      threads = []
       for component, url in queryDict.items():
-         t = HtmlContentThread(url, session, component)
-         threads.append(t)
-      for thread in threads:
-         thread.start()
-      for thread in threads:
-         thread.join()
-         component, content = thread.getResult()
+         content = getHtmlContent(url, session)
          p = re.compile('>(\S+) bugs? found')
          count = p.findall(str(content))[0]
          if count == 'One':
@@ -112,8 +76,12 @@ def fillTheDict(queryDict, countDict, countTask=False):
          if count == 'No':
             count = 0
          countDict[component] = count
+         if countTask:
+            regex2 = re.compile('d>Task</td')
+            taskCount = len(regex2.findall(str(content)))
+            countDictTasks[component] = taskCount
    except Exception as ex:
-      logger.error(ex)
+      logger.error(ex.with_traceback())
 
 def getCountNShortUrlDict(url):
    session = login()
@@ -138,24 +106,18 @@ def getCountNShortUrlDict(url):
          component = 'Total'
          component2url[component] = initial_url
    component2count = {}
-   
    fillTheDict(component2url, component2count)
    fileName = PATH + url[-4:] + '.json'
    if not os.path.exists(fileName):
       saveShortUrlDict(fileName, {})
    component2shortUrl = loadShortUrlDict(fileName)
-   threads = []
    for component, longUrl in component2url.items():
-      if component not in component2shortUrl.keys():
-         t = ShortUrlThread(longUrl, component)
-         threads.append(t)
-   for thread in threads:
-      thread.start()
-   for thread in threads:
-      thread.join()
-      component, shortUrl = thread.getResult()
-      component2shortUrl[component] = shortUrl
-         
+      if component not in component2shortUrl.keys() or \
+         not component2shortUrl[component] or \
+         component2shortUrl[component] == 'None':
+         shortUrl = getShortUrl(longUrl)
+         if shortUrl is not None:
+            component2shortUrl[component] = shortUrl
    saveShortUrlDict(fileName, component2shortUrl)
    logger.debug(component2count)
    logger.debug(component2shortUrl)
@@ -175,7 +137,10 @@ def generateAndSendMsg(message, bug_component2count, bug_component2shortUrl,
       bug_count = 0
       if key in bug_component2count:
          bug_count = int(bug_component2count[key])
-         resultLine += '<%s|%s>' % (bug_component2shortUrl[key], bug_count)
+         if not bug_component2shortUrl[key] or bug_component2shortUrl[key] == "None":
+            resultLine += str(bug_count)
+         else:
+            resultLine += '<%s|%s>' % (bug_component2shortUrl[key], bug_count)
       else:
          resultLine += str(bug_count)
       resultLine += '                 '
@@ -187,9 +152,13 @@ def generateAndSendMsg(message, bug_component2count, bug_component2shortUrl,
       unclose_bug_count = 0
       if key in unclose_component2count:
          unclose_bug_count = int(unclose_component2count[key])
-         resultLine += '<%s|%s>' % (unclosed_component2shortUrl[key], unclose_bug_count)
+         if not unclosed_component2shortUrl[key] \
+            or unclosed_component2shortUrl[key] == "None":
+            resultLine += str(unclose_bug_count)
+         else:
+            resultLine += '<%s|%s>' % (unclosed_component2shortUrl[key], unclose_bug_count)
       else:
-         resultLine += unclose_bug_count
+         resultLine += str(unclose_bug_count)
       resultLine += '                                       '
       if unclose_bug_count<100:
          resultLine += '  '
@@ -209,7 +178,10 @@ def generateAndSendMsgWithoutUnclosed(message, countDict, queryLinkDict):
       if int(count) <= 0:
          continue
       resultLine = ""
-      resultLine += '<%s|%s>' % (queryLinkDict.get(component), count)
+      if not queryLinkDict.get(component) or queryLinkDict.get(component) == "None":
+         resultLine += str(count)
+      else:
+         resultLine += '<%s|%s>' % (queryLinkDict.get(component), count)
       resultLine += '                '
       if int(count)<100:
          resultLine += '  '
@@ -224,23 +196,3 @@ def generateAndSendMsgWithoutUnclosed(message, countDict, queryLinkDict):
 def cleanTotal(d):
    if 'Total' in d:
       del d['Total']
-
-if __name__ == '__main__':
-   n = Notifier()
-   n.channel_id = SERVICE_CHANNEL
-   # Generate the opened bugs component2count dict
-   bug_component2count, bug_component2shortUrl = getCountNShortUrlDict(bug_url)
-   cleanTotal(bug_component2count)
-   cleanTotal(bug_component2shortUrl)
-   unclose_component2count, unclosed_component2shortUrl = \
-      getCountNShortUrlDict(unclosed_url)
-   cleanTotal(unclose_component2count)
-   cleanTotal(unclosed_component2shortUrl)
-   today = datetime.today()
-   message = 'Fix by 70U2 bugs ({0}-{1}-{2})\n'.format(today.year, today.month, today.day)
-   message = generateAndSendMsg(message, bug_component2count, bug_component2shortUrl,
-                                unclose_component2count, unclosed_component2shortUrl)
-   # logger(message)
-   message = message.replace('Management', 'File Service Mgmt')
-   logger.info(message)
-   n.sendMessage(message)

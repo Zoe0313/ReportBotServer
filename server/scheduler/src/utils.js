@@ -2,7 +2,7 @@ import moment from 'moment-timezone'
 import logger from '../../src/logger.js'
 
 export function formatDate(date) {
-   if (date == null) {
+   if (date == null || date === '') {
       return ''
    }
    try {
@@ -14,7 +14,7 @@ export function formatDate(date) {
 }
 
 export function formatDateTime(date) {
-   if (date == null) {
+   if (date == null || date === '') {
       return ''
    }
    try {

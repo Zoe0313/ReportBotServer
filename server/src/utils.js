@@ -1,8 +1,8 @@
 import fs from 'fs'
 import moment from 'moment-timezone'
-import _ from 'lodash'
-import logger from './logger.js'
+import lodash from 'lodash'
 
+const { cloneDeep } = lodash
 const blocksCache = {}
 
 export function loadBlocks(name) {
@@ -10,34 +10,33 @@ export function loadBlocks(name) {
       return []
    }
    if (blocksCache[name]) {
-      return _.cloneDeep(blocksCache[name])
+      return cloneDeep(blocksCache[name])
    } else {
       const blocks = JSON.parse(fs.readFileSync(`src/blocks/${name}.json`))['blocks']
       blocksCache[name] = blocks
-      return _.cloneDeep(blocks)
+      return cloneDeep(blocks)
    }
 }
 
 export function formatDate(date) {
-   if (date == null) {
+   if (date == null || date === '') {
       return ''
    }
    try {
       return moment(date).tz('Asia/Shanghai').format('YYYY-MM-DD')
    } catch (e) {
-      logger.error(e)
+      console.error(e)
       return ''
    }
 }
 
 export function formatDateTime(date) {
-   if (date == null) {
+   if (date == null || date === '')
       return ''
-   }
    try {
       return moment(date).tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm')
    } catch (e) {
-      logger.error(e)
+      console.error(e)
       return ''
    }
 }

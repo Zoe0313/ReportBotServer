@@ -2,9 +2,13 @@ import { loadBlocks, formatDateTime, getConversationsName } from '../utils.js'
 import { ReportHistory } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
 import { ReportConfiguration } from '../model/report-configuration.js'
-import _ from 'lodash'
+import lodash from 'lodash'
+const { cloneDeep } = lodash
 import { performance } from 'perf_hooks'
 import logger from '../logger.js'
+
+
+const LIMIT = 5
 
 const getState = async (ts) => {
    let state = await ReportHistoryState.findOne({ ts })
@@ -28,8 +32,6 @@ const saveState = async (state) => {
    }
 }
 
-const limit = 5
-
 export function reportHistoryService(app) {
    const listReportHistories = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
@@ -37,7 +39,7 @@ export function reportHistoryService(app) {
       const user = body.user?.id
       const t0 = performance.now()
       try {
-         let offset = (state.page - 1) * limit
+         let offset = (state.page - 1) * LIMIT
          const filterReport = body?.state?.values[state.filterBlockId]
             ?.action_filter_by_report?.selected_option?.value
          const filterConversation = body?.state?.values[state.filterBlockId]
@@ -74,7 +76,7 @@ export function reportHistoryService(app) {
             offset = 0
          }
          const [reportHistories, allReportConfigurations] = await Promise.all([
-            ReportHistory.find(filters).skip(offset).limit(limit).sort({
+            ReportHistory.find(filters).skip(offset).limit(LIMIT).sort({
                sentTime: -1
             }),
             ReportConfiguration.find({ creator: user })
@@ -117,7 +119,7 @@ export function reportHistoryService(app) {
          const listItemTemplate = loadBlocks('report_history/list-item-template')[0]
          const listItems = reportHistories.map(history => {
             const content = `*${history.title} - ${history.reportType}*\nSent at ${formatDateTime(history.sentTime)}`
-            const listItem = _.cloneDeep(listItemTemplate)
+            const listItem = cloneDeep(listItemTemplate)
             listItem.text.text = content
             listItem.accessory.value = history._id
             if (history._id == state.selectedId) {
@@ -131,11 +133,11 @@ export function reportHistoryService(app) {
          if (state.page > 1) {
             listPaginationElements.push(listPagination[0].elements[0])
          }
-         if (limit < count) {
-            const maxPage = (count - 1) / limit + 1
+         if (LIMIT < count) {
+            const maxPage = (count - 1) / LIMIT + 1
             const option = listPagination[0].elements[1].options[0]
             for (let i = 2; i <= maxPage; i++) {
-               const newOption = _.cloneDeep(option)
+               const newOption = cloneDeep(option)
                newOption.text.text = i.toString()
                newOption.value = i.toString()
                listPagination[0].elements[1].options.push(newOption)
@@ -144,7 +146,7 @@ export function reportHistoryService(app) {
                .find(option => option.value == state.page.toString())
             listPaginationElements.push(listPagination[0].elements[1])
          }
-         if (state.page * limit < count) {
+         if (state.page * LIMIT < count) {
             listPaginationElements.push(listPagination[0].elements[2])
          }
          if (listPaginationElements.length > 0) {
@@ -277,7 +279,7 @@ export function reportHistoryService(app) {
       const ts = body.message.ts
       const state = await getState(ts)
       const count = state.count
-      if (state.page * limit < count) {
+      if (state.page * LIMIT < count) {
          state.page += 1
          await saveState(state)
          await listReportHistories(true, ts, ack, body, client)

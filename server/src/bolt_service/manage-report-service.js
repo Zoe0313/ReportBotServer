@@ -2,9 +2,13 @@ import { loadBlocks, formatDate, formatDateTime, getConversationsName } from '..
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
 import { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation } from '../scheduler-adapter.js'
-import _ from 'lodash'
+import lodash from 'lodash'
+const { cloneDeep } = lodash
 import { performance } from 'perf_hooks'
 import logger from '../logger.js'
+
+
+const LIMIT = 5
 
 const WEEK = {
    1: 'Monday',
@@ -25,7 +29,8 @@ const REPORT_STATUS_DISPLAY = {
 
 function displayTimeSetting(report) {
    const repeatConfig = report.repeatConfig
-   const dayOfWeekStr = repeatConfig.dayOfWeek ? repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ') : 'Empty'
+   const dayOfWeekStr = repeatConfig.dayOfWeek ? 
+      repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ') : 'Empty'
    switch (repeatConfig.repeatType) {
       case 'not_repeat': return `Not Repeat - ${formatDate(repeatConfig.date)} ${repeatConfig.time}`
       case 'hourly': return `Hourly - ${repeatConfig.minsOfHour} mins of every hour`
@@ -110,19 +115,20 @@ const saveState = async (state) => {
    }
 }
 
-const limit = 5
-
 export function manageReportService(app) {
    const listReports = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
       const state = await getState(ts)
       const user = body.user?.id
+      if (user == null ) {
+         throw new Error('User is none in body, can not list the reports.')
+      }
       try {
-         let offset = (state.page - 1) * limit
+         let offset = (state.page - 1) * LIMIT
          const filter = {
             status: { $ne: REPORT_STATUS.CREATED }
          }
-         if (user != null && user != process.env.ADMIN_SLACK_USER) {
+         if (user != process.env.ADMIN_SLACK_USER) {
             filter.creator = user
          }
          const count = await ReportConfiguration.countDocuments(filter)
@@ -131,10 +137,12 @@ export function manageReportService(app) {
             offset = 0
          }
          state.count = count
-         const reportConfigurations = await ReportConfiguration.find(filter).skip(offset).limit(limit)
+         const reportConfigurations = await ReportConfiguration.find(filter).skip(offset).limit(LIMIT)
+
          // list header
          const listHeader = loadBlocks('report/list-header')
          listHeader[1].text.text = `There are *${count} reports* in your account.`
+
          // list item detail
          let listItemDetail = loadBlocks('report/list-item-detail')
          const report = await ReportConfiguration.findById(state.selectedId)
@@ -150,26 +158,39 @@ export function manageReportService(app) {
             logger.info(reportUsers)
             const nextReportSendingTime = formatDateTime(new Date(await nextInvocation(report._id)))
             logger.info(nextReportSendingTime)
+            // report title
             listItemDetail[0].text.text = `*Title: ${report.title}*`
+            // report type
             listItemDetail[1].fields[0].text += report.reportType
+            // report status
             listItemDetail[1].fields[1].text += REPORT_STATUS_DISPLAY[report.status]
+            // report channels to be sent
             listItemDetail[1].fields[2].text += conversations
+            // users to be notified
             listItemDetail[1].fields[3].text += reportUsers
+            // scheduler start date
             listItemDetail[1].fields[4].text += formatDate(report.startDate)
+            // scheduler end date
             listItemDetail[1].fields[5].text += formatDate(report.endDate)
+            // repeat config summary
             listItemDetail[1].fields[6].text += displayTimeSetting(report)
+            // next sending time
             listItemDetail[1].fields[7].text += nextReportSendingTime
 
+            // edit button
             listItemDetail[2].elements[0].value = report._id
+            // remove button
             listItemDetail[2].elements[1].value = report._id
+            // cancel next sending button
             listItemDetail[2].elements[2].value = report._id
          }
+
          // list items
          const listItemTemplate = loadBlocks('report/list-item-template')[0]
          const listItems = reportConfigurations.map(report => {
             const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':x:'
             const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report)}`
-            const listItem = _.cloneDeep(listItemTemplate)
+            const listItem = cloneDeep(listItemTemplate)
             listItem.text.text = content
             listItem.accessory.value = report._id
             if (report._id == state.selectedId) {
@@ -183,7 +204,7 @@ export function manageReportService(app) {
          if (state.page > 1) {
             listPaginationElements.push(listPagination[0].elements[0])
          }
-         if (state.page * limit < count) {
+         if (state.page * LIMIT < count) {
             listPaginationElements.push(listPagination[0].elements[1])
          }
          if (listPaginationElements.length > 0) {
@@ -268,7 +289,7 @@ export function manageReportService(app) {
       const ts = body.message.ts
       const state = await getState(ts)
       const count = await ReportConfiguration.countDocuments()
-      if (state.page * limit < count) {
+      if (state.page * LIMIT < count) {
          state.page += 1
          await saveState(state)
          await listReports(true, ts, ack, body, client)
@@ -311,6 +332,7 @@ export function manageReportService(app) {
          })
       } catch (e) {
          logger.error(e)
+         logger.error('can not open remove confirmation modal')
       }
    })
 

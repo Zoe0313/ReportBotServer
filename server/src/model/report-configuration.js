@@ -35,3 +35,44 @@ const ReportConfigurationSchema = new mongoose.Schema({
 const ReportConfiguration = mongoose.model('ReportConfiguration', ReportConfigurationSchema)
 
 export { ReportConfiguration, REPORT_STATUS }
+
+// {
+//    "text": {
+//       "type": "plain_text",
+//       "text": "Perforce",
+//       "emoji": true
+//    },
+//    "value": "perforce"
+// },
+// {
+//    "text": {
+//       "type": "plain_text",
+//       "text": "SVS",
+//       "emoji": true
+//    },
+//    "value": "svs"
+// },
+// {
+//    "text": {
+//       "type": "plain_text",
+//       "text": "FastSVS",
+//       "emoji": true
+//    },
+//    "value": "fastsvs"
+// },
+// {
+//    "text": {
+//       "type": "plain_text",
+//       "text": "Text",
+//       "emoji": true
+//    },
+//    "value": "text"
+// },
+// {
+//    "text": {
+//       "type": "plain_text",
+//       "text": "Customized report",
+//       "emoji": true
+//    },
+//    "value": "customized"
+// }

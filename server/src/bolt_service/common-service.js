@@ -4,7 +4,8 @@ export function commonService(app) {
 
    // Reply in channel
    app.event('app_mention', async ({ event, say }) => {
-      await say(`Hi, <@${event['user']}>. I'm a little shy in public, but I'll follow up you by direct message.`)
+      await say(`Hi, <@${event['user']}>. ` + 
+         `I'm a little shy in public, but I'll follow up you by direct message.`)
    })
    // Home page
    app.event('app_home_opened', async ({ client, event, logger }) => {

@@ -5,19 +5,30 @@ import logger from '../logger.js'
 export function registerApiRouters(receiver, app) {
    receiver.router.get('/health', (req, res) => {
       if (app.receiver.client.badConnection) {
-         res.status(500).send('Internal Server Error')
+         res.status(500)
+         res.json({ result: false, message: 'Internal Server Error' })
          return
       }
-      res.status(200).send(true)
+      res.status(200)
+      res.json({ result: true })
    })
 
    receiver.router.get('/report_configurations', async (req, res) => {
-      const reports = await ReportConfiguration.find({ creator: 'U014LBYG63D' })
+      let filter = {}
+      if (req.query.user != null) {
+         filter.creator = req.query.user
+      }
+      const reports = await ReportConfiguration.find(filter)
+         .offset(req.query.offset).limit(req.query.limit)
       logger.info(reports)
       res.json(reports)
    })
 
    receiver.router.get('/report_configurations/:id', async (req, res) => {
+      if (req.params.id == null) {
+         res.status(400)
+         res.json({ result: false, message: 'invalid id' })
+      }
       const report = await ReportConfiguration.findById(req.params.id)
       logger.info(report)
       res.json(report)
@@ -31,7 +42,8 @@ export function registerApiRouters(receiver, app) {
          res.json(report)
       } catch (e) {
          res.status(500)
-         res.send(e.message)
+         res.json({ result: false, message: 'Internal Server Error' })
+         logger.error(e)
       }
    })
 
@@ -45,7 +57,8 @@ export function registerApiRouters(receiver, app) {
          res.json(report)
       } catch (e) {
          res.status(500)
-         res.send(e.message)
+         res.json({ result: false, message: 'Internal Server Error' })
+         logger.error(e)
       }
    })
 
@@ -54,9 +67,9 @@ export function registerApiRouters(receiver, app) {
       const result = await ReportConfiguration.findByIdAndRemove(req.params.id)
       if (result) {
          unregisterSchedule(req.params.id)
-         res.send(true)
+         res.json({ result: true })
       } else {
-         res.send(false)
+         res.json({ result: false, message: 'delete report configuration failed' })
       }
    })
 

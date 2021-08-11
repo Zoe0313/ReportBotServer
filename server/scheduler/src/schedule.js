@@ -82,6 +82,7 @@ const commonHandler = async (report) => {
       case 'fastsvs':
       case 'text':
       case 'customized':
+      default:
          logger.error(`report type ${report.reportType} not supported.`)
    }
 }
@@ -145,6 +146,8 @@ const registerSchedule = function (report) {
          rule = repeatConfig.cronExpression
          scheduleOption.rule = rule
          break
+      default:
+         throw new Error('invalid repeat type')
    }
    job = schedule.scheduleJob(scheduleOption, function (report) {
       commonHandler(report)
