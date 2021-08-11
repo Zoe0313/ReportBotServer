@@ -1,93 +1,93 @@
 {
-	"blocks": [
-		{
-			"type": "header",
-			"text": {
-				"type": "plain_text",
-				"text": "Weekly report additional setting"
-			}
-		},
-		{
-			"block_id": "block_day_of_week",
-			"type": "input",
-			"label": {
-				"type": "plain_text",
-				"text": "Send the report every"
-			},
-			"element": {
-				"type": "checkboxes",
-				"options": [
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "Monday"
-						},
-						"value": "1"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "Tuesday"
-						},
-						"value": "2"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "Wednesday"
-						},
-						"value": "3"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "Thursday"
-						},
-						"value": "4"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "Friday"
-						},
-						"value": "5"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "Saturday"
-						},
-						"value": "6"
-					},
-					{
-						"text": {
-							"type": "plain_text",
-							"text": "Sunday"
-						},
-						"value": "0"
-					}
-				],
-				"action_id": "action_day_of_week"
-			}
-		},
-		{
-			"block_id": "block_time",
-			"type": "input",
-			"label": {
-				"type": "plain_text",
-				"text": ":clock2: Select a time for your report",
-				"emoji": true
-			},
-			"element": {
-				"type": "timepicker",
-				"initial_time": "08:00",
-				"placeholder": {
-					"type": "plain_text",
-					"text": "Select time for daily report",
-					"emoji": true
-				},
-				"action_id": "action_time"
-			}
-		}
-	]
+   "blocks": [
+      {
+         "type": "header",
+         "text": {
+            "type": "plain_text",
+            "text": "Weekly report additional setting"
+         }
+      },
+      {
+         "block_id": "block_day_of_week",
+         "type": "input",
+         "label": {
+            "type": "plain_text",
+            "text": "Send the report every"
+         },
+         "element": {
+            "type": "checkboxes",
+            "options": [
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Monday"
+                  },
+                  "value": "1"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Tuesday"
+                  },
+                  "value": "2"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Wednesday"
+                  },
+                  "value": "3"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Thursday"
+                  },
+                  "value": "4"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Friday"
+                  },
+                  "value": "5"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Saturday"
+                  },
+                  "value": "6"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Sunday"
+                  },
+                  "value": "0"
+               }
+            ],
+            "action_id": "action_day_of_week"
+         }
+      },
+      {
+         "block_id": "block_time",
+         "type": "input",
+         "label": {
+            "type": "plain_text",
+            "text": ":clock2: Select a time for your report",
+            "emoji": true
+         },
+         "element": {
+            "type": "timepicker",
+            "initial_time": "08:00",
+            "placeholder": {
+               "type": "plain_text",
+               "text": "Select time for daily report",
+               "emoji": true
+            },
+            "action_id": "action_time"
+         }
+      }
+   ]
 }

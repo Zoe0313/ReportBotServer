@@ -1,67 +1,67 @@
 {
-	"blocks": [
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": "Hi, welcome to *vSlackbot*! In this world, you can quickly schedule and manage your report. Please select the action as below:"
-			}
-		},
-		{
-			"type": "divider"
-		},
-		{
-			"block_id": "block_welcome",
-			"type": "actions",
-			"elements": [
-				{
-					"type": "button",
-					"text": {
-						"type": "plain_text",
-						"text": ":new: Create a report",
-						"emoji": true
-					},
-					"value": "approve",
-					"action_id": "action_create"
-				},
-				{
-					"type": "button",
-					"text": {
-						"type": "plain_text",
-						"text": ":mag: Manage my reports",
-						"emoji": true
-					},
-					"value": "approve",
-					"action_id": "action_list"
-				},
-				{
-					"type": "button",
-					"text": {
-						"type": "plain_text",
-						"text": ":speech_balloon: Report Send History",
-						"emoji": true
-					},
-					"value": "approve",
-					"action_id": "action_history"
-				}
-			]
-		},
-		{
-			"type": "divider"
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": ":link: Get started from <fakeLink.toEmployeeProfile.com|Slack Bot User Manual>"
-			}
-		},
-		{
-			"type": "section",
-			"text": {
-				"type": "mrkdwn",
-				"text": ":slack: Contact us <fakeLink.toEmployeeProfile.com|#vSlackbot Shanghai>"
-			}
-		}
-	]
+   "blocks": [
+      {
+         "type": "divider"
+      },
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": "Hi, welcome to *vSlackbot*! In this world, you can quickly schedule and manage your report. Please select the action as below:"
+         }
+      },
+      {
+         "block_id": "block_welcome",
+         "type": "actions",
+         "elements": [
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "text": ":new: Create a report",
+                  "emoji": true
+               },
+               "value": "approve",
+               "action_id": "action_create"
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "text": ":mag: Manage my reports",
+                  "emoji": true
+               },
+               "value": "approve",
+               "action_id": "action_list"
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "text": ":speech_balloon: Report Send History",
+                  "emoji": true
+               },
+               "value": "approve",
+               "action_id": "action_history"
+            }
+         ]
+      },
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": ":link: Get started from <fakeLink.toEmployeeProfile.com|Slack Bot User Manual>"
+         }
+      },
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": ":slack: Contact us <fakeLink.toEmployeeProfile.com|#vSlackbot Shanghai>"
+         }
+      },
+      {
+         "type": "divider"
+      }
+   ]
 }
