@@ -1,9 +1,12 @@
 import winston from 'winston'
 
+const today = new Date().toISOString().split('T')[0]
+console.log(today)
+
 const options = {
    file: {
       level: 'info',
-      filename: './log/slackbot-server.log',
+      filename: `./log/slackbot-server-${today}.log`,
       handleExceptions: true,
       json: true,
       colorize: false,

@@ -85,13 +85,15 @@ export function reportHistoryService(app) {
          // list filter
          const listFilter = loadBlocks('report_history/list-filter')
          listFilter[2].block_id = state.filterBlockId.toString()
-         listFilter[2].elements[0].options = allReportConfigurations.map(report => ({
-            "text": {
-               "type": "plain_text",
-               "text": report.title
-            },
-            "value": report._id
-         }))
+         if (allReportConfigurations.length > 0) {
+            listFilter[2].elements[0].options = allReportConfigurations.map(report => ({
+               "text": {
+                  "type": "plain_text",
+                  "text": report.title
+               },
+               "value": report._id
+            }))
+         }
          // list header
          const listHeader = loadBlocks('report_history/list-header')
          listHeader[1].text.text = `There are *${count} report histories* in your account after conditions applied.`
