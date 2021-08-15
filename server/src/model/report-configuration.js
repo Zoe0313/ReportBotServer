@@ -18,7 +18,9 @@ const ReportConfigurationSchema = new mongoose.Schema({
    reportType: { type: String, enum: REPORT_TYPE_ENUM, required: true },
    conversations: { type: [String], required: true },
    mentionUsers: [String],
-   reportLink: String,
+   reportSpecConfig: {
+      bugzillaLink: String
+   },
    repeatConfig: {
       repeatType: { type: String, enum: REPEAT_TYPE_ENUM, required: true },
       tz: { type: String, default: 'Asia/Shanghai', required: true },

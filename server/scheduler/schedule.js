@@ -81,7 +81,8 @@ const commonHandler = async (report) => {
    switch (report.reportType) {
       case 'bugzilla':
          const scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
-         await handleExecCommand(`python3 ${scriptPath} --title '${report.title}' --url '${report.reportLink}'`, report)
+         await handleExecCommand(`python3 ${scriptPath} --title '${report.title}' ` + 
+            `--url '${report.reportSpecConfig.bugzillaLink}'`, report)
          break
       case 'perforce':
       case 'svs':

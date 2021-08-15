@@ -118,9 +118,11 @@ export function registerCreateReportService(app) {
          creator: user,
          status: REPORT_STATUS.CREATED,
          reportType: inputObj.action_report_type?.selected_option?.value,
-         reportLink: inputObj.action_report_link?.value,
          conversations: inputObj.action_conversation?.selected_conversations,
          mentionUsers: inputObj.action_report_users?.selected_users,
+         reportSpecConfig: {
+            bugzillaLink: inputObj.action_report_link?.value
+         },
          repeatConfig: {
             repeatType: inputObj.action_repeat_type?.selected_option?.value,
             tz,

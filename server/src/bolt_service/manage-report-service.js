@@ -46,26 +46,27 @@ function displayTimeSetting(report, tz) {
 }
 
 function setReportDetailInitialValue(report, findBlockById) {
+   const reportSpecConfig = report.reportSpecConfig
    switch (report.reportType) {
       case 'bugzilla':
-         if (report.reportLink != null && report.reportLink.length > 0) {
-            findBlockById('block_report_link').element.initial_value = report.reportLink
+         if (reportSpecConfig.bugzillaLink != null && reportSpecConfig.bugzillaLink.length > 0) {
+            findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
          }
          break
       case 'perforce':
-         findBlockById('block_report_link').element.initial_value = report.reportLink
+         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
          break
       case 'svs':
-         findBlockById('block_report_link').element.initial_value = report.reportLink
+         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
          break
       case 'fastsvs':
-         findBlockById('block_report_link').element.initial_value = report.reportLink
+         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
          break
       case 'text':
-         findBlockById('block_report_link').element.initial_value = report.reportLink
+         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
          break
       case 'customized':
-         findBlockById('block_report_link').element.initial_value = report.reportLink
+         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
          break
    }
 }
@@ -510,9 +511,11 @@ export function registerManageReportService(app) {
             _id: id,
             title: inputObj.action_title?.value,
             reportType: inputObj.action_report_type_edit?.selected_option?.value,
-            reportLink: inputObj.action_report_link?.value,
             conversations: inputObj.action_conversation?.selected_conversations,
             mentionUsers: inputObj.action_report_users?.selected_users,
+            reportSpecConfig: {
+               bugzillaLink: inputObj.action_report_link?.value
+            },
             repeatConfig: {
                repeatType: inputObj.action_repeat_type_edit?.selected_option?.value,
                tz,
