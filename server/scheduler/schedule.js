@@ -4,6 +4,7 @@ dotenv.config()
 import schedule from 'node-schedule'
 import { ReportHistory } from '../src/model/report-history.js'
 import { parseDateWithTz, convertTimeWithTz } from '../common/utils.js'
+import { getConversationsName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 import { exec } from 'child_process'
 import { WebClient } from '@slack/web-api'
@@ -35,7 +36,11 @@ const commonHandler = async (report) => {
    // const REPORT_TYPE_ENUM = ['bugzilla', 'perforce', 'svs', 'fastsvs', 'text', 'customized']
    const handleExecCommand = async (command, report) => {
       try {
-         const stdout = await execCommand(command)
+         let stdout = await execCommand(command)
+         if (report.mentionUsers != null && report.mentionUsers.length > 0) {
+            const mentionUsers = '\n' + (await getConversationsName(report.mentionUsers))
+            stdout += mentionUsers
+         }
          logger.info(stdout)
          await Promise.all(
             report.conversations.map(conversation => {
@@ -51,7 +56,7 @@ const commonHandler = async (report) => {
             creator: report.creator,
             reportType: report.reportType,
             conversations: report.conversations,
-            reportUsers: report.reportUsers,
+            mentionUsers: report.mentionUsers,
             sentTime: new Date(),
             content: stdout,
             result: true
@@ -65,7 +70,7 @@ const commonHandler = async (report) => {
             creator: report.creator,
             reportType: report.reportType,
             conversations: report.conversations,
-            reportUsers: report.reportUsers,
+            mentionUsers: report.mentionUsers,
             sentTime: new Date(),
             content: e.message,
             result: false

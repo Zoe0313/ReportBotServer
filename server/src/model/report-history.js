@@ -6,7 +6,7 @@ const ReportHistorySchema = new mongoose.Schema({
    creator: { type: String, required: true, immutable: true },
    reportType: { type: String, required: true, immutable: true },
    conversations: { type: [String], immutable: true },
-   reportUsers: { type: [String], immutable: true },
+   mentionUsers: { type: [String], immutable: true },
    sentTime: { type: Date, immutable: true },
    content: { type: String, immutable: true },
    result: { type: Boolean, immutable: true }

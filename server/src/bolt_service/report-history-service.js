@@ -1,6 +1,6 @@
-import { loadBlocks, formatDateTime } from '../../common/utils.js'
+import { formatDateTime } from '../../common/utils.js'
 import logger from '../../common/logger.js'
-import { getConversationsName, getUserTz } from '../../common/slack-helper.js'
+import { loadBlocks, getConversationsName, getUserTz } from '../../common/slack-helper.js'
 import { ReportHistory } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
 import { ReportConfiguration } from '../model/report-configuration.js'
@@ -62,7 +62,7 @@ export function registerReportHistoryService(app) {
             filters.conversations = filterConversation
          }
          if (filterReportUser) {
-            filters.reportUsers = filterReportUser
+            filters.mentionUsers = filterReportUser
          }
          if (filterStartDate || filterEndDate) {
             filters.sentTime = {}
@@ -107,17 +107,17 @@ export function registerReportHistoryService(app) {
             state.selectedId == null
             listItemDetail = []
          } else {
-            const [conversations, reportUsers] = await Promise.all([
-               getConversationsName(client, selectedHistory.conversations),
-               getConversationsName(client, selectedHistory.reportUsers)
+            const [conversations, mentionUsers] = await Promise.all([
+               getConversationsName(selectedHistory.conversations),
+               getConversationsName(selectedHistory.mentionUsers)
             ])
             logger.info(conversations)
-            logger.info(reportUsers)
+            logger.info(mentionUsers)
             listItemDetail[0].text.text = `*Title: ${selectedHistory.title}*`
             listItemDetail[1].fields[0].text += selectedHistory.reportType
             listItemDetail[1].fields[1].text += formatDateTime(selectedHistory.sentTime, tz)
             listItemDetail[1].fields[2].text += conversations
-            listItemDetail[1].fields[3].text += reportUsers
+            listItemDetail[1].fields[3].text += mentionUsers
             listItemDetail[2].text.text += selectedHistory.content.substr(0, 1000)
          }
          // list items
@@ -184,12 +184,7 @@ export function registerReportHistoryService(app) {
          }
          await saveState(state)
       } catch (e) {
-         logger.error(e)
-         await client.chat.postMessage({
-            channel: user,
-            text: e.message,
-            blocks: []
-         })
+         throw e
       }
    }
 

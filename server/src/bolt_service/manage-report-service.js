@@ -1,6 +1,6 @@
-import { loadBlocks, formatDate, formatDateTime, convertTimeWithTz, parseDateWithTz } from '../../common/utils.js'
+import { formatDate, formatDateTime, convertTimeWithTz, parseDateWithTz } from '../../common/utils.js'
 import logger from '../../common/logger.js'
-import { getConversationsName, getUserTz } from '../../common/slack-helper.js'
+import { loadBlocks, getConversationsName, getUserTz } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
 import { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation } from '../scheduler-adapter.js'
@@ -175,12 +175,12 @@ export function registerManageReportService(app) {
             state.selectedId == null
             listItemDetail = []
          } else {
-            const [conversations, reportUsers] = await Promise.all([
-               getConversationsName(client, report.conversations),
-               getConversationsName(client, report.reportUsers)
+            const [conversations, mentionUsers] = await Promise.all([
+               getConversationsName(report.conversations),
+               getConversationsName(report.mentionUsers)
             ])
             logger.info(conversations)
-            logger.info(reportUsers)
+            logger.info(mentionUsers)
             const nextInvocationTime = await nextInvocation(report._id)
             const nextReportSendingTime = nextInvocationTime ?
                formatDateTime(new Date(nextInvocationTime), tz) : 'No longer executed'
@@ -194,7 +194,7 @@ export function registerManageReportService(app) {
             // report channels to be sent
             listItemDetail[1].fields[2].text += conversations
             // users to be notified
-            listItemDetail[1].fields[3].text += reportUsers
+            listItemDetail[1].fields[3].text += mentionUsers
             // scheduler start date
             listItemDetail[1].fields[4].text += formatDate(report.repeatConfig.startDate)
             // scheduler end date
@@ -260,12 +260,7 @@ export function registerManageReportService(app) {
          }
          await saveState(state)
       } catch (e) {
-         logger.error(e)
-         await client.chat.postMessage({
-            channel: user,
-            text: e.message,
-            blocks: []
-         })
+         throw e
       }
    }
 
@@ -358,8 +353,13 @@ export function registerManageReportService(app) {
             }
          })
       } catch (e) {
-         logger.error(e)
-         logger.error('can not open remove confirmation modal')
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to open remove confirmation modal. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
       }
    })
 
@@ -382,12 +382,13 @@ export function registerManageReportService(app) {
          // })
          await listReports(true, ts, ack, body, client)
       } catch (e) {
-         logger.error(e)
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: e.message
+            text: 'Failed to delete the report configuration, ' + 
+               'please contact developers to resolve it.'
          })
+         throw e
       }
    })
 
@@ -423,8 +424,8 @@ export function registerManageReportService(app) {
          if (report.conversations.length > 0) {
             findBlockById('block_conversation').element.initial_conversations = report.conversations
          }
-         if (report.reportUsers.length > 0) {
-            findBlockById('block_report_users').element.initial_users = report.reportUsers
+         if (report.mentionUsers.length > 0) {
+            findBlockById('block_report_users').element.initial_users = report.mentionUsers
          }
          if (report.repeatConfig.startDate != null) {
             findBlockById('block_start_date').element.initial_date = formatDate(report.repeatConfig.startDate)
@@ -469,7 +470,13 @@ export function registerManageReportService(app) {
             submit_disabled: true,
          })
       } catch (e) {
-         logger.error(e)
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to open edit report configuration modal. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
       }
    })
 
@@ -480,47 +487,48 @@ export function registerManageReportService(app) {
       const id = state.selectedId
       logger.info(`edit report, id: ${id}`)
       if (!id) {
-         return
+         throw new Error('report id is null when editing report config')
       }
-      const user = body['user']['id']
-      const tz = await getUserTz(client, user)
-      const inputObj = {}
-      const inputValues = Object.values(view['state']['values'])
-      inputValues.forEach(actions => {
-         Object.keys(actions).forEach(actionKey => {
-            inputObj[actionKey] = actions[actionKey]
-         })
-      })
-      logger.info(inputObj)
-      const parseIntNullable = (num) => num ? parseInt(num) : null
-      const oldReport = await ReportConfiguration.findById(id)
-      if (!oldReport) {
-         return
-      }
-      const report = {
-         _id: id,
-         title: inputObj.action_title?.value,
-         reportType: inputObj.action_report_type_edit?.selected_option?.value,
-         reportLink: inputObj.action_report_link?.value,
-         conversations: inputObj.action_conversation?.selected_conversations,
-         reportUsers: inputObj.action_report_users?.selected_users,
-         repeatConfig: {
-            repeatType: inputObj.action_repeat_type_edit?.selected_option?.value,
-            tz,
-            startDate: inputObj.action_start_date?.selected_date,
-            endDate: inputObj.action_end_date?.selected_date,
-            cronExpression: inputObj.action_cron_expression?.value,
-            date: formatDate(inputObj.action_date?.selected_date),
-            time: inputObj.action_time?.selected_time,
-            dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
-            dayOfWeek: inputObj.action_day_of_week?.selected_options
-               ?.map(option => parseIntNullable(option.value)),
-            minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value),
-         }
-      }
-      logger.info(report)
 
       try {
+         const user = body['user']['id']
+         const tz = await getUserTz(client, user)
+         const inputObj = {}
+         const inputValues = Object.values(view['state']['values'])
+         inputValues.forEach(actions => {
+            Object.keys(actions).forEach(actionKey => {
+               inputObj[actionKey] = actions[actionKey]
+            })
+         })
+         logger.info(inputObj)
+         const parseIntNullable = (num) => num ? parseInt(num) : null
+         const oldReport = await ReportConfiguration.findById(id)
+         if (!oldReport) {
+            return
+         }
+         const report = {
+            _id: id,
+            title: inputObj.action_title?.value,
+            reportType: inputObj.action_report_type_edit?.selected_option?.value,
+            reportLink: inputObj.action_report_link?.value,
+            conversations: inputObj.action_conversation?.selected_conversations,
+            mentionUsers: inputObj.action_report_users?.selected_users,
+            repeatConfig: {
+               repeatType: inputObj.action_repeat_type_edit?.selected_option?.value,
+               tz,
+               startDate: inputObj.action_start_date?.selected_date,
+               endDate: inputObj.action_end_date?.selected_date,
+               cronExpression: inputObj.action_cron_expression?.value,
+               date: formatDate(inputObj.action_date?.selected_date),
+               time: inputObj.action_time?.selected_time,
+               dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
+               dayOfWeek: inputObj.action_day_of_week?.selected_options
+                  ?.map(option => parseIntNullable(option.value)),
+               minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value),
+            }
+         }
+         logger.info(report)
+   
          await ReportConfiguration.updateOne({ _id: id }, report)
          const newReport = await ReportConfiguration.findById(id)
          registerSchedule(newReport)
@@ -532,11 +540,12 @@ export function registerManageReportService(app) {
          // })
          await listReports(true, ts, ack, body, client)
       } catch (e) {
-         logger.error(e)
          await client.chat.postMessage({
-            channel: user,
-            text: e.message
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to edit report configuration. Please contact developers to resolve it.'
          })
+         throw e
       }
    })
 
@@ -553,12 +562,13 @@ export function registerManageReportService(app) {
          await cancelNextInvocation(id)
          await listReports(true, ts, ack, body, client)
       } catch (e) {
-         logger.error(e)
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: e.message
+            text: 'Failed to cancel next sending report.' + 
+               'Please contact developers to resolve it.'
          })
+         throw e
       }
    })
 
@@ -609,7 +619,7 @@ export function registerManageReportService(app) {
             }
          })
       } catch (e) {
-         logger.error(e)
+         throw e
       }
    }
 

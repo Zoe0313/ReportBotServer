@@ -1,6 +1,9 @@
 import logger from './logger.js'
+import fs from 'fs'
+import cloneDeep from 'lodash/cloneDeep.js'
 
 const userTzCache = {}
+const blocksCache = {}
 
 export const getUserTz = async (client, userId) => {
    try {
@@ -30,11 +33,16 @@ export const updateUserTzCache = (userId, tz) => {
    }
 }
 
-export const getConversationsName = async (client, conversationIds) => {
+export const getConversationsName = async (conversationIds) => {
+   if (conversationIds == null) {
+      return ''
+   }
    try {
       return conversationIds.map(channel => {
+         // if conversation is a channel
          if (channel.startsWith('C')) {
             return `<#${channel}>`
+            // if conversation is a user
          } else if (channel.startsWith('U')) {
             return `<@${channel}>`
          } else {
@@ -43,5 +51,18 @@ export const getConversationsName = async (client, conversationIds) => {
       }).join(', ')
    } catch (e) {
       return conversationIds
+   }
+}
+
+export function loadBlocks(name) {
+   if (name.endsWith('null') || name.endsWith('undefined')) {
+      return []
+   }
+   if (blocksCache[name]) {
+      return cloneDeep(blocksCache[name])
+   } else {
+      const blocks = JSON.parse(fs.readFileSync(`src/blocks/${name}.json`))['blocks']
+      blocksCache[name] = blocks
+      return cloneDeep(blocks)
    }
 }

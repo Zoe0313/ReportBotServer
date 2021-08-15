@@ -1,5 +1,4 @@
-import { loadBlocks } from '../../common/utils.js'
-import { updateUserTzCache } from '../../common/slack-helper.js'
+import { loadBlocks, updateUserTzCache } from '../../common/slack-helper.js'
 
 export function registerCommonService(app) {
 

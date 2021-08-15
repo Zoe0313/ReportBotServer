@@ -1,6 +1,6 @@
-import { loadBlocks, formatDate } from '../../common/utils.js'
+import { formatDate } from '../../common/utils.js'
 import logger from '../../common/logger.js'
-import { getUserTz } from '../../common/slack-helper.js'
+import { loadBlocks, getUserTz } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { registerSchedule } from '../scheduler-adapter.js'
 
@@ -37,7 +37,13 @@ export function registerCreateReportService(app) {
             submit_disabled: true,
          })
       } catch (e) {
-         logger.error(e)
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to open create report configuration modal. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
       }
    })
 
@@ -75,7 +81,7 @@ export function registerCreateReportService(app) {
             }
          })
       } catch (e) {
-         logger.error(e)
+         throw e
       }
    }
 
@@ -114,7 +120,7 @@ export function registerCreateReportService(app) {
          reportType: inputObj.action_report_type?.selected_option?.value,
          reportLink: inputObj.action_report_link?.value,
          conversations: inputObj.action_conversation?.selected_conversations,
-         reportUsers: inputObj.action_report_users?.selected_users,
+         mentionUsers: inputObj.action_report_users?.selected_users,
          repeatConfig: {
             repeatType: inputObj.action_repeat_type?.selected_option?.value,
             tz,
@@ -143,11 +149,13 @@ export function registerCreateReportService(app) {
             text: 'Precheck your new report'
          })
       } catch (e) {
-         logger.info(e.message)
          await client.chat.postMessage({
-            channel: user,
-            text: e.message
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to open precheck confirmation. ' + 
+               'Please contact developers to resolve it.'
          })
+         throw e
       }
    })
 
@@ -180,9 +188,13 @@ export function registerCreateReportService(app) {
             text: 'Create and enable new report configuration!'
          })
       } catch (e) {
-         await say({
-            text: e.message
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to enable new report configuration. ' + 
+               'Please contact developers to resolve it.'
          })
+         throw e
       }
    })
 
@@ -207,9 +219,13 @@ export function registerCreateReportService(app) {
             text: 'Saved draft report configuration.'
          })
       } catch (e) {
-         await say({
-            text: e.message
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to save report configuration as draft. ' + 
+               'Please contact developers to resolve it.'
          })
+         throw e
       }
    })
 
@@ -232,9 +248,13 @@ export function registerCreateReportService(app) {
             text: 'Cancel creation.'
          })
       } catch (e) {
-         await say({
-            text: e.message
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to cancel this report configuration. ' + 
+               'Please contact developers to resolve it.'
          })
+         throw e
       }
    })
 }
