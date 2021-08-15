@@ -1,12 +1,12 @@
-import { loadBlocks, formatDate, formatDateTime, getConversationsName } from '../utils.js'
+import { loadBlocks, formatDate, formatDateTime, convertTimeWithTz, parseDateWithTz } from '../../common/utils.js'
+import logger from '../../common/logger.js'
+import { getConversationsName, getUserTz } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
 import { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation } from '../scheduler-adapter.js'
-import lodash from 'lodash'
-const { cloneDeep } = lodash
+import cloneDeep from 'lodash/cloneDeep.js'
+import isNumber from 'lodash/isNumber.js'
 import { performance } from 'perf_hooks'
-import logger from '../logger.js'
-
 
 const LIMIT = 5
 
@@ -27,16 +27,19 @@ const REPORT_STATUS_DISPLAY = {
    ENABLED: ':white_check_mark: Enabled',
 }
 
-function displayTimeSetting(report) {
+function displayTimeSetting(report, tz) {
    const repeatConfig = report.repeatConfig
    const dayOfWeekStr = repeatConfig.dayOfWeek ? 
       repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ') : 'Empty'
+   const convertedTime = convertTimeWithTz(repeatConfig.time,  repeatConfig.tz, tz)
    switch (repeatConfig.repeatType) {
-      case 'not_repeat': return `Not Repeat - ${formatDate(repeatConfig.date)} ${repeatConfig.time}`
+      case 'not_repeat': 
+         const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
+         return `Not Repeat - ${formatDateTime(date, tz)}`
       case 'hourly': return `Hourly - ${repeatConfig.minsOfHour} mins of every hour`
-      case 'daily': return `Daily - ${repeatConfig.time} of every day`
-      case 'weekly': return `Weekly - ${dayOfWeekStr} - ${repeatConfig.time}`
-      case 'monthly': return `Monthly - ${repeatConfig.dayOfMonth}th of every month - ${repeatConfig.time}`
+      case 'daily': return `Daily - ${convertedTime} of every day`
+      case 'weekly': return `Weekly - ${dayOfWeekStr} - ${convertedTime}`
+      case 'monthly': return `Monthly - ${repeatConfig.dayOfMonth}th of every month - ${convertedTime}`
       case 'cron_expression': return `Cron Expression - ${repeatConfig.cronExpression}`
       default: return 'Unknown'
    }
@@ -45,7 +48,9 @@ function displayTimeSetting(report) {
 function setReportDetailInitialValue(report, findBlockById) {
    switch (report.reportType) {
       case 'bugzilla':
-         findBlockById('block_report_link').element.initial_value = report.reportLink
+         if (report.reportLink != null && report.reportLink.length > 0) {
+            findBlockById('block_report_link').element.initial_value = report.reportLink
+         }
          break
       case 'perforce':
          findBlockById('block_report_link').element.initial_value = report.reportLink
@@ -65,31 +70,50 @@ function setReportDetailInitialValue(report, findBlockById) {
    }
 }
 
-function setTimeSettingInitialValue(report, findBlockById) {
+function setTimeSettingInitialValue(report, tz, findBlockById) {
    const repeatConfig = report.repeatConfig
+   const convertedTime = convertTimeWithTz(repeatConfig.time,  repeatConfig.tz, tz)
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
-         findBlockById('block_date').element.initial_date = formatDate(repeatConfig.date)
-         findBlockById('block_time').element.initial_time = repeatConfig.time
+         const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
+         const dateStr = formatDateTime(date, tz)
+         if (dateStr != null && dateStr.split(' ').length === 2) {
+            findBlockById('block_date').element.initial_date = dateStr.split(' ')[0]
+            findBlockById('block_time').element.initial_time = dateStr.split(' ')[1]   
+         }
          break
       case 'hourly':
-         findBlockById('block_mins_of_hour').element.initial_value = repeatConfig.minsOfHour.toString()
+         if (repeatConfig.minsOfHour != null) {
+            findBlockById('block_mins_of_hour').element.initial_value = repeatConfig.minsOfHour.toString()
+         }
          break
       case 'daily':
-         findBlockById('block_time').element.initial_time = repeatConfig.time
+         if (convertedTime != null) {
+            findBlockById('block_time').element.initial_time = convertedTime
+         }
          break
       case 'weekly':
          const dayOfWeekOptions = findBlockById('block_day_of_week')
             .element.options.filter(option => repeatConfig.dayOfWeek.includes(parseInt(option.value)))
-         findBlockById('block_day_of_week').element.initial_options = dayOfWeekOptions
-         findBlockById('block_time').element.initial_time = repeatConfig.time
+         if (dayOfWeekOptions.length > 0) {
+            findBlockById('block_day_of_week').element.initial_options = dayOfWeekOptions
+         }
+         if (convertedTime != null) {
+            findBlockById('block_time').element.initial_time = convertedTime
+         }
          break
       case 'monthly':
-         findBlockById('block_day_of_month').element.initial_value = repeatConfig.dayOfMonth.toString()
-         findBlockById('block_time').element.initial_time = repeatConfig.time
+         if (repeatConfig.dayOfMonth != null) {
+            findBlockById('block_day_of_month').element.initial_value = repeatConfig.dayOfMonth.toString()    
+         } 
+         if (convertedTime != null) {
+            findBlockById('block_time').element.initial_time = convertedTime
+         }
          break
       case 'cron_expression':
-         findBlockById('block_cron_expression').element.initial_value = repeatConfig.cronExpression
+         if (repeatConfig.cronExpression != null) {
+            findBlockById('block_cron_expression').element.initial_value = repeatConfig.cronExpression
+         }
          break
    }
 }
@@ -115,15 +139,16 @@ const saveState = async (state) => {
    }
 }
 
-export function manageReportService(app) {
+export function registerManageReportService(app) {
    const listReports = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
       const state = await getState(ts)
-      const user = body.user?.id
-      if (user == null ) {
-         throw new Error('User is none in body, can not list the reports.')
-      }
       try {
+         const user = body.user?.id
+         if (user == null ) {
+            throw new Error('User is none in body, can not list the reports.')
+         }
+         const tz = await getUserTz(client, user)
          let offset = (state.page - 1) * LIMIT
          const filter = {
             status: { $ne: REPORT_STATUS.CREATED }
@@ -156,7 +181,9 @@ export function manageReportService(app) {
             ])
             logger.info(conversations)
             logger.info(reportUsers)
-            const nextReportSendingTime = formatDateTime(new Date(await nextInvocation(report._id)))
+            const nextInvocationTime = await nextInvocation(report._id)
+            const nextReportSendingTime = nextInvocationTime ?
+               formatDateTime(new Date(nextInvocationTime), tz) : 'No longer executed'
             logger.info(nextReportSendingTime)
             // report title
             listItemDetail[0].text.text = `*Title: ${report.title}*`
@@ -169,11 +196,11 @@ export function manageReportService(app) {
             // users to be notified
             listItemDetail[1].fields[3].text += reportUsers
             // scheduler start date
-            listItemDetail[1].fields[4].text += formatDate(report.startDate)
+            listItemDetail[1].fields[4].text += formatDate(report.repeatConfig.startDate)
             // scheduler end date
-            listItemDetail[1].fields[5].text += formatDate(report.endDate)
+            listItemDetail[1].fields[5].text += formatDate(report.repeatConfig.endDate)
             // repeat config summary
-            listItemDetail[1].fields[6].text += displayTimeSetting(report)
+            listItemDetail[1].fields[6].text += displayTimeSetting(report, tz)
             // next sending time
             listItemDetail[1].fields[7].text += nextReportSendingTime
 
@@ -189,7 +216,7 @@ export function manageReportService(app) {
          const listItemTemplate = loadBlocks('report/list-item-template')[0]
          const listItems = reportConfigurations.map(report => {
             const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':x:'
-            const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report)}`
+            const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report, tz)}`
             const listItem = cloneDeep(listItemTemplate)
             listItem.text.text = content
             listItem.accessory.value = report._id
@@ -370,12 +397,17 @@ export function manageReportService(app) {
       'action_id': 'action_edit_report'
    }, async ({ ack, body, payload, client }) => {
       await ack()
-      const id = payload.value
-      logger.info(`edit report, id: ${id}`)
-      if (!id) {
-         return
-      }
       try {
+         const id = payload.value
+         if (!id) {
+            throw new Error('report id is null when edit report')
+         }
+         logger.info(`edit report, id: ${id}`)
+         const user = body.user?.id
+         if (user == null ) {
+            throw new Error('User is none in body, can not list the reports.')
+         }
+         const tz = await getUserTz(client, user)
          const report = await ReportConfiguration.findById(id)
          logger.info('open edit report config modal')
          logger.info(report)
@@ -388,24 +420,36 @@ export function manageReportService(app) {
             .concat(reportModalTime).concat(reportModalRepeatType)
          const findBlockById = (blockId) => blocks.find(block => block.block_id === blockId)
          findBlockById('block_title').element.initial_value = report.title
-         findBlockById('block_conversation').element.initial_conversations = report.conversations
-         findBlockById('block_report_users').element.initial_users = report.reportUsers
-         findBlockById('block_start_date').element.initial_date = formatDate(report.startDate)
-         findBlockById('block_end_date').element.initial_date = formatDate(report.endDate)
-
+         if (report.conversations.length > 0) {
+            findBlockById('block_conversation').element.initial_conversations = report.conversations
+         }
+         if (report.reportUsers.length > 0) {
+            findBlockById('block_report_users').element.initial_users = report.reportUsers
+         }
+         if (report.repeatConfig.startDate != null) {
+            findBlockById('block_start_date').element.initial_date = formatDate(report.repeatConfig.startDate)
+         }
+         if (report.repeatConfig.endDate != null) {
+            findBlockById('block_end_date').element.initial_date = formatDate(report.repeatConfig.endDate)
+         }
+         
          const reportTypeBlock = findBlockById('block_report_type')
          reportTypeBlock.element.action_id = 'action_report_type_edit'
          const reportTypeOption = reportTypeBlock.element.options
             .find(option => option.value === report.reportType)
-         reportTypeBlock.element.initial_option = reportTypeOption
+         if (reportTypeOption != null) {
+            reportTypeBlock.element.initial_option = reportTypeOption
+         }
 
          const repeatTypeBlock = findBlockById('block_repeat_type')
          repeatTypeBlock.element.action_id = 'action_repeat_type_edit'
          const repeatTypeOption = repeatTypeBlock.element.options
             .find(option => option.value === report.repeatConfig.repeatType)
-         repeatTypeBlock.element.initial_option = repeatTypeOption
+         if (repeatTypeOption != null) {
+            repeatTypeBlock.element.initial_option = repeatTypeOption
+         }
          setReportDetailInitialValue(report, findBlockById)
-         setTimeSettingInitialValue(report, findBlockById)
+         setTimeSettingInitialValue(report, tz, findBlockById)
          await client.views.open({
             trigger_id: body.trigger_id,
             view: {
@@ -439,6 +483,7 @@ export function manageReportService(app) {
          return
       }
       const user = body['user']['id']
+      const tz = await getUserTz(client, user)
       const inputObj = {}
       const inputValues = Object.values(view['state']['values'])
       inputValues.forEach(actions => {
@@ -459,12 +504,13 @@ export function manageReportService(app) {
          reportLink: inputObj.action_report_link?.value,
          conversations: inputObj.action_conversation?.selected_conversations,
          reportUsers: inputObj.action_report_users?.selected_users,
-         startDate: inputObj.action_start_date?.selected_date,
-         endDate: inputObj.action_end_date?.selected_date,
          repeatConfig: {
             repeatType: inputObj.action_repeat_type_edit?.selected_option?.value,
+            tz,
+            startDate: inputObj.action_start_date?.selected_date,
+            endDate: inputObj.action_end_date?.selected_date,
             cronExpression: inputObj.action_cron_expression?.value,
-            date: inputObj.action_date?.selected_date,
+            date: formatDate(inputObj.action_date?.selected_date),
             time: inputObj.action_time?.selected_time,
             dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
             dayOfWeek: inputObj.action_day_of_week?.selected_options

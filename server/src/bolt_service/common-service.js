@@ -1,12 +1,14 @@
-import { loadBlocks } from '../utils.js'
+import { loadBlocks } from '../../common/utils.js'
+import { updateUserTzCache } from '../../common/slack-helper.js'
 
-export function commonService(app) {
+export function registerCommonService(app) {
 
    // Reply in channel
    app.event('app_mention', async ({ event, say }) => {
       await say(`Hi, <@${event['user']}>. ` + 
          `I'm a little shy in public, but I'll follow up you by direct message.`)
    })
+
    // Home page
    app.event('app_home_opened', async ({ client, event, logger }) => {
       try {
@@ -25,11 +27,19 @@ export function commonService(app) {
    })
 
    // Hi page
-   app.message(/^(hi|hello|hey)/i, async ({ event, say }) => {
+   app.message(/^(hi|hello|hey)/i, async ({ say }) => {
       await say({
          blocks: loadBlocks('welcome'),
          text: 'Select an action'
       })
    })
 
+   
+   // user profile change
+   app.event('user_change', async ({ payload }) => {
+      const userId = payload?.user?.id
+      const tz = payload?.user?.tz
+      console.log(`user change event happened for user ${userId}, tz ${tz}`)
+      updateUserTzCache(userId, tz)
+   })
 }

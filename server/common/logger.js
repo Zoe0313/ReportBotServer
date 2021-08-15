@@ -1,7 +1,6 @@
 import winston from 'winston'
 
 const today = new Date().toISOString().split('T')[0]
-console.log(today)
 
 const options = {
    file: {
@@ -27,5 +26,7 @@ const logger = winston.createLogger({
    ],
    exitOnError: false
 })
+
+logger.info(today)
 
 export default logger

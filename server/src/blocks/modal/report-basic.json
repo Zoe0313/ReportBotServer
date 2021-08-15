@@ -47,6 +47,7 @@
       {
          "type": "input",
          "block_id": "block_report_users",
+         "optional": true,
          "element": {
             "type": "multi_users_select",
             "placeholder": {

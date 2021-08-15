@@ -2,12 +2,13 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import schedule from 'node-schedule'
-import { ReportHistory } from '../../src/model/report-history.js'
-import { formatDate } from './utils.js'
+import { ReportHistory } from '../src/model/report-history.js'
+import { parseDateWithTz, convertTimeWithTz } from '../common/utils.js'
+import logger from '../common/logger.js'
 import { exec } from 'child_process'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
-import logger from '../../src/logger.js'
+
 // check timezone
 import moment from 'moment-timezone'
 const systemTz = moment.tz.guess()
@@ -115,10 +116,11 @@ const registerSchedule = function (report) {
    const repeatConfig = report.repeatConfig
    let scheduleOption = { start: repeatConfig.startDate, end: repeatConfig.endDate }
    let rule = new schedule.RecurrenceRule()
-   let date = null
+   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, systemTz)
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
-         date = formatDate(repeatConfig.date) + ' ' + repeatConfig.time
+         const dateStr = `${repeatConfig.date} ${repeatConfig.time}`
+         const date = parseDateWithTz(dateStr, repeatConfig.tz)
          scheduleOption = date
          break
       case 'hourly':
@@ -126,20 +128,20 @@ const registerSchedule = function (report) {
          scheduleOption.rule = rule
          break
       case 'daily':
-         rule.hour = repeatConfig.time.split(':')[0]
-         rule.minute = repeatConfig.time.split(':')[1]
+         rule.hour = convertedTime.split(':')[0]
+         rule.minute = convertedTime.split(':')[1]
          scheduleOption.rule = rule
          break
       case 'weekly':
          rule.dayOfWeek = repeatConfig.dayOfWeek
-         rule.hour = repeatConfig.time.split(':')[0]
-         rule.minute = repeatConfig.time.split(':')[1]
+         rule.hour = convertedTime.split(':')[0]
+         rule.minute = convertedTime.split(':')[1]
          scheduleOption.rule = rule
          break
       case 'monthly':
          rule.date = repeatConfig.dayOfMonth
-         rule.hour = repeatConfig.time.split(':')[0]
-         rule.minute = repeatConfig.time.split(':')[1]
+         rule.hour = convertedTime.split(':')[0]
+         rule.minute = convertedTime.split(':')[1]
          scheduleOption.rule = rule
          break
       case 'cron_expression':
@@ -152,9 +154,12 @@ const registerSchedule = function (report) {
    job = schedule.scheduleJob(scheduleOption, function (report) {
       commonHandler(report)
    }.bind(null, report))
-
-   scheduleJobStore[report._id] = job
-   logger.info(`success to schedule job ${report._id} ${report.title}`)
+   if (job != null) {
+      scheduleJobStore[report._id] = job
+      logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`) 
+   } else {
+      logger.info(`fail to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`) 
+   }
    return job
 }
 

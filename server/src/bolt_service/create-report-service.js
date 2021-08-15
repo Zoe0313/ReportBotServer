@@ -1,9 +1,10 @@
-import { loadBlocks } from '../utils.js'
+import { loadBlocks, formatDate } from '../../common/utils.js'
+import logger from '../../common/logger.js'
+import { getUserTz } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { registerSchedule } from '../scheduler-adapter.js'
-import logger from '../logger.js'
 
-export function createReportService(app) {
+export function registerCreateReportService(app) {
 
    // New report message configuration
    app.action({
@@ -96,6 +97,7 @@ export function createReportService(app) {
    app.view('view_create_report', async ({ ack, body, view, client }) => {
       await ack()
       const user = body['user']['id']
+      const tz = await getUserTz(client, user)
       const inputObj = {}
       const inputValues = Object.values(view['state']['values'])
       inputValues.forEach(actions => {
@@ -113,12 +115,13 @@ export function createReportService(app) {
          reportLink: inputObj.action_report_link?.value,
          conversations: inputObj.action_conversation?.selected_conversations,
          reportUsers: inputObj.action_report_users?.selected_users,
-         startDate: inputObj.action_start_date?.selected_date,
-         endDate: inputObj.action_end_date?.selected_date,
          repeatConfig: {
             repeatType: inputObj.action_repeat_type?.selected_option?.value,
+            tz,
+            startDate: inputObj.action_start_date?.selected_date,
+            endDate: inputObj.action_end_date?.selected_date,
             cronExpression: inputObj.action_cron_expression?.value,
-            date: inputObj.action_date?.selected_date,
+            date: formatDate(inputObj.action_date?.selected_date),
             time: inputObj.action_time?.selected_time,
             dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
             dayOfWeek: inputObj.action_day_of_week?.selected_options

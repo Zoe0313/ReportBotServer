@@ -1,6 +1,6 @@
 import { ReportConfiguration } from '../model/report-configuration.js'
 import { registerSchedule, unregisterSchedule } from '../scheduler-adapter.js'
-import logger from '../logger.js'
+import logger from '../../common/logger.js'
 
 export function registerApiRouters(receiver, app) {
    receiver.router.get('/health', (req, res) => {

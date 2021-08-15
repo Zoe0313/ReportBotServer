@@ -1,12 +1,11 @@
-import { loadBlocks, formatDateTime, getConversationsName } from '../utils.js'
+import { loadBlocks, formatDateTime } from '../../common/utils.js'
+import logger from '../../common/logger.js'
+import { getConversationsName, getUserTz } from '../../common/slack-helper.js'
 import { ReportHistory } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
 import { ReportConfiguration } from '../model/report-configuration.js'
-import lodash from 'lodash'
-const { cloneDeep } = lodash
+import cloneDeep from 'lodash/cloneDeep.js'
 import { performance } from 'perf_hooks'
-import logger from '../logger.js'
-
 
 const LIMIT = 5
 
@@ -32,11 +31,15 @@ const saveState = async (state) => {
    }
 }
 
-export function reportHistoryService(app) {
+export function registerReportHistoryService(app) {
    const listReportHistories = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
       const state = await getState(ts)
       const user = body.user?.id
+      if (user == null ) {
+         throw new Error('User is none in body, can not list the reports.')
+      }
+      const tz = await getUserTz(client, user)
       const t0 = performance.now()
       try {
          let offset = (state.page - 1) * LIMIT
@@ -112,7 +115,7 @@ export function reportHistoryService(app) {
             logger.info(reportUsers)
             listItemDetail[0].text.text = `*Title: ${selectedHistory.title}*`
             listItemDetail[1].fields[0].text += selectedHistory.reportType
-            listItemDetail[1].fields[1].text += formatDateTime(selectedHistory.sentTime)
+            listItemDetail[1].fields[1].text += formatDateTime(selectedHistory.sentTime, tz)
             listItemDetail[1].fields[2].text += conversations
             listItemDetail[1].fields[3].text += reportUsers
             listItemDetail[2].text.text += selectedHistory.content.substr(0, 1000)
@@ -120,7 +123,8 @@ export function reportHistoryService(app) {
          // list items
          const listItemTemplate = loadBlocks('report_history/list-item-template')[0]
          const listItems = reportHistories.map(history => {
-            const content = `*${history.title} - ${history.reportType}*\nSent at ${formatDateTime(history.sentTime)}`
+            const content = `*${history.title} - ${history.reportType}*\n` + 
+               `Sent at ${formatDateTime(history.sentTime, tz)}`
             const listItem = cloneDeep(listItemTemplate)
             listItem.text.text = content
             listItem.accessory.value = history._id

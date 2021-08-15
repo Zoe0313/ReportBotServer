@@ -4,14 +4,17 @@ dotenv.config()
 import bolt from '@slack/bolt'
 import express from 'express'
 import {
-   commonService, createReportService, manageReportService, reportHistoryService
+   registerCreateReportService, 
+   registerManageReportService, 
+   registerReportHistoryService, 
+   registerCommonService 
 } from './bolt_service/index.js'
 import { registerApiRouters } from './api_service/index.js'
 import { connectMongoDatabase } from './database-adapter.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import { registerSchedule } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
-import logger from './logger.js'
+import logger from '../common/logger.js'
 
 connectMongoDatabase(async () => {
    const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
@@ -31,7 +34,7 @@ const app = new bolt.App({
 })
 
 app.use(async ({ body, next }) => {
-   const user = body?.user?.id || body?.message?.user || body?.event?.message?.user
+   const user = body?.user?.id || body?.message?.user || body?.event?.user?.id || body?.event?.message?.user
    const type = body?.subtype || body?.type
    const t0 = performance.now()
    await next()
@@ -43,10 +46,10 @@ app.error((error) => {
    console.error(error);
 })
 
-commonService(app)
-createReportService(app)
-manageReportService(app)
-reportHistoryService(app)
+registerCommonService(app)
+registerCreateReportService(app) 
+registerManageReportService(app)
+registerReportHistoryService(app)
 
 registerApiRouters(receiver, app)
 

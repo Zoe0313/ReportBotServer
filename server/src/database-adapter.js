@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import logger from './logger.js'
+import logger from '../common/logger.js'
 
 function connectMongoDatabase(openFn) {
    mongoose.connect(`mongodb://${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`,

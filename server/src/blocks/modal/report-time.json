@@ -13,6 +13,7 @@
       {
          "type": "input",
          "block_id": "block_start_date",
+         "optional": true,
          "label": {
             "type": "plain_text",
             "text": ":arrow_forward: Start day",
@@ -20,7 +21,6 @@
          },
          "element": {
             "type": "datepicker",
-            "initial_date": "2021-01-01",
             "placeholder": {
                "type": "plain_text",
                "text": "Select a date",
@@ -32,6 +32,7 @@
       {
          "type": "input",
          "block_id": "block_end_date",
+         "optional": true,
          "label": {
             "type": "plain_text",
             "text": ":black_square_for_stop: End day",
@@ -39,7 +40,6 @@
          },
          "element": {
             "type": "datepicker",
-            "initial_date": "2021-12-31",
             "placeholder": {
                "type": "plain_text",
                "text": "Select a date",
