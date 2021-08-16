@@ -66,3 +66,47 @@ export function loadBlocks(name) {
       return cloneDeep(blocks)
    }
 }
+
+export function initReportTypeBlocks(report, blocks) {
+   if (report == null || report.reportType == null) {
+      const reportTypeBlock = findBlockById(blocks, 'block_report_type')
+      const reportTypeOption = reportTypeBlock.element.options
+         .find(option => option.value === 'bugzilla')
+      if (reportTypeOption != null) {
+         reportTypeBlock.element.initial_option = reportTypeOption
+      } else {
+         throw new Error('bugzilla option can not be found in the block.')
+      }
+   } else {
+      const reportSpecConfig = report.reportSpecConfig
+      switch (report.reportType) {
+         case 'bugzilla':
+            if (reportSpecConfig.bugzillaLink != null && reportSpecConfig.bugzillaLink.length > 0) {
+               findBlockById(blocks, 'block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
+            }
+            break
+         case 'perforce':
+            findBlockById(blocks, 'block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
+            break
+         case 'svs':
+            findBlockById(blocks, 'block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
+            break
+         case 'fastsvs':
+            findBlockById(blocks, 'block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
+            break
+         case 'text':
+            findBlockById(blocks, 'block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
+            break
+         case 'customized':
+            findBlockById(blocks, 'block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
+            break
+         default:
+            throw new Error(`report type ${report.reportType} is not supported`)
+      }
+   }
+}
+
+
+export function findBlockById(blocks, blockId) {
+   return blocks.find(block => block.block_id === blockId)
+}

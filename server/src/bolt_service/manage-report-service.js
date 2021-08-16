@@ -1,9 +1,11 @@
 import { formatDate, formatDateTime, convertTimeWithTz, parseDateWithTz } from '../../common/utils.js'
 import logger from '../../common/logger.js'
-import { loadBlocks, getConversationsName, getUserTz } from '../../common/slack-helper.js'
+import { loadBlocks, getConversationsName, getUserTz, initReportTypeBlocks, 
+   findBlockById } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
-import { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation } from '../scheduler-adapter.js'
+import { registerSchedule, unregisterSchedule, nextInvocation, 
+   cancelNextInvocation } from '../scheduler-adapter.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import isNumber from 'lodash/isNumber.js'
 import { performance } from 'perf_hooks'
@@ -45,33 +47,7 @@ function displayTimeSetting(report, tz) {
    }
 }
 
-function setReportDetailInitialValue(report, findBlockById) {
-   const reportSpecConfig = report.reportSpecConfig
-   switch (report.reportType) {
-      case 'bugzilla':
-         if (reportSpecConfig.bugzillaLink != null && reportSpecConfig.bugzillaLink.length > 0) {
-            findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
-         }
-         break
-      case 'perforce':
-         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
-         break
-      case 'svs':
-         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
-         break
-      case 'fastsvs':
-         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
-         break
-      case 'text':
-         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
-         break
-      case 'customized':
-         findBlockById('block_report_link').element.initial_value = reportSpecConfig.bugzillaLink
-         break
-   }
-}
-
-function setTimeSettingInitialValue(report, tz, findBlockById) {
+function setTimeSettingInitialValue(report, blocks, tz) {
    const repeatConfig = report.repeatConfig
    const convertedTime = convertTimeWithTz(repeatConfig.time,  repeatConfig.tz, tz)
    switch (repeatConfig.repeatType) {
@@ -79,41 +55,41 @@ function setTimeSettingInitialValue(report, tz, findBlockById) {
          const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
          const dateStr = formatDateTime(date, tz)
          if (dateStr != null && dateStr.split(' ').length === 2) {
-            findBlockById('block_date').element.initial_date = dateStr.split(' ')[0]
-            findBlockById('block_time').element.initial_time = dateStr.split(' ')[1]   
+            findBlockById(blocks, 'block_date').element.initial_date = dateStr.split(' ')[0]
+            findBlockById(blocks, 'block_time').element.initial_time = dateStr.split(' ')[1]   
          }
          break
       case 'hourly':
          if (repeatConfig.minsOfHour != null) {
-            findBlockById('block_mins_of_hour').element.initial_value = repeatConfig.minsOfHour.toString()
+            findBlockById(blocks, 'block_mins_of_hour').element.initial_value = repeatConfig.minsOfHour.toString()
          }
          break
       case 'daily':
          if (convertedTime != null) {
-            findBlockById('block_time').element.initial_time = convertedTime
+            findBlockById(blocks, 'block_time').element.initial_time = convertedTime
          }
          break
       case 'weekly':
          const dayOfWeekOptions = findBlockById('block_day_of_week')
             .element.options.filter(option => repeatConfig.dayOfWeek.includes(parseInt(option.value)))
          if (dayOfWeekOptions.length > 0) {
-            findBlockById('block_day_of_week').element.initial_options = dayOfWeekOptions
+            findBlockById(blocks, 'block_day_of_week').element.initial_options = dayOfWeekOptions
          }
          if (convertedTime != null) {
-            findBlockById('block_time').element.initial_time = convertedTime
+            findBlockById(blocks, 'block_time').element.initial_time = convertedTime
          }
          break
       case 'monthly':
          if (repeatConfig.dayOfMonth != null) {
-            findBlockById('block_day_of_month').element.initial_value = repeatConfig.dayOfMonth.toString()    
+            findBlockById(blocks, 'block_day_of_month').element.initial_value = repeatConfig.dayOfMonth.toString()    
          } 
          if (convertedTime != null) {
-            findBlockById('block_time').element.initial_time = convertedTime
+            findBlockById(blocks, 'block_time').element.initial_time = convertedTime
          }
          break
       case 'cron_expression':
          if (repeatConfig.cronExpression != null) {
-            findBlockById('block_cron_expression').element.initial_value = repeatConfig.cronExpression
+            findBlockById(blocks, 'block_cron_expression').element.initial_value = repeatConfig.cronExpression
          }
          break
    }
@@ -491,22 +467,21 @@ export function registerManageReportServiceHandler(app) {
          const reportModalRepeatType = loadBlocks(`repeat_type/${report.repeatConfig.repeatType}`)
          const blocks = reportModalBasic.concat(reportModalReportType)
             .concat(reportModalTime).concat(reportModalRepeatType)
-         const findBlockById = (blockId) => blocks.find(block => block.block_id === blockId)
-         findBlockById('block_title').element.initial_value = report.title
+         findBlockById(blocks, 'block_title').element.initial_value = report.title
          if (report.conversations.length > 0) {
-            findBlockById('block_conversation').element.initial_conversations = report.conversations
+            findBlockById(blocks, 'block_conversation').element.initial_conversations = report.conversations
          }
          if (report.mentionUsers.length > 0) {
-            findBlockById('block_report_users').element.initial_users = report.mentionUsers
+            findBlockById(blocks, 'block_report_users').element.initial_users = report.mentionUsers
          }
          if (report.repeatConfig.startDate != null) {
-            findBlockById('block_start_date').element.initial_date = formatDate(report.repeatConfig.startDate)
+            findBlockById(blocks, 'block_start_date').element.initial_date = formatDate(report.repeatConfig.startDate)
          }
          if (report.repeatConfig.endDate != null) {
-            findBlockById('block_end_date').element.initial_date = formatDate(report.repeatConfig.endDate)
+            findBlockById(blocks, 'block_end_date').element.initial_date = formatDate(report.repeatConfig.endDate)
          }
          
-         const reportTypeBlock = findBlockById('block_report_type')
+         const reportTypeBlock = findBlockById(blocks, 'block_report_type')
          reportTypeBlock.element.action_id = 'action_report_type_edit'
          const reportTypeOption = reportTypeBlock.element.options
             .find(option => option.value === report.reportType)
@@ -514,15 +489,15 @@ export function registerManageReportServiceHandler(app) {
             reportTypeBlock.element.initial_option = reportTypeOption
          }
 
-         const repeatTypeBlock = findBlockById('block_repeat_type')
+         const repeatTypeBlock = findBlockById(blocks, 'block_repeat_type')
          repeatTypeBlock.element.action_id = 'action_repeat_type_edit'
          const repeatTypeOption = repeatTypeBlock.element.options
             .find(option => option.value === report.repeatConfig.repeatType)
          if (repeatTypeOption != null) {
             repeatTypeBlock.element.initial_option = repeatTypeOption
          }
-         setReportDetailInitialValue(report, findBlockById)
-         setTimeSettingInitialValue(report, tz, findBlockById)
+         initReportTypeBlocks(report, blocks)
+         setTimeSettingInitialValue(report, blocks, tz)
          await client.views.open({
             trigger_id: body.trigger_id,
             view: {
@@ -667,10 +642,9 @@ export function registerManageReportServiceHandler(app) {
       const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
       const blocks = reportModalBasic.concat(reportModalReportType)
          .concat(reportModalTime).concat(reportModalRepeatType)
-      const findBlockById = (blockId) => blocks.find(block => block.block_id === blockId)
-      const reportTypeBlock = findBlockById('block_report_type')
+      const reportTypeBlock = findBlockById(blocks, 'block_report_type')
       reportTypeBlock.element.action_id = 'action_report_type_edit'
-      const repeatTypeBlock = findBlockById('block_repeat_type')
+      const repeatTypeBlock = findBlockById(blocks, 'block_repeat_type')
       repeatTypeBlock.element.action_id = 'action_repeat_type_edit'
       await ack()
       await client.views.update({

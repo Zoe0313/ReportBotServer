@@ -1,6 +1,6 @@
 import { formatDate } from '../../common/utils.js'
 import logger from '../../common/logger.js'
-import { loadBlocks, getUserTz } from '../../common/slack-helper.js'
+import { loadBlocks, getUserTz, initReportTypeBlocks } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { registerSchedule } from '../scheduler-adapter.js'
 
@@ -18,7 +18,9 @@ export function registerCreateReportServiceHandler(app) {
       try {
          const reportModalBasic = loadBlocks('modal/report-basic')
          const reportModalTime = loadBlocks('modal/report-time')
-         const blocks = reportModalBasic.concat(reportModalTime)
+         const reportTypeBlock = loadBlocks('report_type/bugzilla')
+         const blocks = reportModalBasic.concat(reportTypeBlock).concat(reportModalTime)
+         initReportTypeBlocks(null, blocks)
          await client.views.open({
             trigger_id: body.trigger_id,
             view: {
