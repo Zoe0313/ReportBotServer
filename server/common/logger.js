@@ -1,4 +1,5 @@
 import winston from 'winston'
+const format = winston.format
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -7,19 +8,25 @@ const options = {
       level: 'info',
       filename: `./log/slackbot-server-${today}.log`,
       handleExceptions: true,
-      json: true,
       colorize: false,
    },
    console: {
       level: 'debug',
       handleExceptions: true,
-      json: false,
       colorize: true,
    },
 }
 
+const myFormat = format.printf(({ level, message, timestamp }) => {
+   return `${timestamp} ${level}: ${message}`;
+})
+
 const logger = winston.createLogger({
    levels: winston.config.npm.levels,
+   format: format.combine(
+      format.timestamp(),
+      myFormat
+   ),
    transports: [
       new winston.transports.File(options.file),
       new winston.transports.Console(options.console)

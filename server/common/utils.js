@@ -27,7 +27,6 @@ export function formatDateTime(date, tz) {
 }
 
 export function parseDateWithTz(dateStr, tz) {
-   logger.warn(dateStr)
    if (dateStr == null) {
       return null
    }

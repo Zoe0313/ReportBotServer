@@ -4,10 +4,10 @@ dotenv.config()
 import bolt from '@slack/bolt'
 import express from 'express'
 import {
-   registerCreateReportService, 
-   registerManageReportService, 
-   registerReportHistoryService, 
-   registerCommonService 
+   registerCommonServiceHandler,
+   registerCreateReportServiceHandler, 
+   registerManageReportServiceHandler, 
+   registerReportHistoryServiceHandler
 } from './bolt_service/index.js'
 import { registerApiRouters } from './api_service/index.js'
 import { connectMongoDatabase } from './database-adapter.js'
@@ -15,6 +15,7 @@ import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration
 import { registerSchedule } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 import logger from '../common/logger.js'
+import e from 'express'
 
 connectMongoDatabase(async () => {
    const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
@@ -34,7 +35,8 @@ const app = new bolt.App({
 })
 
 app.use(async ({ body, next }) => {
-   const user = body?.user?.id || body?.message?.user || body?.event?.user?.id || body?.event?.message?.user
+   const user = body?.user?.id || body?.message?.user || 
+      body?.event?.user?.id || body?.event?.message?.user
    const type = body?.subtype || body?.type
    const t0 = performance.now()
    await next()
@@ -43,13 +45,24 @@ app.use(async ({ body, next }) => {
 })
 
 app.error((error) => {
-   console.error(error);
+   logger.error(error);
+   if (process.env.ISSUE_CHANNEL_ID) {
+      try {
+         app.client.chat.postMessage({
+            channel: process.env.ISSUE_CHANNEL_ID,
+            blocks: [],
+            text: `code: ${error.code}, message: ${error.original}, stack: ${error.original?.stack}`
+         })
+      } catch (e) {
+         logger.error(e)
+      }
+   }
 })
 
-registerCommonService(app)
-registerCreateReportService(app) 
-registerManageReportService(app)
-registerReportHistoryService(app)
+registerCommonServiceHandler(app)
+registerCreateReportServiceHandler(app) 
+registerManageReportServiceHandler(app)
+registerReportHistoryServiceHandler(app)
 
 registerApiRouters(receiver, app)
 

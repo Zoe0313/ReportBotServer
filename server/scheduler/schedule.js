@@ -104,7 +104,7 @@ const unregisterSchedule = function (id) {
       logger.info(`cancel previous schedule job ${id}`)
       job.cancel()
    } else {
-      logger.info(`failed to cancel previous schedule job ${id}`)
+      logger.warn(`failed to cancel previous schedule job ${id}`)
    }
    delete scheduleJobStore[id]
 }
@@ -164,7 +164,7 @@ const registerSchedule = function (report) {
       scheduleJobStore[report._id] = job
       logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`) 
    } else {
-      logger.info(`fail to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`) 
+      logger.warn(`fail to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`) 
    }
    return job
 }
@@ -178,7 +178,7 @@ const nextInvocation = function (id) {
    if (job != null) {
       return job.nextInvocation()
    } else {
-      logger.info(`failed to query next invocation since no job for ${id}`)
+      logger.warn(`failed to query next invocation since no job for ${id}`)
       return null
    }
 }
@@ -192,7 +192,7 @@ const cancelNextInvocation = function (id) {
    if (job != null) {
       job.cancelNext()
    } else {
-      logger.info(`failed to cancel next invocation since no job for ${id}`)
+      logger.warn(`failed to cancel next invocation since no job for ${id}`)
    }
 }
 

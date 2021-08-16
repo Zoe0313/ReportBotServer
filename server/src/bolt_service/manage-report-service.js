@@ -140,129 +140,125 @@ const saveState = async (state) => {
    }
 }
 
-export function registerManageReportService(app) {
+export function registerManageReportServiceHandler(app) {
    const listReports = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
       const state = await getState(ts)
-      try {
-         const user = body.user?.id
-         if (user == null ) {
-            throw new Error('User is none in body, can not list the reports.')
-         }
-         const tz = await getUserTz(client, user)
-         let offset = (state.page - 1) * LIMIT
-         const filter = {
-            status: { $ne: REPORT_STATUS.CREATED }
-         }
-         if (user != process.env.ADMIN_SLACK_USER) {
-            filter.creator = user
-         }
-         const count = await ReportConfiguration.countDocuments(filter)
-         if (offset >= count) {
-            state.page = 1
-            offset = 0
-         }
-         state.count = count
-         const reportConfigurations = await ReportConfiguration.find(filter).skip(offset).limit(LIMIT)
-
-         // list header
-         const listHeader = loadBlocks('report/list-header')
-         listHeader[1].text.text = `There are *${count} reports* in your account.`
-
-         // list item detail
-         let listItemDetail = loadBlocks('report/list-item-detail')
-         const report = await ReportConfiguration.findById(state.selectedId)
-         if (state.selectedId == null || report == null) {
-            state.selectedId == null
-            listItemDetail = []
-         } else {
-            const [conversations, mentionUsers] = await Promise.all([
-               getConversationsName(report.conversations),
-               getConversationsName(report.mentionUsers)
-            ])
-            logger.info(conversations)
-            logger.info(mentionUsers)
-            const nextInvocationTime = await nextInvocation(report._id)
-            const nextReportSendingTime = nextInvocationTime ?
-               formatDateTime(new Date(nextInvocationTime), tz) : 'No longer executed'
-            logger.info(nextReportSendingTime)
-            // report title
-            listItemDetail[0].text.text = `*Title: ${report.title}*`
-            // report type
-            listItemDetail[1].fields[0].text += report.reportType
-            // report status
-            listItemDetail[1].fields[1].text += REPORT_STATUS_DISPLAY[report.status]
-            // report channels to be sent
-            listItemDetail[1].fields[2].text += conversations
-            // users to be notified
-            listItemDetail[1].fields[3].text += mentionUsers
-            // scheduler start date
-            listItemDetail[1].fields[4].text += formatDate(report.repeatConfig.startDate)
-            // scheduler end date
-            listItemDetail[1].fields[5].text += formatDate(report.repeatConfig.endDate)
-            // repeat config summary
-            listItemDetail[1].fields[6].text += displayTimeSetting(report, tz)
-            // next sending time
-            listItemDetail[1].fields[7].text += nextReportSendingTime
-
-            // edit button
-            listItemDetail[2].elements[0].value = report._id
-            // remove button
-            listItemDetail[2].elements[1].value = report._id
-            // cancel next sending button
-            listItemDetail[2].elements[2].value = report._id
-         }
-
-         // list items
-         const listItemTemplate = loadBlocks('report/list-item-template')[0]
-         const listItems = reportConfigurations.map(report => {
-            const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':x:'
-            const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report, tz)}`
-            const listItem = cloneDeep(listItemTemplate)
-            listItem.text.text = content
-            listItem.accessory.value = report._id
-            if (report._id == state.selectedId) {
-               listItem.accessory.style = 'primary'
-            }
-            return listItem
-         })
-         // list pagination
-         let listPagination = loadBlocks('report/list-pagination')
-         const listPaginationElements = []
-         if (state.page > 1) {
-            listPaginationElements.push(listPagination[0].elements[0])
-         }
-         if (state.page * LIMIT < count) {
-            listPaginationElements.push(listPagination[0].elements[1])
-         }
-         if (listPaginationElements.length > 0) {
-            listPagination[0].elements = listPaginationElements
-         } else {
-            listPagination = []
-         }
-         const blocks = listHeader.concat(listItemDetail).concat(listItems).concat(listPagination)
-         if (ack) await ack()
-         if (isUpdate) {
-            state.channel = body.channel ? body.channel.id : state.channel
-            await client.chat.update({
-               channel: state.channel,
-               ts,
-               text: 'Manage all reports',
-               blocks
-            })
-         } else {
-            const response = await client.chat.postMessage({
-               channel: user,
-               text: 'Manage all reports',
-               blocks
-            })
-            state.channel = response.channel
-            state.ts = response.ts
-         }
-         await saveState(state)
-      } catch (e) {
-         throw e
+      const user = body.user?.id
+      if (user == null ) {
+         throw new Error('User is none in body, can not list the reports.')
       }
+      const tz = await getUserTz(client, user)
+      let offset = (state.page - 1) * LIMIT
+      const filter = {
+         status: { $ne: REPORT_STATUS.CREATED }
+      }
+      if (user != process.env.ADMIN_SLACK_USER) {
+         filter.creator = user
+      }
+      const count = await ReportConfiguration.countDocuments(filter)
+      if (offset >= count) {
+         state.page = 1
+         offset = 0
+      }
+      state.count = count
+      const reportConfigurations = await ReportConfiguration.find(filter).skip(offset).limit(LIMIT)
+
+      // list header
+      const listHeader = loadBlocks('report/list-header')
+      listHeader[1].text.text = `There are *${count} reports* in your account.`
+
+      // list item detail
+      let listItemDetail = loadBlocks('report/list-item-detail')
+      const report = await ReportConfiguration.findById(state.selectedId)
+      if (state.selectedId == null || report == null) {
+         state.selectedId == null
+         listItemDetail = []
+      } else {
+         const [conversations, mentionUsers] = await Promise.all([
+            getConversationsName(report.conversations),
+            getConversationsName(report.mentionUsers)
+         ])
+         logger.info(conversations)
+         logger.info(mentionUsers)
+         const nextInvocationTime = await nextInvocation(report._id)
+         const nextReportSendingTime = nextInvocationTime ?
+            formatDateTime(new Date(nextInvocationTime), tz) : 'No longer executed'
+         logger.info(nextReportSendingTime)
+         // report title
+         listItemDetail[0].text.text = `*Title: ${report.title}*`
+         // report type
+         listItemDetail[1].fields[0].text += report.reportType
+         // report status
+         listItemDetail[1].fields[1].text += REPORT_STATUS_DISPLAY[report.status]
+         // report channels to be sent
+         listItemDetail[1].fields[2].text += conversations
+         // users to be notified
+         listItemDetail[1].fields[3].text += mentionUsers
+         // scheduler start date
+         listItemDetail[1].fields[4].text += formatDate(report.repeatConfig.startDate)
+         // scheduler end date
+         listItemDetail[1].fields[5].text += formatDate(report.repeatConfig.endDate)
+         // repeat config summary
+         listItemDetail[1].fields[6].text += displayTimeSetting(report, tz)
+         // next sending time
+         listItemDetail[1].fields[7].text += nextReportSendingTime
+
+         // edit button
+         listItemDetail[2].elements[0].value = report._id
+         // remove button
+         listItemDetail[2].elements[1].value = report._id
+         // cancel next sending button
+         listItemDetail[2].elements[2].value = report._id
+      }
+
+      // list items
+      const listItemTemplate = loadBlocks('report/list-item-template')[0]
+      const listItems = reportConfigurations.map(report => {
+         const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':x:'
+         const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report, tz)}`
+         const listItem = cloneDeep(listItemTemplate)
+         listItem.text.text = content
+         listItem.accessory.value = report._id
+         if (report._id == state.selectedId) {
+            listItem.accessory.style = 'primary'
+         }
+         return listItem
+      })
+      // list pagination
+      let listPagination = loadBlocks('report/list-pagination')
+      const listPaginationElements = []
+      if (state.page > 1) {
+         listPaginationElements.push(listPagination[0].elements[0])
+      }
+      if (state.page * LIMIT < count) {
+         listPaginationElements.push(listPagination[0].elements[1])
+      }
+      if (listPaginationElements.length > 0) {
+         listPagination[0].elements = listPaginationElements
+      } else {
+         listPagination = []
+      }
+      const blocks = listHeader.concat(listItemDetail).concat(listItems).concat(listPagination)
+      if (ack) await ack()
+      if (isUpdate) {
+         state.channel = body.channel ? body.channel.id : state.channel
+         await client.chat.update({
+            channel: state.channel,
+            ts,
+            text: 'Manage all reports',
+            blocks
+         })
+      } else {
+         const response = await client.chat.postMessage({
+            channel: user,
+            text: 'Manage all reports',
+            blocks
+         })
+         state.channel = response.channel
+         state.ts = response.ts
+      }
+      await saveState(state)
    }
 
    // List all reports
@@ -270,22 +266,43 @@ export function registerManageReportService(app) {
       'block_id': 'block_welcome',
       'action_id': 'action_list'
    }, async ({ ack, body, client }) => {
-      await listReports(false, body.message?.ts, ack, body, client)
+      try {
+         await listReports(false, body.message?.ts, ack, body, client)
+      } catch (e) {
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to open report configs list. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
+      }
    })
 
    // Choose report to display detail
    app.action('action_choose_report_item', async ({ ack, body, payload, say, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      const selected = payload.value
-      logger.info('choose report id ' + selected)
-      if (state.selectedId === selected) {
-         state.selectedId = null
-      } else {
-         state.selectedId = selected
+      
+      try {
+         const selected = payload.value
+         logger.info('choose report id ' + selected)
+         if (state.selectedId === selected) {
+            state.selectedId = null
+         } else {
+            state.selectedId = selected
+         }
+         await saveState(state)
+         await listReports(true, ts, ack, body, client)
+      } catch (e) {
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to update report configs list. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
       }
-      await saveState(state)
-      await listReports(true, ts, ack, body, client)
    })
 
    // previous 5 reports
@@ -295,12 +312,23 @@ export function registerManageReportService(app) {
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      if (state.page > 1) {
-         state.page -= 1
-         await saveState(state)
-         await listReports(true, ts, ack, body, client)
-      } else {
-         await ack()
+      
+      try {
+         if (state.page > 1) {
+            state.page -= 1
+            await saveState(state)
+            await listReports(true, ts, ack, body, client)
+         } else {
+            await ack()
+         }
+      } catch (e) {
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to update report configs list. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
       }
    })
 
@@ -311,13 +339,56 @@ export function registerManageReportService(app) {
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      const count = await ReportConfiguration.countDocuments()
-      if (state.page * LIMIT < count) {
-         state.page += 1
-         await saveState(state)
+      
+      try {
+         const count = await ReportConfiguration.countDocuments()
+         if (state.page * LIMIT < count) {
+            state.page += 1
+            await saveState(state)
+            await listReports(true, ts, ack, body, client)
+         } else {
+            await ack()
+         }   
+      } catch (e) {
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to update report configs list. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
+      }
+   })
+
+
+   // change report status
+   app.action('action_change_report_status', async ({ ack, body, payload, client }) => {
+      const ts = body.message.ts
+      const state = await getState(ts)
+      
+      try {
+         const id = state.selectedId
+         const status = payload.selected_option.value
+         logger.info(`change report status, id: ${id}, status: ${status}`)
+         if (!id) {
+            throw new Error('report id is null')
+         }
+         await ReportConfiguration.updateOne({ _id: id }, { status })
+         const report = await ReportConfiguration.findById(id)
+         if (report.status === 'ENABLED') {
+            registerSchedule(report)
+         } else {
+            unregisterSchedule(id)
+         }
          await listReports(true, ts, ack, body, client)
-      } else {
-         await ack()
+      } catch (e) {
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to update report configs list. ' + 
+               'Please contact developers to resolve it.'
+         })
+         throw e
       }
    })
 
@@ -326,12 +397,12 @@ export function registerManageReportService(app) {
       'block_id': 'block_list_detail_actions',
       'action_id': 'action_remove_report'
    }, async ({ ack, body, payload, client }) => {
-      const id = payload.value
-      logger.info(`display remove report confirm modal, id: ${id}`)
-      if (!id) {
-         return
-      }
       try {
+         const id = payload.value
+         logger.info(`display remove report confirm modal, id: ${id}`)
+         if (!id) {
+            throw Error('id is null when remove report')
+         }
          const report = await ReportConfiguration.findById(id)
          const blocks = loadBlocks('modal/delete')
          blocks[0].text.text += `*${report.title}*`
@@ -368,12 +439,12 @@ export function registerManageReportService(app) {
    app.view('view_remove_confirmation', async ({ ack, body, payload, client }) => {
       const ts = payload.private_metadata
       const state = await getState(ts)
-      const id = state.selectedId
-      logger.info(`remove report, id: ${id} ts: ${ts}`)
-      if (!id) {
-         return
-      }
       try {
+         const id = state.selectedId
+         logger.info(`remove report, id: ${id} ts: ${ts}`)
+         if (!id) {
+            throw Error('id is null when remove report')
+         }
          await ReportConfiguration.deleteOne({ _id: id })
          unregisterSchedule(id)
          // await client.chat.postMessage({
@@ -485,13 +556,13 @@ export function registerManageReportService(app) {
    app.view('view_edit_report', async ({ ack, body, payload, view, client }) => {
       const ts = payload.private_metadata
       const state = await getState(ts)
-      const id = state.selectedId
-      logger.info(`edit report, id: ${id}`)
-      if (!id) {
-         throw new Error('report id is null when editing report config')
-      }
 
       try {
+         const id = state.selectedId
+         logger.info(`edit report, id: ${id}`)
+         if (!id) {
+            throw new Error('report id is null when editing report config')
+         }
          const user = body['user']['id']
          const tz = await getUserTz(client, user)
          const inputObj = {}
@@ -556,12 +627,12 @@ export function registerManageReportService(app) {
    app.action('action_cancel_next_report', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      const id = state.selectedId
-      logger.info(`cancel next report sending, id: ${id} ts: ${ts}`)
-      if (!id) {
-         return
-      }
       try {
+         const id = state.selectedId
+         logger.info(`cancel next report sending, id: ${id} ts: ${ts}`)
+         if (!id) {
+            throw new Error('report id is null')
+         }
          await cancelNextInvocation(id)
          await listReports(true, ts, ack, body, client)
       } catch (e) {
@@ -581,49 +652,45 @@ export function registerManageReportService(app) {
       const id = state.selectedId
       logger.info('change repeat type id ' + id)
       if (!id) {
-         return
+         throw new Error('report id is null')
       }
-      try {
-         const reportType = body.view.state.values
-            ?.block_report_type?.action_report_type_edit?.selected_option?.value
-         const repeatType = body.view.state.values
-            ?.block_repeat_type?.action_repeat_type_edit?.selected_option?.value
-         logger.info(`select report type ${reportType} of report scheduler`)
-         logger.info(`select repeat type ${repeatType} of report scheduler`)
+      const reportType = body.view.state.values
+         ?.block_report_type?.action_report_type_edit?.selected_option?.value
+      const repeatType = body.view.state.values
+         ?.block_repeat_type?.action_repeat_type_edit?.selected_option?.value
+      logger.info(`select report type ${reportType} of report scheduler`)
+      logger.info(`select repeat type ${repeatType} of report scheduler`)
 
-         const reportModalBasic = loadBlocks('modal/report-basic')
-         const reportModalReportType = loadBlocks(`report_type/${reportType}`)
-         const reportModalTime = loadBlocks('modal/report-time')
-         const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
-         const blocks = reportModalBasic.concat(reportModalReportType)
-            .concat(reportModalTime).concat(reportModalRepeatType)
-         const findBlockById = (blockId) => blocks.find(block => block.block_id === blockId)
-         const reportTypeBlock = findBlockById('block_report_type')
-         reportTypeBlock.element.action_id = 'action_report_type_edit'
-         const repeatTypeBlock = findBlockById('block_repeat_type')
-         repeatTypeBlock.element.action_id = 'action_repeat_type_edit'
-         await ack()
-         await client.views.update({
-            view_id: body.view.id,
-            hash: body.view.hash,
-            view: {
-               type: 'modal',
-               callback_id: 'view_edit_report',
-               private_metadata: ts,
-               title: {
-                  type: 'plain_text',
-                  text: 'Edit your report'
-               },
-               blocks,
-               submit: {
-                  type: 'plain_text',
-                  text: 'Submit'
-               }
+      const reportModalBasic = loadBlocks('modal/report-basic')
+      const reportModalReportType = loadBlocks(`report_type/${reportType}`)
+      const reportModalTime = loadBlocks('modal/report-time')
+      const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
+      const blocks = reportModalBasic.concat(reportModalReportType)
+         .concat(reportModalTime).concat(reportModalRepeatType)
+      const findBlockById = (blockId) => blocks.find(block => block.block_id === blockId)
+      const reportTypeBlock = findBlockById('block_report_type')
+      reportTypeBlock.element.action_id = 'action_report_type_edit'
+      const repeatTypeBlock = findBlockById('block_repeat_type')
+      repeatTypeBlock.element.action_id = 'action_repeat_type_edit'
+      await ack()
+      await client.views.update({
+         view_id: body.view.id,
+         hash: body.view.hash,
+         view: {
+            type: 'modal',
+            callback_id: 'view_edit_report',
+            private_metadata: ts,
+            title: {
+               type: 'plain_text',
+               text: 'Edit your report'
+            },
+            blocks,
+            submit: {
+               type: 'plain_text',
+               text: 'Submit'
             }
-         })
-      } catch (e) {
-         throw e
-      }
+         }
+      })
    }
 
    // change report type
@@ -640,25 +707,5 @@ export function registerManageReportService(app) {
       'action_id': 'action_repeat_type_edit'
    }, async (event) => {
       await updateModal(event)
-   })
-
-   // change report status
-   app.action('action_change_report_status', async ({ ack, body, payload, client }) => {
-      const ts = body.message.ts
-      const state = await getState(ts)
-      const id = state.selectedId
-      const status = payload.selected_option.value
-      logger.info(`change report status, id: ${id}, status: ${status}`)
-      if (!id) {
-         return
-      }
-      await ReportConfiguration.updateOne({ _id: id }, { status })
-      const report = await ReportConfiguration.findById(id)
-      if (report.status === 'ENABLED') {
-         registerSchedule(report)
-      } else {
-         unregisterSchedule(id)
-      }
-      await listReports(true, ts, ack, body, client)
    })
 }

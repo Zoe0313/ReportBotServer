@@ -1,11 +1,11 @@
-import { registerCreateReportService } from './create-report-service.js'
-import { registerManageReportService } from './manage-report-service.js'
-import { registerReportHistoryService } from './report-history-service.js'
-import { registerCommonService } from './common-service.js'
+import { registerCreateReportServiceHandler } from './create-report-service.js'
+import { registerManageReportServiceHandler } from './manage-report-service.js'
+import { registerReportHistoryServiceHandler } from './report-history-service.js'
+import { registerCommonServiceHandler } from './common-service.js'
 
 export { 
-   registerCreateReportService, 
-   registerManageReportService, 
-   registerReportHistoryService, 
-   registerCommonService 
+   registerCreateReportServiceHandler, 
+   registerManageReportServiceHandler, 
+   registerReportHistoryServiceHandler, 
+   registerCommonServiceHandler 
 }

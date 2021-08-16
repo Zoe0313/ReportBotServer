@@ -1,6 +1,6 @@
 import { loadBlocks, updateUserTzCache } from '../../common/slack-helper.js'
 
-export function registerCommonService(app) {
+export function registerCommonServiceHandler(app) {
 
    // Reply in channel
    app.event('app_mention', async ({ event, say }) => {

@@ -4,7 +4,7 @@ import { loadBlocks, getUserTz } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { registerSchedule } from '../scheduler-adapter.js'
 
-export function registerCreateReportService(app) {
+export function registerCreateReportServiceHandler(app) {
 
    // New report message configuration
    app.action({
@@ -49,40 +49,37 @@ export function registerCreateReportService(app) {
 
    const updateModal = async ({ ack, payload, body, client }) => {
       await ack()
-      try {
-         const reportType = body.view.state.values
-            ?.block_report_type?.action_report_type?.selected_option?.value
-         const repeatType = body.view.state.values
-            ?.block_repeat_type?.action_repeat_type?.selected_option?.value
-         logger.info(`select report type ${reportType} of report scheduler`)
-         logger.info(`select repeat type ${repeatType} of report scheduler`)
 
-         const reportModalBasic = loadBlocks('modal/report-basic')
-         const reportModalReportType = loadBlocks(`report_type/${reportType}`)
-         const reportModalTime = loadBlocks('modal/report-time')
-         const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
-         const blocks = reportModalBasic.concat(reportModalReportType)
-            .concat(reportModalTime).concat(reportModalRepeatType)
-         await client.views.update({
-            view_id: body.view.id,
-            hash: body.view.hash,
-            view: {
-               type: 'modal',
-               callback_id: 'view_create_report',
-               title: {
-                  type: 'plain_text',
-                  text: 'Create your new report'
-               },
-               blocks,
-               submit: {
-                  type: 'plain_text',
-                  text: 'Submit'
-               }
+      const reportType = body.view.state.values
+         ?.block_report_type?.action_report_type?.selected_option?.value
+      const repeatType = body.view.state.values
+         ?.block_repeat_type?.action_repeat_type?.selected_option?.value
+      logger.info(`select report type ${reportType} of report scheduler`)
+      logger.info(`select repeat type ${repeatType} of report scheduler`)
+
+      const reportModalBasic = loadBlocks('modal/report-basic')
+      const reportModalReportType = loadBlocks(`report_type/${reportType}`)
+      const reportModalTime = loadBlocks('modal/report-time')
+      const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
+      const blocks = reportModalBasic.concat(reportModalReportType)
+         .concat(reportModalTime).concat(reportModalRepeatType)
+      await client.views.update({
+         view_id: body.view.id,
+         hash: body.view.hash,
+         view: {
+            type: 'modal',
+            callback_id: 'view_create_report',
+            title: {
+               type: 'plain_text',
+               text: 'Create your new report'
+            },
+            blocks,
+            submit: {
+               type: 'plain_text',
+               text: 'Submit'
             }
-         })
-      } catch (e) {
-         throw e
-      }
+         }
+      })
    }
 
    app.action({
@@ -102,43 +99,43 @@ export function registerCreateReportService(app) {
    // Precheck and create a report request
    app.view('view_create_report', async ({ ack, body, view, client }) => {
       await ack()
-      const user = body['user']['id']
-      const tz = await getUserTz(client, user)
-      const inputObj = {}
-      const inputValues = Object.values(view['state']['values'])
-      inputValues.forEach(actions => {
-         Object.keys(actions).forEach(actionKey => {
-            inputObj[actionKey] = actions[actionKey]
-         })
-      })
-      logger.info(inputObj)
-      const parseIntNullable = (num) => num ? parseInt(num) : null
-      const report = new ReportConfiguration({
-         title: inputObj.action_title?.value,
-         creator: user,
-         status: REPORT_STATUS.CREATED,
-         reportType: inputObj.action_report_type?.selected_option?.value,
-         conversations: inputObj.action_conversation?.selected_conversations,
-         mentionUsers: inputObj.action_report_users?.selected_users,
-         reportSpecConfig: {
-            bugzillaLink: inputObj.action_report_link?.value
-         },
-         repeatConfig: {
-            repeatType: inputObj.action_repeat_type?.selected_option?.value,
-            tz,
-            startDate: inputObj.action_start_date?.selected_date,
-            endDate: inputObj.action_end_date?.selected_date,
-            cronExpression: inputObj.action_cron_expression?.value,
-            date: formatDate(inputObj.action_date?.selected_date),
-            time: inputObj.action_time?.selected_time,
-            dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
-            dayOfWeek: inputObj.action_day_of_week?.selected_options
-               ?.map(option => parseIntNullable(option.value)),
-            minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value),
-         }
-      })
-      logger.info(report)
       try {
+         const user = body['user']['id']
+         const tz = await getUserTz(client, user)
+         const inputObj = {}
+         const inputValues = Object.values(view['state']['values'])
+         inputValues.forEach(actions => {
+            Object.keys(actions).forEach(actionKey => {
+               inputObj[actionKey] = actions[actionKey]
+            })
+         })
+         logger.debug(inputObj)
+         const parseIntNullable = (num) => num ? parseInt(num) : null
+         const report = new ReportConfiguration({
+            title: inputObj.action_title?.value,
+            creator: user,
+            status: REPORT_STATUS.CREATED,
+            reportType: inputObj.action_report_type?.selected_option?.value,
+            conversations: inputObj.action_conversation?.selected_conversations,
+            mentionUsers: inputObj.action_report_users?.selected_users,
+            reportSpecConfig: {
+               bugzillaLink: inputObj.action_report_link?.value
+            },
+            repeatConfig: {
+               repeatType: inputObj.action_repeat_type?.selected_option?.value,
+               tz,
+               startDate: inputObj.action_start_date?.selected_date,
+               endDate: inputObj.action_end_date?.selected_date,
+               cronExpression: inputObj.action_cron_expression?.value,
+               date: formatDate(inputObj.action_date?.selected_date),
+               time: inputObj.action_time?.selected_time,
+               dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
+               dayOfWeek: inputObj.action_day_of_week?.selected_options
+                  ?.map(option => parseIntNullable(option.value)),
+               minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value),
+            }
+         })
+         logger.debug(report)
          const saved = await report.save()
          logger.info(`Create successful. saved report id ${saved._id}`)
          const blocks = loadBlocks('precheck-report')
@@ -167,16 +164,16 @@ export function registerCreateReportService(app) {
       'action_id': 'action_create_done'
    }, async ({ ack, payload, body, say, client }) => {
       await ack()
-      // change to enable status
-      logger.info(body)
-      const ts = body['message']['ts']
-      const id = payload.value
-      if (!ts || !id) {
-         return
-      }
-      logger.info(`report id : ${id}`)
-      logger.info(`ts : ${ts}`)
       try {
+         // change to enable status
+         logger.info(body)
+         const ts = body['message']['ts']
+         const id = payload.value
+         if (!ts || !id) {
+            return
+         }
+         logger.info(`report id : ${id}`)
+         logger.info(`ts : ${ts}`)
          const report = await ReportConfiguration.findById(id)
          logger.info(`report : ${report}`)
          report.status = REPORT_STATUS.ENABLED
@@ -206,11 +203,11 @@ export function registerCreateReportService(app) {
       'action_id': 'action_create_save'
    }, async ({ ack, payload, body, say, client }) => {
       await ack()
-      // change to draft status
-      const ts = body['message']['ts']
-      const id = payload.value
-      logger.info(`report id : ${id}`)
       try {
+         // change to draft status
+         const ts = body['message']['ts']
+         const id = payload.value
+         logger.info(`report id : ${id}`)
          const report = await ReportConfiguration.findById(id)
          report.status = REPORT_STATUS.DRAFT
          await report.save()
@@ -237,11 +234,11 @@ export function registerCreateReportService(app) {
       'action_id': 'action_create_cancel'
    }, async ({ ack, payload, body, say, client }) => {
       await ack()
-      // remove record in db
-      const ts = body['message']['ts']
-      const id = payload.value
-      logger.info(`report id : ${id}`)
       try {
+         // remove record in db
+         const ts = body['message']['ts']
+         const id = payload.value
+         logger.info(`report id : ${id}`)
          await ReportConfiguration.deleteOne({ _id: id })
          await client.chat.update({
             channel: body.channel.id,
