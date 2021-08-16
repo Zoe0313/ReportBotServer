@@ -1,11 +1,15 @@
-import { formatDate, formatDateTime, convertTimeWithTz, parseDateWithTz } from '../../common/utils.js'
+import {
+   formatDate, formatDateTime, convertTimeWithTz, parseDateWithTz
+} from '../../common/utils.js'
 import logger from '../../common/logger.js'
-import { loadBlocks, getConversationsName, getUserTz, initReportTypeBlocks, 
-   findBlockById } from '../../common/slack-helper.js'
+import {
+   loadBlocks, getConversationsName, getUserTz, initReportTypeBlocks, findBlockById
+} from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
-import { registerSchedule, unregisterSchedule, nextInvocation, 
-   cancelNextInvocation } from '../scheduler-adapter.js'
+import {
+   registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation
+} from '../scheduler-adapter.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import isNumber from 'lodash/isNumber.js'
 import { performance } from 'perf_hooks'
@@ -19,25 +23,27 @@ const WEEK = {
    4: 'Thursday',
    5: 'Friday',
    6: 'Saturday',
-   0: 'Sunday',
+   0: 'Sunday'
 }
 
 const REPORT_STATUS_DISPLAY = {
    CREATED: 'Created',
    DRAFT: ':x: Draft',
    DISABLED: ':x: Disabled',
-   ENABLED: ':white_check_mark: Enabled',
+   ENABLED: ':white_check_mark: Enabled'
 }
 
 function displayTimeSetting(report, tz) {
    const repeatConfig = report.repeatConfig
-   const dayOfWeekStr = repeatConfig.dayOfWeek ? 
-      repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ') : 'Empty'
-   const convertedTime = convertTimeWithTz(repeatConfig.time,  repeatConfig.tz, tz)
+   const dayOfWeekStr = repeatConfig.dayOfWeek
+      ? repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ')
+      : 'Empty'
+   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
    switch (repeatConfig.repeatType) {
-      case 'not_repeat': 
+      case 'not_repeat': {
          const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
          return `Not Repeat - ${formatDateTime(date, tz)}`
+      }
       case 'hourly': return `Hourly - ${repeatConfig.minsOfHour} mins of every hour`
       case 'daily': return `Daily - ${convertedTime} of every day`
       case 'weekly': return `Weekly - ${dayOfWeekStr} - ${convertedTime}`
@@ -49,19 +55,20 @@ function displayTimeSetting(report, tz) {
 
 function setTimeSettingInitialValue(report, blocks, tz) {
    const repeatConfig = report.repeatConfig
-   const convertedTime = convertTimeWithTz(repeatConfig.time,  repeatConfig.tz, tz)
+   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
          const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
          const dateStr = formatDateTime(date, tz)
          if (dateStr != null && dateStr.split(' ').length === 2) {
             findBlockById(blocks, 'block_date').element.initial_date = dateStr.split(' ')[0]
-            findBlockById(blocks, 'block_time').element.initial_time = dateStr.split(' ')[1]   
+            findBlockById(blocks, 'block_time').element.initial_time = dateStr.split(' ')[1]
          }
          break
       case 'hourly':
          if (repeatConfig.minsOfHour != null) {
-            findBlockById(blocks, 'block_mins_of_hour').element.initial_value = repeatConfig.minsOfHour.toString()
+            findBlockById(blocks, 'block_mins_of_hour').element.initial_value =
+               repeatConfig.minsOfHour.toString()
          }
          break
       case 'daily':
@@ -71,7 +78,8 @@ function setTimeSettingInitialValue(report, blocks, tz) {
          break
       case 'weekly':
          const dayOfWeekOptions = findBlockById('block_day_of_week')
-            .element.options.filter(option => repeatConfig.dayOfWeek.includes(parseInt(option.value)))
+            .element.options
+            .filter(option => repeatConfig.dayOfWeek.includes(parseInt(option.value)))
          if (dayOfWeekOptions.length > 0) {
             findBlockById(blocks, 'block_day_of_week').element.initial_options = dayOfWeekOptions
          }
@@ -81,15 +89,17 @@ function setTimeSettingInitialValue(report, blocks, tz) {
          break
       case 'monthly':
          if (repeatConfig.dayOfMonth != null) {
-            findBlockById(blocks, 'block_day_of_month').element.initial_value = repeatConfig.dayOfMonth.toString()    
-         } 
+            findBlockById(blocks, 'block_day_of_month').element.initial_value =
+               repeatConfig.dayOfMonth.toString()
+         }
          if (convertedTime != null) {
             findBlockById(blocks, 'block_time').element.initial_time = convertedTime
          }
          break
       case 'cron_expression':
          if (repeatConfig.cronExpression != null) {
-            findBlockById(blocks, 'block_cron_expression').element.initial_value = repeatConfig.cronExpression
+            findBlockById(blocks, 'block_cron_expression').element.initial_value =
+               repeatConfig.cronExpression
          }
          break
    }
@@ -121,7 +131,7 @@ export function registerManageReportServiceHandler(app) {
       logger.info('display or update list, ts ' + ts)
       const state = await getState(ts)
       const user = body.user?.id
-      if (user == null ) {
+      if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
       }
       const tz = await getUserTz(client, user)
@@ -129,7 +139,7 @@ export function registerManageReportServiceHandler(app) {
       const filter = {
          status: { $ne: REPORT_STATUS.CREATED }
       }
-      if (user != process.env.ADMIN_SLACK_USER) {
+      if (user !== process.env.ADMIN_SLACK_USER) {
          filter.creator = user
       }
       const count = await ReportConfiguration.countDocuments(filter)
@@ -148,7 +158,7 @@ export function registerManageReportServiceHandler(app) {
       let listItemDetail = loadBlocks('report/list-item-detail')
       const report = await ReportConfiguration.findById(state.selectedId)
       if (state.selectedId == null || report == null) {
-         state.selectedId == null
+         state.selectedId = null
          listItemDetail = []
       } else {
          const [conversations, mentionUsers] = await Promise.all([
@@ -158,8 +168,9 @@ export function registerManageReportServiceHandler(app) {
          logger.info(conversations)
          logger.info(mentionUsers)
          const nextInvocationTime = await nextInvocation(report._id)
-         const nextReportSendingTime = nextInvocationTime ?
-            formatDateTime(new Date(nextInvocationTime), tz) : 'No longer executed'
+         const nextReportSendingTime = nextInvocationTime
+            ? formatDateTime(new Date(nextInvocationTime), tz)
+            : 'No longer executed'
          logger.info(nextReportSendingTime)
          // report title
          listItemDetail[0].text.text = `*Title: ${report.title}*`
@@ -196,7 +207,7 @@ export function registerManageReportServiceHandler(app) {
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = report._id
-         if (report._id == state.selectedId) {
+         if (report._id === state.selectedId) {
             listItem.accessory.style = 'primary'
          }
          return listItem
@@ -239,8 +250,8 @@ export function registerManageReportServiceHandler(app) {
 
    // List all reports
    app.action({
-      'block_id': 'block_welcome',
-      'action_id': 'action_list'
+      block_id: 'block_welcome',
+      action_id: 'action_list'
    }, async ({ ack, body, client }) => {
       try {
          await listReports(false, body.message?.ts, ack, body, client)
@@ -248,7 +259,7 @@ export function registerManageReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to open report configs list. ' + 
+            text: 'Failed to open report configs list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -259,7 +270,7 @@ export function registerManageReportServiceHandler(app) {
    app.action('action_choose_report_item', async ({ ack, body, payload, say, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      
+
       try {
          const selected = payload.value
          logger.info('choose report id ' + selected)
@@ -274,7 +285,7 @@ export function registerManageReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report configs list. ' + 
+            text: 'Failed to update report configs list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -283,12 +294,12 @@ export function registerManageReportServiceHandler(app) {
 
    // previous 5 reports
    app.action({
-      'block_id': 'block_list_pagination',
-      'action_id': 'action_previous_page'
+      block_id: 'block_list_pagination',
+      action_id: 'action_previous_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      
+
       try {
          if (state.page > 1) {
             state.page -= 1
@@ -301,7 +312,7 @@ export function registerManageReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report configs list. ' + 
+            text: 'Failed to update report configs list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -310,12 +321,12 @@ export function registerManageReportServiceHandler(app) {
 
    // next 5 reports
    app.action({
-      'block_id': 'block_list_pagination',
-      'action_id': 'action_next_page'
+      block_id: 'block_list_pagination',
+      action_id: 'action_next_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      
+
       try {
          const count = await ReportConfiguration.countDocuments()
          if (state.page * LIMIT < count) {
@@ -324,24 +335,23 @@ export function registerManageReportServiceHandler(app) {
             await listReports(true, ts, ack, body, client)
          } else {
             await ack()
-         }   
+         }
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report configs list. ' + 
+            text: 'Failed to update report configs list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
       }
    })
 
-
    // change report status
    app.action('action_change_report_status', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      
+
       try {
          const id = state.selectedId
          const status = payload.selected_option.value
@@ -361,7 +371,7 @@ export function registerManageReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report configs list. ' + 
+            text: 'Failed to update report configs list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -370,8 +380,8 @@ export function registerManageReportServiceHandler(app) {
 
    // display remove modal
    app.action({
-      'block_id': 'block_list_detail_actions',
-      'action_id': 'action_remove_report'
+      block_id: 'block_list_detail_actions',
+      action_id: 'action_remove_report'
    }, async ({ ack, body, payload, client }) => {
       try {
          const id = payload.value
@@ -404,7 +414,7 @@ export function registerManageReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to open remove confirmation modal. ' + 
+            text: 'Failed to open remove confirmation modal. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -433,7 +443,7 @@ export function registerManageReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to delete the report configuration, ' + 
+            text: 'Failed to delete the report configuration, ' +
                'please contact developers to resolve it.'
          })
          throw e
@@ -442,8 +452,8 @@ export function registerManageReportServiceHandler(app) {
 
    // display edit modal
    app.action({
-      'block_id': 'block_list_detail_actions',
-      'action_id': 'action_edit_report'
+      block_id: 'block_list_detail_actions',
+      action_id: 'action_edit_report'
    }, async ({ ack, body, payload, client }) => {
       await ack()
       try {
@@ -453,7 +463,7 @@ export function registerManageReportServiceHandler(app) {
          }
          logger.info(`edit report, id: ${id}`)
          const user = body.user?.id
-         if (user == null ) {
+         if (user == null) {
             throw new Error('User is none in body, can not list the reports.')
          }
          const tz = await getUserTz(client, user)
@@ -469,19 +479,22 @@ export function registerManageReportServiceHandler(app) {
             .concat(reportModalTime).concat(reportModalRepeatType)
          findBlockById(blocks, 'block_title').element.initial_value = report.title
          if (report.conversations.length > 0) {
-            findBlockById(blocks, 'block_conversation').element.initial_conversations = report.conversations
+            findBlockById(blocks, 'block_conversation').element.initial_conversations =
+               report.conversations
          }
          if (report.mentionUsers.length > 0) {
             findBlockById(blocks, 'block_report_users').element.initial_users = report.mentionUsers
          }
          if (report.repeatConfig.startDate != null) {
-            findBlockById(blocks, 'block_start_date').element.initial_date = formatDate(report.repeatConfig.startDate)
+            findBlockById(blocks, 'block_start_date').element.initial_date =
+               formatDate(report.repeatConfig.startDate)
          }
          if (report.repeatConfig.endDate != null) {
-            findBlockById(blocks, 'block_end_date').element.initial_date = formatDate(report.repeatConfig.endDate)
+            findBlockById(blocks, 'block_end_date').element.initial_date =
+               formatDate(report.repeatConfig.endDate)
          }
-         
-         const reportTypeBlock = findBlockById(blocks, 'block_report_type')
+
+         const reportTypeBlock = findBlockById('block_report_type')
          reportTypeBlock.element.action_id = 'action_report_type_edit'
          const reportTypeOption = reportTypeBlock.element.options
             .find(option => option.value === report.reportType)
@@ -514,13 +527,13 @@ export function registerManageReportServiceHandler(app) {
                   text: 'Submit'
                }
             },
-            submit_disabled: true,
+            submit_disabled: true
          })
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to open edit report configuration modal. ' + 
+            text: 'Failed to open edit report configuration modal. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -538,10 +551,10 @@ export function registerManageReportServiceHandler(app) {
          if (!id) {
             throw new Error('report id is null when editing report config')
          }
-         const user = body['user']['id']
+         const user = body.user.id
          const tz = await getUserTz(client, user)
          const inputObj = {}
-         const inputValues = Object.values(view['state']['values'])
+         const inputValues = Object.values(view.state.values)
          inputValues.forEach(actions => {
             Object.keys(actions).forEach(actionKey => {
                inputObj[actionKey] = actions[actionKey]
@@ -573,11 +586,11 @@ export function registerManageReportServiceHandler(app) {
                dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
                dayOfWeek: inputObj.action_day_of_week?.selected_options
                   ?.map(option => parseIntNullable(option.value)),
-               minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value),
+               minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value)
             }
          }
          logger.info(report)
-   
+
          await ReportConfiguration.updateOne({ _id: id }, report)
          const newReport = await ReportConfiguration.findById(id)
          registerSchedule(newReport)
@@ -614,7 +627,7 @@ export function registerManageReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to cancel next sending report.' + 
+            text: 'Failed to cancel next sending report.' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -669,16 +682,16 @@ export function registerManageReportServiceHandler(app) {
 
    // change report type
    app.action({
-      'block_id': 'block_report_type',
-      'action_id': 'action_report_type_edit'
+      block_id: 'block_report_type',
+      action_id: 'action_report_type_edit'
    }, async (event) => {
       await updateModal(event)
    })
 
    // change repet type
    app.action({
-      'block_id': 'block_repeat_type',
-      'action_id': 'action_repeat_type_edit'
+      block_id: 'block_repeat_type',
+      action_id: 'action_repeat_type_edit'
    }, async (event) => {
       await updateModal(event)
    })

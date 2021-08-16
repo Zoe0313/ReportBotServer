@@ -10,6 +10,7 @@ const ReportConfigurationStateSchema = new mongoose.Schema({
 
 ReportConfigurationStateSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 7 })
 
-const ReportConfigurationState = mongoose.model('ReportConfigurationState', ReportConfigurationStateSchema)
+const ReportConfigurationState = mongoose
+   .model('ReportConfigurationState', ReportConfigurationStateSchema)
 
 export { ReportConfigurationState }

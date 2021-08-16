@@ -1,10 +1,9 @@
 import { loadBlocks, updateUserTzCache } from '../../common/slack-helper.js'
 
 export function registerCommonServiceHandler(app) {
-
    // Reply in channel
    app.event('app_mention', async ({ event, say }) => {
-      await say(`Hi, <@${event['user']}>. ` + 
+      await say(`Hi, <@${event.user}>. ` +
          `I'm a little shy in public, but I'll follow up you by direct message.`)
    })
 
@@ -12,12 +11,12 @@ export function registerCommonServiceHandler(app) {
    app.event('app_home_opened', async ({ client, event, logger }) => {
       try {
          await client.views.publish({
-            user_id: event['user'],
+            user_id: event.user,
             view: {
-               'type': 'home',
-               'private_metadata': event['channel'],
-               'callback_id': 'home_view',
-               'blocks': loadBlocks('welcome'),
+               type: 'home',
+               private_metadata: event.channel,
+               callback_id: 'home_view',
+               blocks: loadBlocks('welcome')
             }
          })
       } catch (e) {
@@ -33,7 +32,6 @@ export function registerCommonServiceHandler(app) {
       })
    })
 
-   
    // user profile change
    app.event('user_change', async ({ payload }) => {
       const userId = payload?.user?.id

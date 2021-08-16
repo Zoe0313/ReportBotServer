@@ -1,13 +1,18 @@
 import mongoose from 'mongoose'
-import logger from '../common/logger.js'
+import logger from './logger.js'
 
-function connectMongoDatabase(openFn) {
+async function connectMongoDatabase(openFn) {
    mongoose.connect(`mongodb://${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`,
       { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true }
-   )
+   ).catch(error => {
+      logger.error(error)
+      process.exit(1)
+   })
    mongoose.set('useFindAndModify', false)
    const db = mongoose.connection
-   db.on('error', logger.error.bind(console, 'connection error:'))
+   db.on('error', function(data) {
+      logger.error(data)
+   })
    db.once('open', function () {
       logger.info('connected to mongodb')
       if (openFn) {

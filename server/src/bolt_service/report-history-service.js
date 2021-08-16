@@ -36,7 +36,7 @@ export function registerReportHistoryServiceHandler(app) {
       logger.info('display or update list, ts ' + ts)
       const state = await getState(ts)
       const user = body.user?.id
-      if (user == null ) {
+      if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
       }
       const tz = await getUserTz(client, user)
@@ -53,9 +53,11 @@ export function registerReportHistoryServiceHandler(app) {
          ?.action_filter_by_start_date?.selected_date
       const filterEndDate = body?.state?.values[state.filterBlockId]
          ?.action_filter_by_end_date?.selected_date
-      logger.info({ filterReport, filterConversation, filterReportUser, filterStartDate, filterEndDate })
+      logger.info({
+         filterReport, filterConversation, filterReportUser, filterStartDate, filterEndDate
+      })
       const filters = { creator: user }
-      if (filterReport && filterReport != 'all') {
+      if (filterReport && filterReport !== 'all') {
          filters.reportConfigId = filterReport
       }
       if (filterConversation) {
@@ -90,11 +92,11 @@ export function registerReportHistoryServiceHandler(app) {
       listFilter[2].block_id = state.filterBlockId.toString()
       if (allReportConfigurations.length > 0) {
          listFilter[2].elements[0].options = allReportConfigurations.map(report => ({
-            "text": {
-               "type": "plain_text",
-               "text": report.title
+            text: {
+               type: 'plain_text',
+               text: report.title
             },
-            "value": report._id
+            value: report._id
          }))
       }
       // list header
@@ -104,7 +106,7 @@ export function registerReportHistoryServiceHandler(app) {
       let listItemDetail = loadBlocks('report_history/list-item-detail')
       const selectedHistory = await ReportHistory.findOne({ ...filters, _id: state.selectedId })
       if (state.selectedId == null || selectedHistory == null) {
-         state.selectedId == null
+         state.selectedId = null
          listItemDetail = []
       } else {
          const [conversations, mentionUsers] = await Promise.all([
@@ -123,12 +125,12 @@ export function registerReportHistoryServiceHandler(app) {
       // list items
       const listItemTemplate = loadBlocks('report_history/list-item-template')[0]
       const listItems = reportHistories.map(history => {
-         const content = `*${history.title} - ${history.reportType}*\n` + 
+         const content = `*${history.title} - ${history.reportType}*\n` +
             `Sent at ${formatDateTime(history.sentTime, tz)}`
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = history._id
-         if (history._id == state.selectedId) {
+         if (history._id === state.selectedId) {
             listItem.accessory.style = 'primary'
          }
          return listItem
@@ -149,7 +151,7 @@ export function registerReportHistoryServiceHandler(app) {
             listPagination[0].elements[1].options.push(newOption)
          }
          listPagination[0].elements[1].initial_option = listPagination[0].elements[1].options
-            .find(option => option.value == state.page.toString())
+            .find(option => option.value === state.page.toString())
          listPaginationElements.push(listPagination[0].elements[1])
       }
       if (state.page * LIMIT < count) {
@@ -163,7 +165,8 @@ export function registerReportHistoryServiceHandler(app) {
       if (ack) {
          await ack()
       }
-      const blocks = listFilter.concat(listHeader).concat(listItemDetail).concat(listItems).concat(listPagination)
+      const blocks = listFilter.concat(listHeader).concat(listItemDetail)
+         .concat(listItems).concat(listPagination)
       if (isUpdate) {
          state.channel = body.channel ? body.channel.id : state.channel
          await client.chat.update({
@@ -187,16 +190,16 @@ export function registerReportHistoryServiceHandler(app) {
 
    // List all reports
    app.action({
-      'block_id': 'block_welcome',
-      'action_id': 'action_history'
+      block_id: 'block_welcome',
+      action_id: 'action_history'
    }, async ({ ack, body, client }) => {
       try {
-         await listReportHistories(true, ts, ack, body, client)
+         await listReportHistories(false, body.message?.ts, ack, body, client)
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -212,12 +215,12 @@ export function registerReportHistoryServiceHandler(app) {
 
    app.action('action_filter_by_report', async ({ ack, body, client }) => {
       try {
-         await listReportHistories(true, ts, ack, body, client)
+         await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -226,12 +229,12 @@ export function registerReportHistoryServiceHandler(app) {
 
    app.action('action_filter_by_conversation', async ({ ack, body, client }) => {
       try {
-         await listReportHistories(true, ts, ack, body, client)
+         await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -240,12 +243,12 @@ export function registerReportHistoryServiceHandler(app) {
 
    app.action('action_filter_by_report_user', async ({ ack, body, client }) => {
       try {
-         await listReportHistories(true, ts, ack, body, client)
+         await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -254,12 +257,12 @@ export function registerReportHistoryServiceHandler(app) {
 
    app.action('action_filter_by_start_date', async ({ ack, body, client }) => {
       try {
-         await listReportHistories(true, ts, ack, body, client)
+         await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -268,12 +271,12 @@ export function registerReportHistoryServiceHandler(app) {
 
    app.action('action_filter_by_end_date', async ({ ack, body, client }) => {
       try {
-         await listReportHistories(true, ts, ack, body, client)
+         await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -284,7 +287,7 @@ export function registerReportHistoryServiceHandler(app) {
    app.action('action_choose_report_history_item', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      
+
       try {
          const selectedId = payload.value
          logger.info('choose report id ' + selectedId)
@@ -294,12 +297,12 @@ export function registerReportHistoryServiceHandler(app) {
             state.selectedId = selectedId
          }
          await saveState(state)
-         await listReportHistories(true, ts, ack, body, client)   
+         await listReportHistories(true, ts, ack, body, client)
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -308,8 +311,8 @@ export function registerReportHistoryServiceHandler(app) {
 
    // previous 5 reports
    app.action({
-      'block_id': 'block_history_list_pagination',
-      'action_id': 'action_previous_page'
+      block_id: 'block_history_list_pagination',
+      action_id: 'action_previous_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
@@ -326,7 +329,7 @@ export function registerReportHistoryServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -335,12 +338,12 @@ export function registerReportHistoryServiceHandler(app) {
 
    // jump to page
    app.action({
-      'block_id': 'block_history_list_pagination',
-      'action_id': 'action_cur_page'
+      block_id: 'block_history_list_pagination',
+      action_id: 'action_cur_page'
    }, async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      
+
       try {
          const page = parseInt(payload.selected_option.value)
          if (page != null && !isNaN(page)) {
@@ -354,7 +357,7 @@ export function registerReportHistoryServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -363,12 +366,12 @@ export function registerReportHistoryServiceHandler(app) {
 
    // next 5 reports
    app.action({
-      'block_id': 'block_history_list_pagination',
-      'action_id': 'action_next_page'
+      block_id: 'block_history_list_pagination',
+      action_id: 'action_next_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      
+
       try {
          const count = state.count
          if (state.page * LIMIT < count) {
@@ -382,7 +385,7 @@ export function registerReportHistoryServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' + 
+            text: 'Failed to update report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e

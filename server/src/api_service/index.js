@@ -14,7 +14,7 @@ export function registerApiRouters(receiver, app) {
    })
 
    receiver.router.get('/report_configurations', async (req, res) => {
-      let filter = {}
+      const filter = {}
       if (req.query.user != null) {
          filter.creator = req.query.user
       }
@@ -72,5 +72,4 @@ export function registerApiRouters(receiver, app) {
          res.json({ result: false, message: 'delete report configuration failed' })
       }
    })
-
 }

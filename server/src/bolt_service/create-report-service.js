@@ -5,11 +5,10 @@ import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuratio
 import { registerSchedule } from '../scheduler-adapter.js'
 
 export function registerCreateReportServiceHandler(app) {
-
    // New report message configuration
    app.action({
-      'block_id': 'block_welcome',
-      'action_id': 'action_create'
+      block_id: 'block_welcome',
+      action_id: 'action_create'
    }, async ({ ack, body, client }) => {
       logger.info('open create report config modal')
       if (ack) {
@@ -36,13 +35,13 @@ export function registerCreateReportServiceHandler(app) {
                   text: 'Submit'
                }
             },
-            submit_disabled: true,
+            submit_disabled: true
          })
       } catch (e) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to open create report configuration modal. ' + 
+            text: 'Failed to open create report configuration modal. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -85,15 +84,15 @@ export function registerCreateReportServiceHandler(app) {
    }
 
    app.action({
-      'block_id': 'block_repeat_type',
-      'action_id': 'action_repeat_type'
+      block_id: 'block_repeat_type',
+      action_id: 'action_repeat_type'
    }, async (event) => {
       await updateModal(event)
    })
 
    app.action({
-      'block_id': 'block_report_type',
-      'action_id': 'action_report_type'
+      block_id: 'block_report_type',
+      action_id: 'action_report_type'
    }, async (event) => {
       await updateModal(event)
    })
@@ -102,10 +101,10 @@ export function registerCreateReportServiceHandler(app) {
    app.view('view_create_report', async ({ ack, body, view, client }) => {
       await ack()
       try {
-         const user = body['user']['id']
+         const user = body.user.id
          const tz = await getUserTz(client, user)
          const inputObj = {}
-         const inputValues = Object.values(view['state']['values'])
+         const inputValues = Object.values(view.state.values)
          inputValues.forEach(actions => {
             Object.keys(actions).forEach(actionKey => {
                inputObj[actionKey] = actions[actionKey]
@@ -134,7 +133,7 @@ export function registerCreateReportServiceHandler(app) {
                dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
                dayOfWeek: inputObj.action_day_of_week?.selected_options
                   ?.map(option => parseIntNullable(option.value)),
-               minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value),
+               minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value)
             }
          })
          logger.debug(report)
@@ -143,7 +142,7 @@ export function registerCreateReportServiceHandler(app) {
          const blocks = loadBlocks('precheck-report')
          // create inited status report
          blocks.find(block => block.block_id === 'block_create_last')
-            .elements.forEach(element => element.value = saved._id)
+            .elements.forEach(element => { element.value = saved._id })
          await client.chat.postMessage({
             channel: user,
             blocks: blocks,
@@ -153,7 +152,7 @@ export function registerCreateReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to open precheck confirmation. ' + 
+            text: 'Failed to open precheck confirmation. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -162,14 +161,14 @@ export function registerCreateReportServiceHandler(app) {
 
    // Listen to the action_create_done action
    app.action({
-      'block_id': 'block_create_last',
-      'action_id': 'action_create_done'
+      block_id: 'block_create_last',
+      action_id: 'action_create_done'
    }, async ({ ack, payload, body, say, client }) => {
       await ack()
       try {
          // change to enable status
          logger.info(body)
-         const ts = body['message']['ts']
+         const ts = body.message.ts
          const id = payload.value
          if (!ts || !id) {
             return
@@ -192,7 +191,7 @@ export function registerCreateReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to enable new report configuration. ' + 
+            text: 'Failed to enable new report configuration. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -201,13 +200,13 @@ export function registerCreateReportServiceHandler(app) {
 
    // Listen to the action_create_save action
    app.action({
-      'block_id': 'block_create_last',
-      'action_id': 'action_create_save'
+      block_id: 'block_create_last',
+      action_id: 'action_create_save'
    }, async ({ ack, payload, body, say, client }) => {
       await ack()
       try {
          // change to draft status
-         const ts = body['message']['ts']
+         const ts = body.message.ts
          const id = payload.value
          logger.info(`report id : ${id}`)
          const report = await ReportConfiguration.findById(id)
@@ -223,7 +222,7 @@ export function registerCreateReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to save report configuration as draft. ' + 
+            text: 'Failed to save report configuration as draft. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -232,13 +231,13 @@ export function registerCreateReportServiceHandler(app) {
 
    // Listen to the action_create_cancel action
    app.action({
-      'block_id': 'block_create_last',
-      'action_id': 'action_create_cancel'
+      block_id: 'block_create_last',
+      action_id: 'action_create_cancel'
    }, async ({ ack, payload, body, say, client }) => {
       await ack()
       try {
          // remove record in db
-         const ts = body['message']['ts']
+         const ts = body.message.ts
          const id = payload.value
          logger.info(`report id : ${id}`)
          await ReportConfiguration.deleteOne({ _id: id })
@@ -252,7 +251,7 @@ export function registerCreateReportServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to cancel this report configuration. ' + 
+            text: 'Failed to cancel this report configuration. ' +
                'Please contact developers to resolve it.'
          })
          throw e

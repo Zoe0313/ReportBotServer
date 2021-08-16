@@ -5,7 +5,11 @@
    "main": "index.js",
    "type": "module",
    "scripts": {
+      "prepare": "cd .. && npx husky install server/.husky",
       "start": "nodemon --watch src --watch scheduler --watch common src/index.js",
+      "start:prod": "node src/index.js",
+      "lint": "eslint src",
+      "lint:fix": "eslint src --fix",
       "test": "echo \"Error: no test specified\" && exit 1"
    },
    "author": "ysixuan",
@@ -22,6 +26,12 @@
       "winston": "^3.3.3"
    },
    "devDependencies": {
+      "eslint": "^7.32.0",
+      "eslint-config-standard": "^16.0.3",
+      "eslint-plugin-import": "^2.24.0",
+      "eslint-plugin-node": "^11.1.0",
+      "eslint-plugin-promise": "^5.1.0",
+      "husky": "^7.0.1",
       "nodemon": "^2.0.12"
    },
    "nodemonconfig": {
