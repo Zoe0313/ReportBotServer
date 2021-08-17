@@ -25,7 +25,7 @@ export function registerCommonServiceHandler(app) {
    })
 
    // Hi page
-   app.message(/^(hi|hello|hey)/i, async ({ say }) => {
+   app.message(/^(hi|hello|hey|help)/i, async ({ say }) => {
       await say({
          blocks: loadBlocks('welcome'),
          text: 'Select an action'

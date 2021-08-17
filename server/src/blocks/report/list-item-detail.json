@@ -5,46 +5,6 @@
          "text": {
             "type": "mrkdwn",
             "text": "*Report title*"
-         },
-         "accessory": {
-            "type": "overflow",
-            "action_id": "action_change_report_status",
-            "confirm": {
-               "title": {
-                  "type": "plain_text",
-                  "text": "Change Report Status"
-               },
-               "text": {
-                  "type": "plain_text",
-                  "text": "Are you sure to change report status"
-               },
-               "confirm": {
-                  "type": "plain_text",
-                  "text": "Confirm"
-               },
-               "deny": {
-                  "type": "plain_text",
-                  "text": "Close"
-               }
-            },
-            "options": [
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "emoji": true,
-                     "text": ":white_check_mark: Enable"
-                  },
-                  "value": "ENABLED"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "emoji": true,
-                     "text": ":x: Disable "
-                  },
-                  "value": "DISABLED"
-               }
-            ]
          }
       },
       {
@@ -109,6 +69,62 @@
                "style": "danger",
                "value": "remove",
                "action_id": "action_remove_report"
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": ":white_check_mark: Enable"
+               },
+               "value": "ENABLED",
+               "action_id": "action_change_report_status",
+               "confirm": {
+                  "title": {
+                     "type": "plain_text",
+                     "text": "Enable report"
+                  },
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Are you sure enable this report?"
+                  },
+                  "confirm": {
+                     "type": "plain_text",
+                     "text": "Confirm"
+                  },
+                  "deny": {
+                     "type": "plain_text",
+                     "text": "Close"
+                  }
+               }
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": ":black_square_for_stop: Disable"
+               },
+               "value": "DISABLED",
+               "action_id": "action_change_report_status",
+               "confirm": {
+                  "title": {
+                     "type": "plain_text",
+                     "text": "Disable report"
+                  },
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Are you sure disable this report?"
+                  },
+                  "confirm": {
+                     "type": "plain_text",
+                     "text": "Confirm"
+                  },
+                  "deny": {
+                     "type": "plain_text",
+                     "text": "Close"
+                  }
+               }
             },
             {
                "type": "button",

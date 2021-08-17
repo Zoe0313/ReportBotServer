@@ -1,6 +1,10 @@
 import mongoose from 'mongoose'
 
-const REPORT_HISTORY_STATUS_ENUM = ['succeed', 'retry succeed', 'failed', 'timeout', 'canceled']
+const REPORT_HISTORY_STATUS = {
+   SUCCEED: 'SUCCEED',
+   FAILED: 'FAILED',
+   TIMEOUT: 'TIMEOUT'
+}
 
 const ReportHistorySchema = new mongoose.Schema({
    reportConfigId: { type: mongoose.ObjectId, required: true, immutable: true },
@@ -11,9 +15,9 @@ const ReportHistorySchema = new mongoose.Schema({
    mentionUsers: { type: [String], immutable: true },
    sentTime: { type: Date, required: true, immutable: true },
    content: { type: String, immutable: true },
-   status: { type: String, enum: REPORT_HISTORY_STATUS_ENUM, required: true }
+   status: { type: String, enum: REPORT_HISTORY_STATUS, required: true }
 }, { timestamps: true })
 
 const ReportHistory = mongoose.model('ReportHistory', ReportHistorySchema)
 
-export { ReportHistory }
+export { ReportHistory, REPORT_HISTORY_STATUS }

@@ -28,8 +28,8 @@ const WEEK = {
 
 const REPORT_STATUS_DISPLAY = {
    CREATED: 'Created',
-   DRAFT: ':x: Draft',
-   DISABLED: ':x: Disabled',
+   DRAFT: ':black_square_for_stop: Draft',
+   DISABLED: ':black_square_for_stop: Disabled',
    ENABLED: ':white_check_mark: Enabled'
 }
 
@@ -139,7 +139,7 @@ export function registerManageReportServiceHandler(app) {
       const filter = {
          status: { $ne: REPORT_STATUS.CREATED }
       }
-      if (user !== process.env.ADMIN_SLACK_USER) {
+      if (user !== process.env.ADMIN_USER_ID) {
          filter.creator = user
       }
       const count = await ReportConfiguration.countDocuments(filter)
@@ -195,14 +195,16 @@ export function registerManageReportServiceHandler(app) {
          listItemDetail[2].elements[0].value = report._id
          // remove button
          listItemDetail[2].elements[1].value = report._id
+         // enable or disable button, only display one button
+         listItemDetail[2].elements.splice(report.status === REPORT_STATUS.ENABLED ? 2 : 3, 1)
          // cancel next sending button
-         listItemDetail[2].elements[2].value = report._id
+         listItemDetail[2].elements[3].value = report._id
       }
 
       // list items
       const listItemTemplate = loadBlocks('report/list-item-template')[0]
       const listItems = reportConfigurations.map(report => {
-         const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':x:'
+         const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':black_square_for_stop:'
          const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report, tz)}`
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
@@ -354,7 +356,7 @@ export function registerManageReportServiceHandler(app) {
 
       try {
          const id = state.selectedId
-         const status = payload.selected_option.value
+         const status = payload.value
          logger.info(`change report status, id: ${id}, status: ${status}`)
          if (!id) {
             throw new Error('report id is null')
@@ -494,7 +496,7 @@ export function registerManageReportServiceHandler(app) {
                formatDate(report.repeatConfig.endDate)
          }
 
-         const reportTypeBlock = findBlockById('block_report_type')
+         const reportTypeBlock = findBlockById(blocks, 'block_report_type')
          reportTypeBlock.element.action_id = 'action_report_type_edit'
          const reportTypeOption = reportTypeBlock.element.options
             .find(option => option.value === report.reportType)

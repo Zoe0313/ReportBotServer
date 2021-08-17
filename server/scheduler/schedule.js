@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import schedule from 'node-schedule'
-import { ReportHistory } from '../src/model/report-history.js'
+import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
 import { parseDateWithTz, convertTimeWithTz } from '../common/utils.js'
 import { getConversationsName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
@@ -59,7 +59,7 @@ const commonHandler = async (report) => {
             mentionUsers: report.mentionUsers,
             sentTime: new Date(),
             content: stdout,
-            result: true
+            status: REPORT_HISTORY_STATUS.SUCCEED
          })
          reportHistory.save()
       } catch (e) {
@@ -73,7 +73,7 @@ const commonHandler = async (report) => {
             mentionUsers: report.mentionUsers,
             sentTime: new Date(),
             content: e.message,
-            result: false
+            status: REPORT_HISTORY_STATUS.FAILED
          })
          reportHistory.save()
       }
