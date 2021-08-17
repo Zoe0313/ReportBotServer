@@ -1,12 +1,9 @@
 {
    "blocks": [
       {
-         "type": "divider"
-      },
-      {
-         "type": "section",
+         "type": "header",
          "text": {
-            "type": "mrkdwn",
+            "type": "plain_text",
             "text": "There are *10 report send histories* in your account."
          }
       },

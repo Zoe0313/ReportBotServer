@@ -152,7 +152,7 @@ export function registerManageReportServiceHandler(app) {
 
       // list header
       const listHeader = loadBlocks('report/list-header')
-      listHeader[1].text.text = `There are *${count} reports* in your account.`
+      listHeader[0].text.text = `There are ${count} reports in your account.`
 
       // list item detail
       let listItemDetail = loadBlocks('report/list-item-detail')

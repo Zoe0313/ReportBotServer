@@ -3,7 +3,7 @@ import logger from '../../common/logger.js'
 import { loadBlocks, getConversationsName, getUserTz } from '../../common/slack-helper.js'
 import { ReportHistory } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
-import { ReportConfiguration } from '../model/report-configuration.js'
+import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import { performance } from 'perf_hooks'
 
@@ -53,9 +53,6 @@ export function registerReportHistoryServiceHandler(app) {
          ?.action_filter_by_start_date?.selected_date
       const filterEndDate = body?.state?.values[state.filterBlockId]
          ?.action_filter_by_end_date?.selected_date
-      logger.info({
-         filterReport, filterConversation, filterReportUser, filterStartDate, filterEndDate
-      })
       const filters = { creator: user }
       if (filterReport && filterReport !== 'all') {
          filters.reportConfigId = filterReport
@@ -84,14 +81,14 @@ export function registerReportHistoryServiceHandler(app) {
          ReportHistory.find(filters).skip(offset).limit(LIMIT).sort({
             sentTime: -1
          }),
-         ReportConfiguration.find({ creator: user })
+         ReportConfiguration.find({ creator: user, status: { $ne: REPORT_STATUS.CREATED } })
       ])
       state.count = count
       // list filter
       const listFilter = loadBlocks('report_history/list-filter')
-      listFilter[2].block_id = state.filterBlockId.toString()
+      listFilter[1].block_id = state.filterBlockId.toString()
       if (allReportConfigurations.length > 0) {
-         listFilter[2].elements[0].options = allReportConfigurations.map(report => ({
+         listFilter[1].elements[0].options = allReportConfigurations.map(report => ({
             text: {
                type: 'plain_text',
                text: report.title
@@ -101,7 +98,7 @@ export function registerReportHistoryServiceHandler(app) {
       }
       // list header
       const listHeader = loadBlocks('report_history/list-header')
-      listHeader[1].text.text = `There are *${count} report histories* in your account after conditions applied.`
+      listHeader[0].text.text = `There are ${count} report histories in your account after conditions applied.`
       // list item detail
       let listItemDetail = loadBlocks('report_history/list-item-detail')
       const selectedHistory = await ReportHistory.findOne({ ...filters, _id: state.selectedId })
@@ -165,7 +162,7 @@ export function registerReportHistoryServiceHandler(app) {
       if (ack) {
          await ack()
       }
-      const blocks = listFilter.concat(listHeader).concat(listItemDetail)
+      const blocks = listHeader.concat(listFilter).concat(listItemDetail)
          .concat(listItems).concat(listPagination)
       if (isUpdate) {
          state.channel = body.channel ? body.channel.id : state.channel
@@ -199,7 +196,7 @@ export function registerReportHistoryServiceHandler(app) {
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
-            text: 'Failed to update report sent history list. ' +
+            text: 'Failed to display report sent history list. ' +
                'Please contact developers to resolve it.'
          })
          throw e
@@ -208,9 +205,19 @@ export function registerReportHistoryServiceHandler(app) {
 
    app.action('action_clear_filters', async ({ ack, body, client }) => {
       const state = await getState(body.message?.ts)
-      state.filterBlockId += 1
-      await saveState(state)
-      await listReportHistories(true, body.message?.ts, ack, body, client)
+      try {
+         state.filterBlockId += 1
+         await saveState(state)
+         await listReportHistories(true, body.message?.ts, ack, body, client)
+      } catch (e) {
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to update report sent history list. ' +
+               'Please contact developers to resolve it.'
+         })
+         throw e
+      }
    })
 
    app.action('action_filter_by_report', async ({ ack, body, client }) => {

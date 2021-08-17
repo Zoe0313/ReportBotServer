@@ -51,13 +51,15 @@ app.use(async ({ body, next }) => {
 
 // global error handler
 app.error((error) => {
-   logger.error(error)
+   const errorMessage = `code: ${error.code}, message: ${error.original}, ` +
+      `stack: ${error.original?.stack}`
+   logger.error(errorMessage)
    if (process.env.ISSUE_CHANNEL_ID) {
       try {
          app.client.chat.postMessage({
             channel: process.env.ISSUE_CHANNEL_ID,
             blocks: [],
-            text: `code: ${error.code}, message: ${error.original}, stack: ${error.original?.stack}`
+            text: errorMessage
          })
       } catch (e) {
          logger.error(e)

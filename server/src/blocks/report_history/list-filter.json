@@ -1,9 +1,6 @@
 {
    "blocks": [
       {
-         "type": "divider"
-      },
-      {
          "type": "section",
          "text": {
             "type": "mrkdwn",
@@ -81,6 +78,9 @@
                "action_id": "action_filter_by_end_date"
             }
          ]
+      },
+      {
+         "type": "divider"
       }
    ]
 }

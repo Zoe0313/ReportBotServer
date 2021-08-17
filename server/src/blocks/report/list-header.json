@@ -1,13 +1,10 @@
 {
    "blocks": [
       {
-         "type": "divider"
-      },
-      {
-         "type": "section",
+         "type": "header",
          "text": {
-            "type": "mrkdwn",
-            "text": "There are *10 reports* in your account."
+            "type": "plain_text",
+            "text": "There are 10 reports in your account."
          }
       },
       {
