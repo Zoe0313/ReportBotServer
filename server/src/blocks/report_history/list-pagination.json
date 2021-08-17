@@ -1,0 +1,51 @@
+{
+   "blocks": [
+      {
+         "block_id": "block_history_list_pagination",
+         "type": "actions",
+         "elements": [
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": "Previous 5 Reports"
+               },
+               "value": "0",
+               "action_id": "action_previous_page"
+            },
+            {
+               "type": "static_select",
+               "placeholder": {
+                  "type": "plain_text",
+                  "text": "Page",
+                  "emoji": true
+               },
+               "options": [
+                  {
+                     "text": {
+                        "type": "plain_text",
+                        "text": "1"
+                     },
+                     "value": "1"
+                  }
+               ],
+               "action_id": "action_cur_page"
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": "Next 5 Reports"
+               },
+               "value": "0",
+               "action_id": "action_next_page"
+            }
+         ]
+      },
+      {
+         "type": "divider"
+      }
+   ]
+}

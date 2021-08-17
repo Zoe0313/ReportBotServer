@@ -1,0 +1,42 @@
+{
+   "blocks": [
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": "*Report title*"
+         }
+      },
+      {
+         "type": "section",
+         "fields": [
+            {
+               "type": "mrkdwn",
+               "text": "*Report Type: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Sent Time: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Conversation: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Report Users: *\n"
+            }
+         ]
+      },
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": "*Content: *\n"
+         }
+      },
+      {
+         "type": "divider"
+      }
+   ]
+}

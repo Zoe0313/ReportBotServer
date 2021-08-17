@@ -1,37 +1,36 @@
-# slackbot dockerfile
-FROM eamonwoortman/alpine-python-curl-zip
+# Slackbot Server Dockerfile
+FROM nikolaik/python-nodejs:python3.8-nodejs14
 
+RUN apt-get install tzdata
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+ENV TZ=Asia/Shanghai
+
+# upgrade python, install python lib
 RUN python -m pip install --upgrade pip
+RUN pip install requests
+RUN pip install certifi
+RUN pip install urllib3
+RUN pip install bs4
+RUN pip install datetime
+RUN pip install filelock
+RUN pip install slack_sdk
+RUN pip install httplib2
+RUN pip install oauth2client
+RUN pip install --upgrade google-api-python-client
+RUN pip install --upgrade google-auth
+RUN pip install python-dateutil
 
-RUN pip install requests && \
-    pip install certifi  && \
-    pip install urllib3 && \
-    pip install bs4 && \
-    pip install datetime
+# set perforce environment
+ENV P4PORT perforce.eng.vmware.com:1666
 
-RUN mkdir -p /slackbot
-# under slackbot directory, copy the source code to /slackbot/bugzilla
+RUN npm install -g nodemon
 
-COPY ./ /slackbot/
+WORKDIR slackbot
 
-ENV PYTHONPATH /slackbot
+COPY . .
 
-WORKDIR /slackbot
+WORKDIR server
 
-RUN chmod +x job
-# Configure the cron
-# Copy file to the cron.d directory
-COPY ./cron /etc/cron.d/cron
+RUN npm install && cp .env.product .env
 
-# Give execution rights on the cron job
-RUN chmod 0644 /etc/cron.d/cron
-
-# Apply cron job
-RUN crontab /etc/cron.d/cron
-
-# Create the log file to be able to run tail
-RUN touch /var/log/cron.log
-
-# Start the cron
-CMD crond && tail -f /var/log/cron.log
-# CMD '/bin/sh'
+CMD [ "npm", "run", "start" ]

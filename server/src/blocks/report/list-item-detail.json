@@ -1,0 +1,163 @@
+{
+   "blocks": [
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": "*Report title*"
+         }
+      },
+      {
+         "type": "section",
+         "fields": [
+            {
+               "type": "mrkdwn",
+               "text": "*Report Type: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Status: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Conversation: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Report Users: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Start Date: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*End Date: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Repeat Time: *\n"
+            },
+            {
+               "type": "mrkdwn",
+               "text": "*Next Sending Time: *\n"
+            }
+         ]
+      },
+      {
+         "type": "actions",
+         "block_id": "block_list_detail_actions",
+         "elements": [
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": "Edit"
+               },
+               "style": "primary",
+               "value": "edit",
+               "action_id": "action_edit_report"
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": "Remove"
+               },
+               "style": "danger",
+               "value": "remove",
+               "action_id": "action_remove_report"
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": ":white_check_mark: Enable"
+               },
+               "value": "ENABLED",
+               "action_id": "action_change_report_status",
+               "confirm": {
+                  "title": {
+                     "type": "plain_text",
+                     "text": "Enable report"
+                  },
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Are you sure enable this report?"
+                  },
+                  "confirm": {
+                     "type": "plain_text",
+                     "text": "Confirm"
+                  },
+                  "deny": {
+                     "type": "plain_text",
+                     "text": "Close"
+                  }
+               }
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": ":black_square_for_stop: Disable"
+               },
+               "value": "DISABLED",
+               "action_id": "action_change_report_status",
+               "confirm": {
+                  "title": {
+                     "type": "plain_text",
+                     "text": "Disable report"
+                  },
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Are you sure disable this report?"
+                  },
+                  "confirm": {
+                     "type": "plain_text",
+                     "text": "Confirm"
+                  },
+                  "deny": {
+                     "type": "plain_text",
+                     "text": "Close"
+                  }
+               }
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "emoji": true,
+                  "text": "Cancel Next"
+               },
+               "value": "Cancel Next",
+               "action_id": "action_cancel_next_report",
+               "confirm": {
+                  "title": {
+                     "type": "plain_text",
+                     "text": "Cancel next report"
+                  },
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Are you sure cancel next report sending?"
+                  },
+                  "confirm": {
+                     "type": "plain_text",
+                     "text": "Confirm"
+                  },
+                  "deny": {
+                     "type": "plain_text",
+                     "text": "Close"
+                  }
+               }
+            }
+         ]
+      },
+      {
+         "type": "divider"
+      }
+   ]
+}
