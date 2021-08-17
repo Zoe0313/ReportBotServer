@@ -9,7 +9,7 @@ import { performance } from 'perf_hooks'
 
 const LIMIT = 5
 
-const getState = async (ts) => {
+async function getState(ts) {
    let state = await ReportHistoryState.findOne({ ts })
    if (state == null) {
       state = ReportHistoryState({
@@ -25,9 +25,11 @@ const getState = async (ts) => {
    return state
 }
 
-const saveState = async (state) => {
+async function saveState(state) {
    if (state != null) {
       await ReportHistoryState.updateOne({ _id: state._id }, state)
+   } else {
+      throw new Error('State should not be null.')
    }
 }
 

@@ -105,7 +105,7 @@ function setTimeSettingInitialValue(report, blocks, tz) {
    }
 }
 
-const getState = async (ts) => {
+async function getState(ts) {
    let state = await ReportConfigurationState.findOne({ ts })
    if (state == null) {
       state = ReportConfigurationState({
@@ -120,9 +120,11 @@ const getState = async (ts) => {
    return state
 }
 
-const saveState = async (state) => {
+async function saveState(state) {
    if (state != null) {
       await ReportConfigurationState.updateOne({ _id: state._id }, state)
+   } else {
+      throw new Error('State should not be null.')
    }
 }
 

@@ -32,7 +32,7 @@ export function registerApiRouters(receiver, app) {
    receiver.router.get('/report_configurations/:id', async (req, res) => {
       if (req.params.id == null) {
          res.status(400)
-         res.json({ result: false, message: 'invalid id' })
+         res.json({ result: false, message: 'Invalid id' })
          return
       }
       const report = await ReportConfiguration.findById(req.params.id)
@@ -75,7 +75,7 @@ export function registerApiRouters(receiver, app) {
          unregisterSchedule(req.params.id)
          res.json({ result: true })
       } else {
-         res.json({ result: false, message: 'delete report configuration failed' })
+         res.json({ result: false, message: 'Delete report configuration failed' })
       }
    })
 }
