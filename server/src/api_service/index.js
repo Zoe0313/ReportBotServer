@@ -14,6 +14,11 @@ export function registerApiRouters(receiver, app) {
    })
 
    receiver.router.get('/report_configurations', async (req, res) => {
+      if (req.query.user == null) {
+         res.status(400)
+         res.json({ result: false, message: 'User ID is null' })
+         return
+      }
       const filter = {}
       if (req.query.user != null) {
          filter.creator = req.query.user
@@ -28,6 +33,7 @@ export function registerApiRouters(receiver, app) {
       if (req.params.id == null) {
          res.status(400)
          res.json({ result: false, message: 'invalid id' })
+         return
       }
       const report = await ReportConfiguration.findById(req.params.id)
       logger.info(report)

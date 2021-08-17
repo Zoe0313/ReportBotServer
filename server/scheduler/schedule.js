@@ -18,7 +18,6 @@ logger.info('system time zone ' + systemTz)
 const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
-
 const execCommand = function (cmd) {
    return new Promise((resolve, reject) => {
       exec(cmd, (error, stdout, stderr) => {

@@ -18,7 +18,7 @@ const options = {
 }
 
 const myFormat = format.printf(({ level, message, timestamp }) => {
-   return `${timestamp} ${level}: ${message}`;
+   return `${timestamp} ${level}: ${JSON.stringify(message)}`;
 })
 
 const logger = winston.createLogger({

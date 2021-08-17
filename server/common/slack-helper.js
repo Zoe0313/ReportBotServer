@@ -10,13 +10,13 @@ export const getUserTz = async (client, userId) => {
       if (userId == null) {
          throw new Error(`user id is null`)
       }
-      if (userTzCache[userId] != null) {
-         return userTzCache[userId]
-      }
+      // if (userTzCache[userId] != null) {
+      //    return userTzCache[userId]
+      // }
       const userInfo = await client.users.info({ user: userId })
       const tz = userInfo?.user?.tz
       if (tz != null) {
-         userTzCache[userId] = tz
+         // userTzCache[userId] = tz
          return tz
       } else {
          throw new Error(`can not get tz of user ${userId}`)
