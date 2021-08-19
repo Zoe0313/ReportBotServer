@@ -12,7 +12,6 @@
     "rules": {
         "space-before-function-paren": ["off"],
         "no-case-declarations": ["off"],
-        "eol-last": ["off"],
         "no-unused-vars": ["warn"],
         "max-len": ["error", { "code": 100, "ignoreTemplateLiterals": true, "ignoreRegExpLiterals": true }],
         "eqeqeq": ["error", "smart"],
