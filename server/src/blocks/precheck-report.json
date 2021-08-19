@@ -7,7 +7,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": "Step 3: Precheck and create your new report request",
+            "text": "Last Step: Precheck and enable your new report configuration",
             "emoji": true
          }
       },
@@ -57,7 +57,7 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": ":mega: Notice: Once you create the report, it will be reported to the target conversations at the recurrence. \n:mega: Or save your report as a draft. You can edit or delete through *Manage my reports*."
+            "text": ":mega: Notice: Please enable your new report configuration, or save as a draft. \n:mega: You can edit or delete through *Manage my reports*."
          }
       },
       {

@@ -4,7 +4,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": "The second step, you need to set up the reccurence time for your new report"
+            "text": "Date time setting for one-time report"
          }
       },
       {
@@ -21,7 +21,7 @@
          },
          "label": {
             "type": "plain_text",
-            "text": "Label",
+            "text": ":date: Select a date for your report",
             "emoji": true
          }
       },

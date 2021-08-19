@@ -4,7 +4,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": "The second step, you need to set up the reccurence time for your new report"
+            "text": ":date: Setup for monthly report"
          }
       },
       {
@@ -36,7 +36,7 @@
             "initial_time": "08:00",
             "placeholder": {
                "type": "plain_text",
-               "text": "Select time for daily report",
+               "text": "Select time for monthly report",
                "emoji": true
             },
             "action_id": "action_time"

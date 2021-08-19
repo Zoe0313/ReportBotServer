@@ -18,9 +18,12 @@ export function registerCreateReportServiceHandler(app) {
       }
       try {
          const reportModalBasic = loadBlocks('modal/report-basic')
-         const reportModalTime = loadBlocks('modal/report-time')
          const reportTypeBlock = loadBlocks('report_type/bugzilla')
-         const blocks = reportModalBasic.concat(reportTypeBlock).concat(reportModalTime)
+         const reportAdvanced = loadBlocks('modal/report-advanced')
+         const reportModalRecurrence = loadBlocks('modal/report-recurrence')
+         const reportModalTime = loadBlocks('modal/report-time')
+         const blocks = reportModalBasic.concat(reportTypeBlock).concat(reportAdvanced)
+            .concat(reportModalRecurrence).concat(reportModalTime)
          findBlockById(blocks, 'block_start_date').element.initial_date =
             formatDate(new Date())
          initReportTypeBlocks(null, blocks)
@@ -64,10 +67,12 @@ export function registerCreateReportServiceHandler(app) {
 
       const reportModalBasic = loadBlocks('modal/report-basic')
       const reportModalReportType = loadBlocks(`report_type/${reportType}`)
-      const reportModalTime = loadBlocks('modal/report-time')
+      const reportAdvanced = loadBlocks('modal/report-advanced')
+      const reportModalRecurrence = loadBlocks('modal/report-recurrence')
       const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
-      const blocks = reportModalBasic.concat(reportModalReportType)
-         .concat(reportModalTime).concat(reportModalRepeatType)
+      const reportModalTime = loadBlocks('modal/report-time')
+      const blocks = reportModalBasic.concat(reportModalReportType).concat(reportAdvanced)
+         .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
       await client.views.update({
          view_id: body.view.id,
          hash: body.view.hash,

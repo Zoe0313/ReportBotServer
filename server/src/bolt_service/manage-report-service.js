@@ -77,7 +77,7 @@ function setTimeSettingInitialValue(report, blocks, tz) {
          }
          break
       case 'weekly':
-         const dayOfWeekOptions = findBlockById('block_day_of_week')
+         const dayOfWeekOptions = findBlockById(blocks, 'block_day_of_week')
             .element.options
             .filter(option => repeatConfig.dayOfWeek.includes(parseInt(option.value)))
          if (dayOfWeekOptions.length > 0) {
@@ -208,11 +208,13 @@ export function registerManageReportServiceHandler(app) {
       const listItems = reportConfigurations.map(report => {
          const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':black_square_for_stop:'
          const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report, tz)}`
+         console.log('deep clone report list')
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = report._id
-         if (report._id === state.selectedId) {
+         if (report._id.toString() === state.selectedId) {
             listItem.accessory.style = 'primary'
+            listItem.accessory.text.text = 'close'
          }
          return listItem
       })
@@ -230,7 +232,7 @@ export function registerManageReportServiceHandler(app) {
       } else {
          listPagination = []
       }
-      const blocks = listHeader.concat(listItemDetail).concat(listItems).concat(listPagination)
+      const blocks = listHeader.concat(listItems).concat(listItemDetail).concat(listPagination)
       if (ack) await ack()
       if (isUpdate) {
          state.channel = body.channel ? body.channel.id : state.channel
@@ -477,10 +479,12 @@ export function registerManageReportServiceHandler(app) {
 
          const reportModalBasic = loadBlocks('modal/report-basic')
          const reportModalReportType = loadBlocks(`report_type/${report.reportType}`)
-         const reportModalTime = loadBlocks('modal/report-time')
+         const reportModalAdvanced = loadBlocks('modal/report-advanced')
+         const reportModalRecurrence = loadBlocks('modal/report-recurrence')
          const reportModalRepeatType = loadBlocks(`repeat_type/${report.repeatConfig.repeatType}`)
-         const blocks = reportModalBasic.concat(reportModalReportType)
-            .concat(reportModalTime).concat(reportModalRepeatType)
+         const reportModalTime = loadBlocks('modal/report-time')
+         const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
+            .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
          findBlockById(blocks, 'block_title').element.initial_value = report.title
          if (report.conversations.length > 0) {
             findBlockById(blocks, 'block_conversation').element.initial_conversations =
@@ -655,10 +659,12 @@ export function registerManageReportServiceHandler(app) {
 
       const reportModalBasic = loadBlocks('modal/report-basic')
       const reportModalReportType = loadBlocks(`report_type/${reportType}`)
+      const reportModalAdvanced = loadBlocks('modal/report-advanced')
+      const reportModalRecurrence = loadBlocks('modal/report-recurrence')
       const reportModalTime = loadBlocks('modal/report-time')
       const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
-      const blocks = reportModalBasic.concat(reportModalReportType)
-         .concat(reportModalTime).concat(reportModalRepeatType)
+      const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
+         .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
       const reportTypeBlock = findBlockById(blocks, 'block_report_type')
       reportTypeBlock.element.action_id = 'action_report_type_edit'
       const repeatTypeBlock = findBlockById(blocks, 'block_repeat_type')

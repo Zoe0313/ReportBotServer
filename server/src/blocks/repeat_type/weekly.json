@@ -12,7 +12,7 @@
          "type": "input",
          "label": {
             "type": "plain_text",
-            "text": "Send the report every"
+            "text": ":calendar: Send the report every"
          },
          "element": {
             "type": "checkboxes",
