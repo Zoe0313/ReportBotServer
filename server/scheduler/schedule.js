@@ -1,5 +1,4 @@
 import dotenv from 'dotenv'
-dotenv.config()
 
 import schedule from 'node-schedule'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
@@ -12,16 +11,19 @@ import path from 'path'
 
 // check timezone
 import moment from 'moment-timezone'
+dotenv.config()
 const systemTz = moment.tz.guess()
 logger.info('system time zone ' + systemTz)
 
 const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
-const execCommand = function (cmd) {
+
+const execCommand = function(cmd, timeout) {
    return new Promise((resolve, reject) => {
-      exec(cmd, (error, stdout, stderr) => {
+      exec(cmd, { timeout }, (error, stdout, stderr) => {
          if (error) {
+            logger.error(stderr)
             reject(error)
          } else {
             resolve(stdout)
@@ -34,53 +36,66 @@ const commonHandler = async (report) => {
    logger.info(`schedule for ${report.title} ${report._id}`)
    // const REPORT_TYPE_ENUM = ['bugzilla', 'perforce', 'svs', 'fastsvs', 'text', 'customized']
    const handleExecCommand = async (command, report) => {
+      let reportHistory = null
       try {
-         let stdout = await execCommand(command)
+         reportHistory = new ReportHistory({
+            reportConfigId: report._id,
+            title: report.title,
+            creator: report.creator,
+            reportType: report.reportType,
+            conversations: report.conversations,
+            mentionUsers: report.mentionUsers,
+            sentTime: null,
+            content: '',
+            status: REPORT_HISTORY_STATUS.PENDING
+         })
+         await reportHistory.save()
+         // 10 mins timeout
+         let stdout = await execCommand(command, 10 * 60 * 1000)
          if (report.mentionUsers != null && report.mentionUsers.length > 0) {
             const mentionUsers = '\n' + (await getConversationsName(report.mentionUsers))
             stdout += mentionUsers
          }
          logger.info(stdout)
+         reportHistory.sentTime = new Date()
+         reportHistory.content = stdout
+         reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
+         await reportHistory.save()
          await Promise.all(
             report.conversations.map(conversation => {
-               client.chat.postMessage({
+               return client.chat.postMessage({
                   channel: conversation,
                   text: stdout
                })
             })
          )
-         const reportHistory = new ReportHistory({
-            reportConfigId: report._id,
-            title: report.title,
-            creator: report.creator,
-            reportType: report.reportType,
-            conversations: report.conversations,
-            mentionUsers: report.mentionUsers,
-            sentTime: new Date(),
-            content: stdout,
-            status: REPORT_HISTORY_STATUS.SUCCEED
-         })
-         reportHistory.save()
       } catch (e) {
+         logger.error('save report history failed')
          logger.error(e)
-         const reportHistory = new ReportHistory({
-            reportConfigId: report._id,
-            title: report.title,
-            creator: report.creator,
-            reportType: report.reportType,
-            conversations: report.conversations,
-            mentionUsers: report.mentionUsers,
-            sentTime: new Date(),
-            content: e.message,
-            status: REPORT_HISTORY_STATUS.FAILED
-         })
-         reportHistory.save()
+         if (reportHistory != null) {
+            if (reportHistory.sentTime === null) {
+               // record failed or timeout time
+               reportHistory.sentTime = new Date()
+            }
+            reportHistory.content = e.message
+            if (e.signal === 'SIGTERM') {
+               reportHistory.status = REPORT_HISTORY_STATUS.TIMEOUT
+            } else {
+               reportHistory.status = REPORT_HISTORY_STATUS.FAILED
+            }
+            try {
+               await reportHistory.save()
+            } catch (e1) {
+               logger.error('save failed report history failed again')
+               logger.error(e1)
+            }
+         }
       }
    }
    switch (report.reportType) {
       case 'bugzilla':
          const scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
-         await handleExecCommand(`python3 ${scriptPath} --title '${report.title}' ` + 
+         await handleExecCommand(`python3 ${scriptPath} --title '${report.title}' ` +
             `--url '${report.reportSpecConfig.bugzillaLink}'`, report)
          break
       case 'perforce':
@@ -98,21 +113,21 @@ const unregisterSchedule = function (id) {
       throw new Error('scheduler id is null, can not unregister scheduler')
    }
    logger.info(`start to cancel previous schedule job ${id}`)
-   let job = scheduleJobStore[id]
+   const job = scheduleJobStore[id.toString()]
    if (job != null) {
       logger.info(`cancel previous schedule job ${id}`)
       job.cancel()
    } else {
       logger.warn(`failed to cancel previous schedule job ${id}`)
    }
-   delete scheduleJobStore[id]
+   delete scheduleJobStore[id.toString()]
 }
 
 const registerSchedule = function (report) {
-   if (process.env.ENABLE_SCHEDULE != 'true') {
+   if (process.env.ENABLE_SCHEDULE !== 'true' && process.env.ENABLE_SCHEDULE !== true) {
       return
    }
-   const id = report._id
+   const id = report._id.toString()
    let job = scheduleJobStore[id]
    if (job != null) {
       logger.info(`cancel previous schedule job ${id} ${report.title}`)
@@ -161,9 +176,9 @@ const registerSchedule = function (report) {
    }.bind(null, report))
    if (job != null) {
       scheduleJobStore[report._id] = job
-      logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`) 
+      logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
    } else {
-      logger.warn(`fail to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`) 
+      logger.warn(`fail to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
    }
    return job
 }
@@ -173,7 +188,7 @@ const nextInvocation = function (id) {
       throw new Error('scheduler id is null, can not query next scheduler')
    }
    logger.info(`start to query next invocation for job ${id}`)
-   let job = scheduleJobStore[id]
+   const job = scheduleJobStore[id.toString()]
    if (job != null) {
       return job.nextInvocation()
    } else {
@@ -187,13 +202,12 @@ const cancelNextInvocation = function (id) {
       throw new Error('scheduler id is null, can not cancel next report sending')
    }
    logger.info(`start to cancel next invocation for job ${id}`)
-   let job = scheduleJobStore[id]
+   const job = scheduleJobStore[id.toString()]
    if (job != null) {
       job.cancelNext()
    } else {
       logger.warn(`failed to cancel next invocation since no job for ${id}`)
    }
 }
-
 
 export { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation }
