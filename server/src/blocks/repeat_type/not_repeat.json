@@ -8,7 +8,7 @@
          }
       },
       {
-         "block_id": "block_date",
+         "block_id": "repeatConfig.date",
          "type": "input",
          "element": {
             "type": "datepicker",
@@ -26,7 +26,7 @@
          }
       },
       {
-         "block_id": "block_time",
+         "block_id": "repeatConfig.time",
          "type": "input",
          "label": {
             "type": "plain_text",

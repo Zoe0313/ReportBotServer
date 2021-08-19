@@ -1,13 +1,13 @@
 import moment from 'moment-timezone'
 import logger from './logger.js'
+import mergeWith from 'lodash/mergeWith.js'
 
-
-export function formatDate(date, tz) {
+export function formatDate(date) {
    if (date == null || date === '') {
       return ''
    }
    try {
-      return moment(date).tz(tz || 'Asia/Shanghai').format('YYYY-MM-DD')
+      return moment(date).format('YYYY-MM-DD')
    } catch (e) {
       logger.warn(e)
       return ''
@@ -51,4 +51,12 @@ export function convertTimeWithTz(timeStr, oldTz, curTz) {
       logger.warn(e)
       return timeStr
    }
+}
+
+export function merge(object, source) {
+   return mergeWith(object, source, (object, source) => {
+      if (Array.isArray(object)) {
+         return source
+      }
+   })
 }

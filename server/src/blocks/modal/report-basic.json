@@ -12,7 +12,7 @@
       },
       {
          "type": "input",
-         "block_id": "block_report_type",
+         "block_id": "reportType",
          "label": {
             "type": "plain_text",
             "text": ":one: Select a report type"
@@ -40,7 +40,7 @@
       },
       {
          "type": "input",
-         "block_id": "block_conversation",
+         "block_id": "conversations",
          "label": {
             "type": "plain_text",
             "text": ":two: Select target conversations for new report"
@@ -53,6 +53,7 @@
                "emoji": true
             },
             "filter": {
+               "include": ["im", "private", "public"],
                "exclude_external_shared_channels": true,
                "exclude_bot_users": true
             },
@@ -61,13 +62,15 @@
       },
       {
          "type": "input",
-         "block_id": "block_title",
+         "block_id": "title",
+
          "element": {
             "type": "plain_text_input",
             "placeholder": {
-               "type": "plain_text",
-               "text": "Title"
+               "text": "Title",
+               "type": "plain_text"
             },
+
             "action_id": "action_title"
          },
          "label": {

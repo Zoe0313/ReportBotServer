@@ -2,7 +2,7 @@
    "blocks": [
       {
          "type": "input",
-         "block_id": "block_report_link",
+         "block_id": "reportSpecConfig.bugzillaLink",
          "element": {
             "type": "plain_text_input",
             "placeholder": {

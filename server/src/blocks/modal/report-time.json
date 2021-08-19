@@ -12,7 +12,7 @@
       },
       {
          "type": "input",
-         "block_id": "block_start_date",
+         "block_id": "repeatConfig.startDate",
          "optional": true,
          "label": {
             "type": "plain_text",
@@ -31,7 +31,7 @@
       },
       {
          "type": "input",
-         "block_id": "block_end_date",
+         "block_id": "repeatConfig.endDate",
          "optional": true,
          "label": {
             "type": "plain_text",
