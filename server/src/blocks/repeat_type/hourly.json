@@ -12,7 +12,7 @@
          "type": "input",
          "label": {
             "type": "plain_text",
-            "text": "Minutes of per hour"
+            "text": ":alarm_clock: Minutes of per hour"
          },
          "element": {
             "type": "plain_text_input",

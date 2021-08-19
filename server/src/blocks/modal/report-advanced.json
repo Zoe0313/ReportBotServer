@@ -1,0 +1,26 @@
+{
+   "blocks": [
+      {
+         "type": "divider"
+      },
+      {
+         "type": "input",
+         "block_id": "block_report_users",
+         "optional": true,
+         "element": {
+            "type": "multi_users_select",
+            "placeholder": {
+               "type": "plain_text",
+               "text": "Select users to be mentioned",
+               "emoji": true
+            },
+            "action_id": "action_report_users"
+         },
+         "label": {
+            "type": "plain_text",
+            "text": "Select users you want to mention in the selected channels",
+            "emoji": true
+         }
+      }
+   ]
+}

@@ -4,14 +4,14 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "*XX Report - fastsvs*\nMonthly - 1"
+            "text": "*View report detail*\n"
          },
          "accessory": {
             "type": "button",
             "text": {
                "type": "plain_text",
                "emoji": true,
-               "text": "Choose"
+               "text": "view"
             },
             "value": "1",
             "action_id": "action_choose_report_item"

@@ -7,7 +7,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": "Step 2: Set up the reccurence"
+            "text": "Step 3: Set up the time"
          }
       },
       {
@@ -16,7 +16,7 @@
          "optional": true,
          "label": {
             "type": "plain_text",
-            "text": ":arrow_forward: Start day",
+            "text": ":arrow_forward: Start date",
             "emoji": true
          },
          "element": {
@@ -35,7 +35,7 @@
          "optional": true,
          "label": {
             "type": "plain_text",
-            "text": ":black_square_for_stop: End day",
+            "text": ":black_square_for_stop: End date",
             "emoji": true
          },
          "element": {
@@ -46,75 +46,6 @@
                "emoji": true
             },
             "action_id": "action_end_date"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "block_repeat_type",
-         "label": {
-            "type": "plain_text",
-            "text": ":repeat: Select a repeat time",
-            "emoji": true
-         },
-         "dispatch_action": true,
-         "element": {
-            "type": "static_select",
-            "action_id": "action_repeat_type",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Repeat type",
-               "emoji": true
-            },
-            "options": [
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Does not repeat",
-                     "emoji": true
-                  },
-                  "value": "not_repeat"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat hourly",
-                     "emoji": true
-                  },
-                  "value": "hourly"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat daily",
-                     "emoji": true
-                  },
-                  "value": "daily"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat weekly",
-                     "emoji": true
-                  },
-                  "value": "weekly"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat monthly",
-                     "emoji": true
-                  },
-                  "value": "monthly"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Cron Expression",
-                     "emoji": true
-                  },
-                  "value": "cron_expression"
-               }
-            ]
          }
       }
    ]
