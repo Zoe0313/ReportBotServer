@@ -24,7 +24,7 @@
             },
             {
                "type": "mrkdwn",
-               "text": "*Report Users: *\n"
+               "text": "*Mention Users: *\n"
             },
             {
                "type": "mrkdwn",

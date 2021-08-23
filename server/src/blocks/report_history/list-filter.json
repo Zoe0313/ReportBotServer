@@ -16,7 +16,7 @@
          }
       },
       {
-         "block_id": "block_history_filter",
+         "block_id": "block_history_filter_basic",
          "type": "actions",
          "elements": [
             {
@@ -49,7 +49,13 @@
                   "exclude_bot_users": true
                },
                "action_id": "action_filter_by_conversation"
-            },
+            }
+         ]
+      },
+      {
+         "block_id": "block_history_filter_date",
+         "type": "actions",
+         "elements": [
             {
                "type": "datepicker",
                "placeholder": {

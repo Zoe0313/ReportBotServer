@@ -5,7 +5,6 @@ import {
 } from '../../common/slack-helper.js'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
-import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import { performance } from 'perf_hooks'
 
@@ -47,17 +46,17 @@ export function registerReportHistoryServiceHandler(app) {
       const t0 = performance.now()
 
       let offset = (state.page - 1) * LIMIT
-      const filterReport = body?.state?.values[state.filterBlockId]
+      const filterReport = body?.state?.values['block_history_filter_basic' + state.filterBlockId]
          ?.action_filter_by_report?.selected_option?.value
-      const filterConversation = body?.state?.values[state.filterBlockId]
-         ?.action_filter_by_conversation?.selected_conversation
-      const filterStartDate = body?.state?.values[state.filterBlockId]
+      const filterConversation = body?.state?.values['block_history_filter_basic' +
+         state.filterBlockId]?.action_filter_by_conversation?.selected_conversation
+      const filterStartDate = body?.state?.values['block_history_filter_date' + state.filterBlockId]
          ?.action_filter_by_start_date?.selected_date
-      const filterEndDate = body?.state?.values[state.filterBlockId]
+      const filterEndDate = body?.state?.values['block_history_filter_date' + state.filterBlockId]
          ?.action_filter_by_end_date?.selected_date
       const filters = { creator: user }
       if (filterReport && filterReport !== 'all') {
-         filters.reportConfigId = filterReport
+         filters.title = filterReport
       }
       if (filterConversation) {
          filters.conversations = filterConversation
@@ -71,28 +70,33 @@ export function registerReportHistoryServiceHandler(app) {
             filters.sentTime.$lte = filterEndDate
          }
       }
+      logger.info(JSON.stringify(filters))
       const count = await ReportHistory.countDocuments(filters)
       if (offset >= count) {
          state.page = 1
          offset = 0
       }
-      const [reportHistories, allReportConfigurations] = await Promise.all([
+      const [reportHistories, allReportHistories] = await Promise.all([
          ReportHistory.find(filters).skip(offset).limit(LIMIT).sort({
             sentTime: -1
          }),
-         ReportConfiguration.find({ creator: user, status: { $ne: REPORT_STATUS.CREATED } })
+         ReportHistory.find({ creator: user })
       ])
       state.count = count
       // list filter
       const listFilter = loadBlocks('report_history/list-filter')
-      listFilter[1].block_id = state.filterBlockId.toString()
-      if (allReportConfigurations.length > 0) {
-         listFilter[1].elements[0].options = allReportConfigurations.map(report => ({
+      listFilter[1].block_id = 'block_history_filter_basic' + state.filterBlockId.toString()
+      listFilter[2].block_id = 'block_history_filter_date' + state.filterBlockId.toString()
+      if (allReportHistories.length > 0) {
+         // dedup title of report history
+         listFilter[1].elements[0].options = [...new Set(allReportHistories.map(reportHistory => {
+            return reportHistory.title
+         }))].map(title => ({
             text: {
                type: 'plain_text',
-               text: report.title
+               text: title
             },
-            value: report._id
+            value: title
          }))
       }
       // list header
@@ -172,8 +176,8 @@ export function registerReportHistoryServiceHandler(app) {
       if (ack) {
          await ack()
       }
-      const blocks = listHeader.concat(listFilter).concat(listItemDetail)
-         .concat(listItems).concat(listPagination)
+      const blocks = listHeader.concat(listFilter).concat(listItems)
+         .concat(listItemDetail).concat(listPagination)
       if (isUpdate) {
          state.channel = body.channel ? body.channel.id : state.channel
          await client.chat.update({
