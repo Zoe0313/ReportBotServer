@@ -59,21 +59,34 @@ const commonHandler = async (report) => {
          }
          logger.info(stdout)
 
-         // update statue and content of report history
-         reportHistory.sentTime = new Date()
-         reportHistory.content = stdout
-         reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
-         await reportHistory.save()
-
          // post reports to slack channels
-         await Promise.all(
+         const results = await Promise.all(
             report.conversations.map(conversation => {
                return client.chat.postMessage({
                   channel: conversation,
                   text: stdout
+               }).catch((e) => {
+                  logger.error(`failed to post message to conversation ${conversation}, error: ${e}`)
+                  return null
                })
             })
          )
+
+         // update statue and content of report history
+         reportHistory.sentTime = new Date()
+
+         const tsMap = Object.fromEntries(
+            results.filter(result => {
+               return result != null
+            }).map(result => {
+               return [result.channel, result.ts]
+            })
+         )
+         logger.info(tsMap)
+         reportHistory.tsMap = tsMap
+         reportHistory.content = stdout
+         reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
+         await reportHistory.save()
       } catch (e) {
          logger.error('failed to handle schedule job')
          logger.error(e)

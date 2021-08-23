@@ -11,7 +11,7 @@
             "text": {
                "type": "plain_text",
                "emoji": true,
-               "text": "Choose"
+               "text": "View"
             },
             "value": "1",
             "action_id": "action_choose_report_history_item"

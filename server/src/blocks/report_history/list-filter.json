@@ -51,15 +51,6 @@
                "action_id": "action_filter_by_conversation"
             },
             {
-               "type": "users_select",
-               "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select user",
-                  "emoji": true
-               },
-               "action_id": "action_filter_by_report_user"
-            },
-            {
                "type": "datepicker",
                "placeholder": {
                   "type": "plain_text",

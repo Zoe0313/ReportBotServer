@@ -4,7 +4,8 @@ const REPORT_HISTORY_STATUS = {
    SUCCEED: 'SUCCEED',
    FAILED: 'FAILED',
    TIMEOUT: 'TIMEOUT',
-   PENDING: 'PENDING'
+   PENDING: 'PENDING',
+   DELETED: 'DELETED'
 }
 
 const ReportHistorySchema = new mongoose.Schema({
@@ -19,6 +20,10 @@ const ReportHistorySchema = new mongoose.Schema({
       required: function(v) {
          return this.status === REPORT_HISTORY_STATUS.SUCCEED
       }
+   },
+   tsMap: {
+      type: Map,
+      of: String
    },
    content: {
       type: String,
