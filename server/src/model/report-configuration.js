@@ -3,6 +3,9 @@ import cronParser from 'cron-parser'
 import parseUrl from 'parse-url'
 import axios from 'axios'
 import logger from '../../common/logger.js'
+import {
+   verifyBotInChannel
+} from '../../common/slack-helper.js'
 
 const REPORT_STATUS = {
    CREATED: 'CREATED',
@@ -27,10 +30,24 @@ const ReportConfigurationSchema = new mongoose.Schema({
    conversations: {
       type: [String],
       validate: {
-         validator: function(v) {
-            return v?.length > 0
-         },
-         message: () => `Should select at least one conversation to send report.`
+         validator: async function(v) {
+            if (!v || v.length === 0) {
+               throw new Error(`Should select at least one channel/direct message to send report.`)
+            } else {
+               const results = await Promise.all(
+                  v.filter(channel => channel.startsWith('C')).map(channel =>
+                     verifyBotInChannel(channel)
+                        .then(inChannel => ({ channel, inChannel }))
+                  )
+               )
+               const notInChannelList = results.filter(result => !result.inChannel)
+                  .map(result => result.channel)
+               if (notInChannelList.length > 0) {
+                  throw new Error('I am not in some selected private channel(s), ' +
+                     'please invite me into the channel(s).')
+               }
+            }
+         }
       }
    },
    mentionUsers: [String],
@@ -65,17 +82,14 @@ const ReportConfigurationSchema = new mongoose.Schema({
                   }
                }
                const url = parseUrl(link)
-               logger.info(JSON.stringify(url))
                if (url.resource === 'bugzilla.eng.vmware.com') {
                   if (url.protocol === 'https' && url.pathname === '/report.cgi' &&
                      url.search.includes('format=table')) {
                      return true
-                  } else {
-                     throw new Error(`Unsupported bugzilla url. It should be started with 'https://bugzilla.eng.vmware.com/report.cgi?format=table'`)
                   }
-               } else {
-                  throw new Error(`Unsupported link. Now we only support 'bugzilla.eng.vmware.com/report.cgi?format=table...'`)
                }
+               throw new Error(`Unsupported bugzilla url. ` +
+                  `It should be started with 'https://bugzilla.eng.vmware.com/report.cgi?format=table...'`)
             }
          }
       }

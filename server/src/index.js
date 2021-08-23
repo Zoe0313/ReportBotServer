@@ -12,6 +12,7 @@ import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration
 import { registerSchedule } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 import { connectMongoDatabase } from '../common/db-utils.js'
+import { initSlackClient } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 dotenv.config()
 
@@ -37,16 +38,20 @@ const app = new bolt.App({
    signingSecret: process.env.SLACK_SIGNING_SECRET
    // receiver
 })
+initSlackClient(app.client)
 
 // handler performance
 app.use(async ({ body, next }) => {
    const user = body?.user?.id || body?.message?.user ||
-      body?.event?.user || body?.event?.message?.user
-   const type = body?.subtype || body?.type
+      body?.event?.user?.id || body?.event?.user || body?.event?.message?.user
+   const type = body?.actions?.map(action => action.action_id)?.join(', ') ||
+      body?.subtype || body?.type
    const t0 = performance.now()
    await next()
    const t1 = performance.now()
-   logger.debug(`${user} did ${type} took ${(t1 - t0)} milliseconds.`)
+   if (body?.event?.type !== 'user_change') {
+      logger.debug(`${user} did ${type} took ${(t1 - t0)} milliseconds.`)
+   }
 })
 
 // global error handler

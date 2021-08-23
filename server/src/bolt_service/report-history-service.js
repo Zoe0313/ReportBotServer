@@ -42,7 +42,7 @@ export function registerReportHistoryServiceHandler(app) {
       if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
       }
-      const tz = await getUserTz(client, user)
+      const tz = await getUserTz(user)
       const t0 = performance.now()
 
       let offset = (state.page - 1) * LIMIT

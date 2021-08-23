@@ -36,7 +36,6 @@ export function registerCommonServiceHandler(app) {
    app.event('user_change', async ({ payload }) => {
       const userId = payload?.user?.id
       const tz = payload?.user?.tz
-      console.log(`user change event happened for user ${userId}, tz ${tz}`)
       updateUserTzCache(userId, tz)
    })
 }

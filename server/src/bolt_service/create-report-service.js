@@ -111,7 +111,7 @@ export function registerCreateReportServiceHandler(app) {
    app.view('view_create_report', async ({ ack, body, view, client }) => {
       try {
          const user = body.user.id
-         const tz = await getUserTz(client, user)
+         const tz = await getUserTz(user)
          const inputObj = transformInputValuesToObj(view.state.values)
 
          const report = new ReportConfiguration(

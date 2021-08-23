@@ -3,56 +3,73 @@ import fs from 'fs'
 import cloneDeep from 'lodash/cloneDeep.js'
 import set from 'lodash/set.js'
 
+let slackClient = null
 const userTzCache = {}
 const blocksCache = {}
 
-export const getUserTz = async (client, userId) => {
-   try {
-      if (userId == null) {
-         throw new Error(`user id is null`)
-      }
-      if (userTzCache[userId] != null) {
-         return userTzCache[userId]
-      }
-      const userInfo = await client.users.info({ user: userId })
-      const tz = userInfo?.user?.tz
-      if (tz != null) {
-         userTzCache[userId] = tz
-         return tz
-      } else {
-         throw new Error(`can not get tz of user ${userId}`)
-      }
-   } catch (e) {
-      logger.error(e)
-      throw e
+export function initSlackClient(client) {
+   slackClient = client
+}
+
+export const getUserTz = async (userId) => {
+   if (slackClient == null) {
+      throw new Error('slackClient is null in slack helper')
+   }
+   if (userId == null) {
+      throw new Error(`user id is null`)
+   }
+   if (userTzCache[userId] != null) {
+      return userTzCache[userId]
+   }
+   const userInfo = await slackClient.users.info({ user: userId })
+   const tz = userInfo?.user?.tz
+   if (tz != null) {
+      userTzCache[userId] = tz
+      return tz
+   } else {
+      throw new Error(`can not get tz of user ${userId}`)
    }
 }
 
 export const updateUserTzCache = (userId, tz) => {
-   if (userId != null) {
+   if (userId != null && userTzCache[userId] != null) {
       userTzCache[userId] = tz
    }
 }
 
-export const getConversationsName = async (conversationIds) => {
+export async function verifyBotInChannel(channel) {
+   if (slackClient == null) {
+      throw new Error('slackClient is null in slack helper')
+   }
+   try {
+      const response = await slackClient.conversations.info({ channel })
+      return response?.ok || false
+   } catch (e) {
+      logger.debug(JSON.stringify(e))
+      // if channel is private channel, will throw channel_not_found error directly
+      if (e.data?.error === 'channel_not_found') {
+         return false
+      } else {
+         throw e
+      }
+   }
+}
+
+export function getConversationsName(conversationIds) {
    if (conversationIds == null) {
       return ''
    }
-   try {
-      return conversationIds.map(channel => {
-         // if conversation is a channel
-         if (channel.startsWith('C')) {
-            return `<#${channel}>`
-            // if conversation is a user
-         } else if (channel.startsWith('U')) {
-            return `<@${channel}>`
-         } else {
-            return `<#${channel}>`
-         }
-      }).join(', ')
-   } catch (e) {
-      return conversationIds
-   }
+   return conversationIds.map(channel => {
+      // if conversation is a channel
+      if (channel.startsWith('C')) {
+         return `<#${channel}>`
+         // if conversation is a user
+      } else if (channel.startsWith('U')) {
+         return `<@${channel}>`
+      } else {
+         return `<#${channel}>`
+      }
+   }).join(', ')
 }
 
 export function loadBlocks(name) {

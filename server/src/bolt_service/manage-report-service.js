@@ -143,7 +143,7 @@ export function registerManageReportServiceHandler(app) {
       if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
       }
-      const tz = await getUserTz(client, user)
+      const tz = await getUserTz(user)
       let offset = (state.page - 1) * LIMIT
       const filter = {
          status: { $ne: REPORT_STATUS.CREATED }
@@ -486,7 +486,7 @@ export function registerManageReportServiceHandler(app) {
          if (user == null) {
             throw new Error('User is none in body, can not list the reports.')
          }
-         const tz = await getUserTz(client, user)
+         const tz = await getUserTz(user)
          const report = await ReportConfiguration.findById(id)
          logger.info('open edit report config modal')
          logger.info(report)
@@ -578,7 +578,7 @@ export function registerManageReportServiceHandler(app) {
             throw new Error('report id is null when editing report config')
          }
          const user = body.user.id
-         const tz = await getUserTz(client, user)
+         const tz = await getUserTz(user)
          const oldReport = await ReportConfiguration.findById(id)
          if (!oldReport) {
             return
@@ -604,7 +604,7 @@ export function registerManageReportServiceHandler(app) {
             Object.keys(e.errors).forEach(errorKey => {
                ackErrors[errorKey] = e.errors[errorKey].message
             })
-            logger.warn(ackErrors)
+            logger.warn(JSON.stringify(ackErrors))
             await ack({
                response_action: 'errors',
                errors: ackErrors

@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 
 import schedule from 'node-schedule'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
+import { REPORT_STATUS } from '../src/model/report-configuration.js'
 import { parseDateWithTz, convertTimeWithTz } from '../common/utils.js'
 import { getConversationsName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
@@ -152,6 +153,10 @@ const registerSchedule = function (report) {
    if (job != null) {
       logger.info(`cancel previous schedule job ${id} ${report.title}`)
       job.cancel()
+   }
+   if (report.status !== REPORT_STATUS.ENABLED) {
+      logger.info(`this report was not enabled, skip the register.`)
+      return null
    }
    const repeatConfig = report.repeatConfig
    let scheduleOption = { start: repeatConfig.startDate, end: repeatConfig.endDate }
