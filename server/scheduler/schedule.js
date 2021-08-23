@@ -50,6 +50,7 @@ const commonHandler = async (report) => {
             status: REPORT_HISTORY_STATUS.PENDING
          })
          await reportHistory.save()
+
          // 10 mins timeout
          let stdout = await execCommand(command, 10 * 60 * 1000)
          if (report.mentionUsers != null && report.mentionUsers.length > 0) {
@@ -57,10 +58,14 @@ const commonHandler = async (report) => {
             stdout += mentionUsers
          }
          logger.info(stdout)
+
+         // update statue and content of report history
          reportHistory.sentTime = new Date()
          reportHistory.content = stdout
          reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
          await reportHistory.save()
+
+         // post reports to slack channels
          await Promise.all(
             report.conversations.map(conversation => {
                return client.chat.postMessage({
@@ -70,7 +75,7 @@ const commonHandler = async (report) => {
             })
          )
       } catch (e) {
-         logger.error('save report history failed')
+         logger.error('failed to handle schedule job')
          logger.error(e)
          if (reportHistory != null) {
             if (reportHistory.sentTime === null) {
@@ -92,17 +97,19 @@ const commonHandler = async (report) => {
          }
       }
    }
+
+   // exec the different report generator
    switch (report.reportType) {
       case 'bugzilla':
          const scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
          await handleExecCommand(`python3 ${scriptPath} --title '${report.title}' ` +
             `--url '${report.reportSpecConfig.bugzillaLink}'`, report)
          break
-      case 'perforce':
-      case 'svs':
-      case 'fastsvs':
-      case 'text':
-      case 'customized':
+      // case 'perforce':
+      // case 'svs':
+      // case 'fastsvs':
+      // case 'text':
+      // case 'customized':
       default:
          logger.error(`report type ${report.reportType} not supported.`)
    }

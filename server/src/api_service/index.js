@@ -64,9 +64,8 @@ export function registerApiRouters(receiver, app) {
       try {
          logger.info(req.params.id)
          const oldReport = await ReportConfiguration.findById(req.params.id)
-         logger.info(oldReport)
          const report = merge(oldReport, req.body)
-         logger.info(report)
+         logger.info(`original report: ${oldReport}\nnew report: ${report}`)
          await report.save()
          registerSchedule(report)
          res.json(report)

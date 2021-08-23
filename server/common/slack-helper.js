@@ -11,13 +11,13 @@ export const getUserTz = async (client, userId) => {
       if (userId == null) {
          throw new Error(`user id is null`)
       }
-      // if (userTzCache[userId] != null) {
-      //    return userTzCache[userId]
-      // }
+      if (userTzCache[userId] != null) {
+         return userTzCache[userId]
+      }
       const userInfo = await client.users.info({ user: userId })
       const tz = userInfo?.user?.tz
       if (tz != null) {
-         // userTzCache[userId] = tz
+         userTzCache[userId] = tz
          return tz
       } else {
          throw new Error(`can not get tz of user ${userId}`)
@@ -116,26 +116,26 @@ export function initReportTypeBlocks(report, blocks) {
                   .element.initial_value = reportSpecConfig.bugzillaLink
             }
             break
-         case 'perforce':
-            findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-               .element.initial_value = reportSpecConfig.bugzillaLink
-            break
-         case 'svs':
-            findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-               .element.initial_value = reportSpecConfig.bugzillaLink
-            break
-         case 'fastsvs':
-            findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-               .element.initial_value = reportSpecConfig.bugzillaLink
-            break
-         case 'text':
-            findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-               .element.initial_value = reportSpecConfig.bugzillaLink
-            break
-         case 'customized':
-            findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-               .element.initial_value = reportSpecConfig.bugzillaLink
-            break
+         // case 'perforce':
+         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
+         //       .element.initial_value = reportSpecConfig.bugzillaLink
+         //    break
+         // case 'svs':
+         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
+         //       .element.initial_value = reportSpecConfig.bugzillaLink
+         //    break
+         // case 'fastsvs':
+         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
+         //       .element.initial_value = reportSpecConfig.bugzillaLink
+         //    break
+         // case 'text':
+         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
+         //       .element.initial_value = reportSpecConfig.bugzillaLink
+         //    break
+         // case 'customized':
+         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
+         //       .element.initial_value = reportSpecConfig.bugzillaLink
+         //    break
          default:
             throw new Error(`report type ${report.reportType} is not supported`)
       }

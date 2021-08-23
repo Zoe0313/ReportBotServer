@@ -53,7 +53,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
                      url.search.includes('format=table')) {
                      return true
                   } else {
-                     throw new Error(`Invalid bugzilla url. It should be started with 'https://bugzilla.eng.vmware.com/report.cgi?format=table'`)
+                     throw new Error(`Unsupported bugzilla url. It should be started with 'https://bugzilla.eng.vmware.com/report.cgi?format=table'`)
                   }
                } else {
                   throw new Error(`Unsupported host. Now we only support 'via.vmw.com' and 'bugzilla.eng.vmware.com'`)
