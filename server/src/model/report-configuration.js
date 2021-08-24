@@ -78,7 +78,9 @@ const ReportConfigurationSchema = new mongoose.Schema({
                      }
                   } catch (e) {
                      logger.warn(e)
-                     throw new Error(`Parse the original link of ${v} failed. Please try again or use original link directly.`)
+                     throw new Error(`Parse the original link of ${v} failed. ` +
+                        `Please try again or use original link directly. ` +
+                        `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table`)
                   }
                }
                const url = parseUrl(link)
@@ -88,8 +90,10 @@ const ReportConfigurationSchema = new mongoose.Schema({
                      return true
                   }
                }
-               throw new Error(`Unsupported bugzilla url. ` +
-                  `It should be started with 'https://bugzilla.eng.vmware.com/report.cgi?format=table...'`)
+               throw new Error(`Unsupported bugzilla url.\n` +
+                  `Currently we only support bugzilla tabular report. ` +
+                  `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table ` +
+                  `for creating the bugzilla tabular report and generate the link.'`)
             }
          }
       }

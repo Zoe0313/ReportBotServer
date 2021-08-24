@@ -417,8 +417,11 @@ export function registerReportHistoryServiceHandler(app) {
       const ts = body.message.ts
       const state = await getState(ts)
       try {
-         logger.info('start to delete report message')
          const selectedHistory = await ReportHistory.findOne({ _id: state.selectedId })
+         if (selectedHistory == null) {
+            throw new Error(`can not find the history since no history with id ${state.selectedId}`)
+         }
+         logger.info(`start to delete report message ${selectedHistory._id} at ${ts}`)
          logger.info(JSON.stringify(selectedHistory.tsMap))
          if (selectedHistory.tsMap == null || selectedHistory.tsMap.size === 0) {
             await ack()
@@ -430,16 +433,19 @@ export function registerReportHistoryServiceHandler(app) {
                   channel: conversation,
                   ts: ts
                }).then(res => {
-                  logger.info(`succeed to delete report message in slack channel ${conversation}`)
+                  logger.info(`succeed to delete report message ${selectedHistory} in ` +
+                     `slack channel ${conversation} at timestamp ` + `${ts}.`)
                   return res
                }).catch(e => {
-                  logger.error(`failed to delete report message in slack channel ${conversation}, error message: ${e}`)
+                  logger.error(`failed to delete report message ${selectedHistory} in ` +
+                     `slack channel ${conversation} at timestamp ${ts}. ` +
+                     `Error message: ${e}`)
                   return null
                })
                reqList.push(req)
             })
             const results = await Promise.all(reqList)
-            logger.info(JSON.stringify(results))
+            logger.info(`Delete message results for ${selectedHistory}: ${JSON.stringify(results)}`)
             results.forEach(result => {
                if (result != null && result.ok && result.channel != null) {
                   selectedHistory.tsMap.delete(result.channel)

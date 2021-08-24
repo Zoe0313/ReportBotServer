@@ -9,9 +9,9 @@ import logger from '../common/logger.js'
 import { exec } from 'child_process'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
-
 // check timezone
 import moment from 'moment-timezone'
+
 dotenv.config()
 const systemTz = moment.tz.guess()
 logger.info('system time zone ' + systemTz)
@@ -24,7 +24,7 @@ const execCommand = function(cmd, timeout) {
    return new Promise((resolve, reject) => {
       exec(cmd, { timeout }, (error, stdout, stderr) => {
          if (error) {
-            logger.error(stderr)
+            logger.error(`failed to execute command ${cmd}, error message: ${stderr}`)
             reject(error)
          } else {
             resolve(stdout)
@@ -58,7 +58,7 @@ const commonHandler = async (report) => {
             const mentionUsers = '\n' + (await getConversationsName(report.mentionUsers))
             stdout += mentionUsers
          }
-         logger.info(stdout)
+         logger.info(`stdout of command ${command}: ${stdout}`)
 
          // post reports to slack channels
          const results = await Promise.all(
@@ -67,13 +67,14 @@ const commonHandler = async (report) => {
                   channel: conversation,
                   text: stdout
                }).catch((e) => {
-                  logger.error(`failed to post message to conversation ${conversation}, error: ${e}`)
+                  logger.error(`failed to post message to conversation ${conversation}` +
+                     `since error: ${JSON.stringify(e)}`)
                   return null
                })
             })
          )
 
-         // update statue and content of report history
+         // update status and content of report history
          reportHistory.sentTime = new Date()
 
          const tsMap = Object.fromEntries(
@@ -83,14 +84,13 @@ const commonHandler = async (report) => {
                return [result.channel, result.ts]
             })
          )
-         logger.info(tsMap)
+         logger.info(`the tsMap of ${reportHistory._id} is ${JSON.stringify(tsMap)}`)
          reportHistory.tsMap = tsMap
          reportHistory.content = stdout
          reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
          await reportHistory.save()
       } catch (e) {
-         logger.error('failed to handle schedule job')
-         logger.error(e)
+         logger.error(`failed to handle schedule job since error: ${JSON.stringify(e)}`)
          if (reportHistory != null) {
             if (reportHistory.sentTime === null) {
                // record failed or timeout time
@@ -105,8 +105,7 @@ const commonHandler = async (report) => {
             try {
                await reportHistory.save()
             } catch (e1) {
-               logger.error('save failed report history failed again')
-               logger.error(e1)
+               logger.error(`save failed report history failed again since error: ${JSON.stringify(e1)}`)
             }
          }
       }
@@ -151,17 +150,20 @@ const registerSchedule = function (report) {
    const id = report._id.toString()
    let job = scheduleJobStore[id]
    if (job != null) {
-      logger.info(`cancel previous schedule job ${id} ${report.title}`)
+      logger.info(`cancel previous schedule job ${id} of ${report.title}`)
       job.cancel()
    }
+
    if (report.status !== REPORT_STATUS.ENABLED) {
-      logger.info(`this report was not enabled, skip the register.`)
+      logger.info(`this report ${id} is ${report.status}, not enabled, skip the register.`)
       return null
    }
+
    const repeatConfig = report.repeatConfig
    let scheduleOption = { start: repeatConfig.startDate, end: repeatConfig.endDate }
    let rule = new schedule.RecurrenceRule()
    const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, systemTz)
+
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
          const dateStr = `${repeatConfig.date} ${repeatConfig.time}`
@@ -196,6 +198,7 @@ const registerSchedule = function (report) {
       default:
          throw new Error('invalid repeat type')
    }
+
    job = schedule.scheduleJob(scheduleOption, function (report) {
       commonHandler(report)
    }.bind(null, report))
