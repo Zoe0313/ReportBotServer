@@ -5,7 +5,7 @@
       },
       {
          "type": "input",
-         "block_id": "block_report_users",
+         "block_id": "mentionUsers",
          "optional": true,
          "element": {
             "type": "multi_users_select",

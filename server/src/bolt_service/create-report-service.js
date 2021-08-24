@@ -1,10 +1,11 @@
-import { formatDate } from '../../common/utils.js'
 import logger from '../../common/logger.js'
+import { formatDate, merge } from '../../common/utils.js'
 import {
-   loadBlocks, getUserTz, initReportTypeBlocks, findBlockById
+   loadBlocks, getUserTz, initReportTypeBlocks, transformInputValuesToObj, findBlockById
 } from '../../common/slack-helper.js'
 import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import { registerSchedule } from '../scheduler-adapter.js'
+import mongoose from 'mongoose'
 
 export function registerCreateReportServiceHandler(app) {
    // New report message configuration
@@ -24,7 +25,7 @@ export function registerCreateReportServiceHandler(app) {
          const reportModalTime = loadBlocks('modal/report-time')
          const blocks = reportModalBasic.concat(reportTypeBlock).concat(reportAdvanced)
             .concat(reportModalRecurrence).concat(reportModalTime)
-         findBlockById(blocks, 'block_start_date').element.initial_date =
+         findBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
             formatDate(new Date())
          initReportTypeBlocks(null, blocks)
          await client.views.open({
@@ -58,10 +59,10 @@ export function registerCreateReportServiceHandler(app) {
    const updateModal = async ({ ack, payload, body, client }) => {
       await ack()
 
-      const reportType = body.view.state.values
-         ?.block_report_type?.action_report_type?.selected_option?.value
-      const repeatType = body.view.state.values
-         ?.block_repeat_type?.action_repeat_type?.selected_option?.value
+      const reportType = body.view.state.values?.reportType
+         ?.action_report_type?.selected_option?.value
+      const repeatType = body.view.state.values['repeatConfig.repeatType']
+         ?.action_repeat_type?.selected_option?.value
       logger.info(`select report type ${reportType} of report scheduler`)
       logger.info(`select repeat type ${repeatType} of report scheduler`)
 
@@ -93,14 +94,14 @@ export function registerCreateReportServiceHandler(app) {
    }
 
    app.action({
-      block_id: 'block_repeat_type',
+      block_id: 'repeatConfig.repeatType',
       action_id: 'action_repeat_type'
    }, async (event) => {
       await updateModal(event)
    })
 
    app.action({
-      block_id: 'block_report_type',
+      block_id: 'reportType',
       action_id: 'action_report_type'
    }, async (event) => {
       await updateModal(event)
@@ -108,63 +109,55 @@ export function registerCreateReportServiceHandler(app) {
 
    // Precheck and create a report request
    app.view('view_create_report', async ({ ack, body, view, client }) => {
-      await ack()
       try {
          const user = body.user.id
          const tz = await getUserTz(client, user)
-         const inputObj = {}
-         const inputValues = Object.values(view.state.values)
-         inputValues.forEach(actions => {
-            Object.keys(actions).forEach(actionKey => {
-               inputObj[actionKey] = actions[actionKey]
+         const inputObj = transformInputValuesToObj(view.state.values)
+
+         const report = new ReportConfiguration(
+            merge(inputObj, {
+               creator: user,
+               status: REPORT_STATUS.CREATED,
+               repeatConfig: {
+                  tz,
+                  date: formatDate(inputObj.repeatConfig.date)
+               }
             })
-         })
-         logger.debug(inputObj)
-         const parseIntNullable = (num) => num ? parseInt(num) : null
-         const report = new ReportConfiguration({
-            title: inputObj.action_title?.value,
-            creator: user,
-            status: REPORT_STATUS.CREATED,
-            reportType: inputObj.action_report_type?.selected_option?.value,
-            conversations: inputObj.action_conversation?.selected_conversations,
-            mentionUsers: inputObj.action_report_users?.selected_users,
-            reportSpecConfig: {
-               bugzillaLink: inputObj.action_report_link?.value
-            },
-            repeatConfig: {
-               repeatType: inputObj.action_repeat_type?.selected_option?.value,
-               tz,
-               startDate: inputObj.action_start_date?.selected_date,
-               endDate: inputObj.action_end_date?.selected_date,
-               cronExpression: inputObj.action_cron_expression?.value,
-               date: formatDate(inputObj.action_date?.selected_date),
-               time: inputObj.action_time?.selected_time,
-               dayOfMonth: parseIntNullable(inputObj.action_day_of_month?.value),
-               dayOfWeek: inputObj.action_day_of_week?.selected_options
-                  ?.map(option => parseIntNullable(option.value)),
-               minsOfHour: parseIntNullable(inputObj.action_mins_of_hour?.value)
-            }
-         })
+         )
          logger.debug(report)
+
          const saved = await report.save()
          logger.info(`Create successful. saved report id ${saved._id}`)
          const blocks = loadBlocks('precheck-report')
          // create inited status report
          blocks.find(block => block.block_id === 'block_create_last')
             .elements.forEach(element => { element.value = saved._id })
+         await ack()
          await client.chat.postMessage({
             channel: user,
             blocks: blocks,
             text: 'Precheck your new report'
          })
       } catch (e) {
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to open precheck confirmation. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
+         if (e instanceof mongoose.Error.ValidationError) {
+            const ackErrors = {}
+            Object.keys(e.errors).forEach(errorKey => {
+               ackErrors[errorKey] = e.errors[errorKey].message
+            })
+            await ack({
+               response_action: 'errors',
+               errors: ackErrors
+            })
+         } else {
+            await ack()
+            await client.chat.postMessage({
+               channel: body.user.id,
+               blocks: [],
+               text: 'Failed to open precheck confirmation. ' +
+                  'Please contact developers to resolve it.'
+            })
+            throw e
+         }
       }
    })
 

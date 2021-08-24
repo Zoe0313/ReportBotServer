@@ -8,7 +8,7 @@
          }
       },
       {
-         "block_id": "block_mins_of_hour",
+         "block_id": "repeatConfig.minsOfHour",
          "type": "input",
          "label": {
             "type": "plain_text",

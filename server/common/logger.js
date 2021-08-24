@@ -3,34 +3,40 @@ const format = winston.format
 
 const today = new Date().toISOString().split('T')[0]
 
+const myFormat = format.printf((info) => {
+   if (info.stack) {
+      return `${info.timestamp} ${info.level}: ${info.message} - ${info.stack}`
+   } else {
+      return `${info.timestamp} ${info.level}: ${info.message}`
+   }
+})
+
 const options = {
    file: {
-      level: 'info',
+      level: 'debug',
       filename: `./log/slackbot-server-${today}.log`,
-      handleExceptions: true,
-      colorize: false,
+      handleExceptions: true
    },
    console: {
       level: 'debug',
       handleExceptions: true,
-      colorize: true,
-   },
+      format: format.combine(
+         format.colorize({ all: true })
+      )
+   }
 }
-
-const myFormat = format.printf(({ level, message, timestamp }) => {
-   return `${timestamp} ${level}: ${JSON.stringify(message)}`;
-})
 
 const logger = winston.createLogger({
    levels: winston.config.npm.levels,
-   format: format.combine(
-      format.timestamp(),
-      myFormat
-   ),
    transports: [
       new winston.transports.File(options.file),
       new winston.transports.Console(options.console)
    ],
+   format: format.combine(
+      format.errors({ stack: true }),
+      format.timestamp(),
+      myFormat
+   ),
    exitOnError: false
 })
 

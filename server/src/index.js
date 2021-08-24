@@ -41,7 +41,7 @@ const app = new bolt.App({
 // handler performance
 app.use(async ({ body, next }) => {
    const user = body?.user?.id || body?.message?.user ||
-      body?.event?.user?.id || body?.event?.message?.user
+      body?.event?.user || body?.event?.message?.user
    const type = body?.subtype || body?.type
    const t0 = performance.now()
    await next()
@@ -51,8 +51,9 @@ app.use(async ({ body, next }) => {
 
 // global error handler
 app.error((error) => {
-   const errorMessage = `code: ${error.code}, message: ${error.original}, ` +
+   const errorMessage = `original message: ${error.original}, ` +
       `stack: ${error.original?.stack}`
+   logger.error(error)
    logger.error(errorMessage)
    if (process.env.ISSUE_CHANNEL_ID) {
       try {

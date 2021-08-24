@@ -129,7 +129,7 @@ export function registerReportHistoryServiceHandler(app) {
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = history._id
-         if (history._id === state.selectedId) {
+         if (history._id.toString() === state.selectedId) {
             listItem.accessory.style = 'primary'
          }
          return listItem
@@ -195,6 +195,7 @@ export function registerReportHistoryServiceHandler(app) {
       try {
          await listReportHistories(false, body.message?.ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -212,6 +213,7 @@ export function registerReportHistoryServiceHandler(app) {
          await saveState(state)
          await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -226,6 +228,7 @@ export function registerReportHistoryServiceHandler(app) {
       try {
          await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -240,6 +243,7 @@ export function registerReportHistoryServiceHandler(app) {
       try {
          await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -254,6 +258,7 @@ export function registerReportHistoryServiceHandler(app) {
       try {
          await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -268,6 +273,7 @@ export function registerReportHistoryServiceHandler(app) {
       try {
          await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -282,6 +288,7 @@ export function registerReportHistoryServiceHandler(app) {
       try {
          await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -308,6 +315,7 @@ export function registerReportHistoryServiceHandler(app) {
          await saveState(state)
          await listReportHistories(true, ts, ack, body, client)
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -335,6 +343,7 @@ export function registerReportHistoryServiceHandler(app) {
             await ack()
          }
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -363,6 +372,7 @@ export function registerReportHistoryServiceHandler(app) {
             await ack()
          }
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],
@@ -391,6 +401,7 @@ export function registerReportHistoryServiceHandler(app) {
             await ack()
          }
       } catch (e) {
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             blocks: [],

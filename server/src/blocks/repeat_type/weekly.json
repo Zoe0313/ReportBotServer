@@ -8,7 +8,7 @@
          }
       },
       {
-         "block_id": "block_day_of_week",
+         "block_id": "repeatConfig.dayOfWeek",
          "type": "input",
          "label": {
             "type": "plain_text",
@@ -71,7 +71,7 @@
          }
       },
       {
-         "block_id": "block_time",
+         "block_id": "repeatConfig.time",
          "type": "input",
          "label": {
             "type": "plain_text",

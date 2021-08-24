@@ -12,7 +12,7 @@
       },
       {
          "type": "input",
-         "block_id": "block_repeat_type",
+         "block_id": "repeatConfig.repeatType",
          "label": {
             "type": "plain_text",
             "text": ":repeat: Select a repeat time",

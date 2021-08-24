@@ -8,7 +8,7 @@
          }
       },
       {
-         "block_id": "block_time",
+         "block_id": "repeatConfig.time",
          "type": "input",
          "label": {
             "type": "plain_text",

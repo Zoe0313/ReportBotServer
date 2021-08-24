@@ -1,9 +1,11 @@
 import { ReportConfiguration } from '../model/report-configuration.js'
 import { registerSchedule, unregisterSchedule } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
+import mongoose from 'mongoose'
+import { merge } from '../../common/utils.js'
 
 export function registerApiRouters(receiver, app) {
-   receiver.router.get('/health', (req, res) => {
+   receiver.router.get('/api/v1/server/health', (req, res) => {
       if (app.receiver.client.badConnection) {
          res.status(500)
          res.json({ result: false, message: 'Internal Server Error' })
@@ -13,7 +15,7 @@ export function registerApiRouters(receiver, app) {
       res.json({ result: true })
    })
 
-   receiver.router.get('/report_configurations', async (req, res) => {
+   receiver.router.get('/api/v1/server/report_configurations', async (req, res) => {
       if (req.query.user == null) {
          res.status(400)
          res.json({ result: false, message: 'User ID is null' })
@@ -24,12 +26,12 @@ export function registerApiRouters(receiver, app) {
          filter.creator = req.query.user
       }
       const reports = await ReportConfiguration.find(filter)
-         .offset(req.query.offset).limit(req.query.limit)
+         .skip(req.query.offset).limit(req.query.limit)
       logger.info(reports)
       res.json(reports)
    })
 
-   receiver.router.get('/report_configurations/:id', async (req, res) => {
+   receiver.router.get('/api/v1/server/report_configurations/:id', async (req, res) => {
       if (req.params.id == null) {
          res.status(400)
          res.json({ result: false, message: 'Invalid id' })
@@ -40,35 +42,46 @@ export function registerApiRouters(receiver, app) {
       res.json(report)
    })
 
-   receiver.router.post('/report_configurations', async (req, res) => {
+   receiver.router.post('/api/v1/server/report_configurations', async (req, res) => {
       try {
          logger.info(req.body)
          const report = await new ReportConfiguration(req.body).save()
          registerSchedule(report)
          res.json(report)
       } catch (e) {
-         res.status(500)
-         res.json({ result: false, message: 'Internal Server Error' })
+         if (e instanceof mongoose.Error.ValidationError) {
+            res.status(400)
+            res.json(e.errors)
+         } else {
+            res.status(500)
+            res.json({ result: false, message: 'Internal Server Error' })
+         }
          logger.error(e)
       }
    })
 
-   receiver.router.put('/report_configurations/:id', async (req, res) => {
+   receiver.router.put('/api/v1/server/report_configurations/:id', async (req, res) => {
       try {
-         logger.info(req.body)
          logger.info(req.params.id)
-         await ReportConfiguration.updateOne({ _id: req.params.id }, req.body)
-         const report = await ReportConfiguration.findById(req.params.id)
+         const oldReport = await ReportConfiguration.findById(req.params.id)
+         const report = merge(oldReport, req.body)
+         logger.info(`original report: ${oldReport}\nnew report: ${report}`)
+         await report.save()
          registerSchedule(report)
          res.json(report)
       } catch (e) {
-         res.status(500)
-         res.json({ result: false, message: 'Internal Server Error' })
+         if (e instanceof mongoose.Error.ValidationError) {
+            res.status(400)
+            res.json(e.errors)
+         } else {
+            res.status(500)
+            res.json({ result: false, message: 'Internal Server Error' })
+         }
          logger.error(e)
       }
    })
 
-   receiver.router.delete('/report_configurations/:id', async (req, res) => {
+   receiver.router.delete('/api/v1/server/report_configurations/:id', async (req, res) => {
       logger.info(req.params.id)
       const result = await ReportConfiguration.findByIdAndRemove(req.params.id)
       if (result) {
