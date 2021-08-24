@@ -1,6 +1,11 @@
 import mongoose from 'mongoose'
 import cronParser from 'cron-parser'
 import parseUrl from 'parse-url'
+import axios from 'axios'
+import logger from '../../common/logger.js'
+import {
+   verifyBotInChannel
+} from '../../common/slack-helper.js'
 
 const REPORT_STATUS = {
    CREATED: 'CREATED',
@@ -25,10 +30,24 @@ const ReportConfigurationSchema = new mongoose.Schema({
    conversations: {
       type: [String],
       validate: {
-         validator: function(v) {
-            return v?.length > 0
-         },
-         message: () => `Should select at least one conversation to send report.`
+         validator: async function(v) {
+            if (!v || v.length === 0) {
+               throw new Error(`Should select at least one channel/direct message to send report.`)
+            } else {
+               const results = await Promise.all(
+                  v.filter(channel => channel.startsWith('C')).map(channel =>
+                     verifyBotInChannel(channel)
+                        .then(inChannel => ({ channel, inChannel }))
+                  )
+               )
+               const notInChannelList = results.filter(result => !result.inChannel)
+                  .map(result => result.channel)
+               if (notInChannelList.length > 0) {
+                  throw new Error('I am not in some selected private channel(s), ' +
+                     'please invite me into the channel(s).')
+               }
+            }
+         }
       }
    },
    mentionUsers: [String],
@@ -39,25 +58,42 @@ const ReportConfigurationSchema = new mongoose.Schema({
             return this.reportType === 'bugzilla'
          },
          validate: {
-            validator: function(v) {
+            validator: async function(v) {
                if (v == null) {
                   return true
                }
-               const url = parseUrl(v)
-               if (!URL_REGEX.test(v)) {
-                  throw new Error(`Invalid http/https url.`)
-               } else if (url.resource === 'via.vmw.com') {
-                  return true
-               } else if (url.resource === 'bugzilla.eng.vmware.com') {
+               let link = v
+               if (v.includes('via.vmw.com')) {
+                  try {
+                     const res = await axios.get(v, {
+                        maxRedirects: 0,
+                        validateStatus: function (status) {
+                           return status >= 200 && status <= 302
+                        }
+                     })
+                     if (res.headers.location != null) {
+                        link = res.headers.location
+                     } else {
+                        throw new Error(`failed to get the original link of ${v}.`)
+                     }
+                  } catch (e) {
+                     logger.warn(e)
+                     throw new Error(`Parse the original link of ${v} failed. ` +
+                        `Please try again or use original link directly. ` +
+                        `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table`)
+                  }
+               }
+               const url = parseUrl(link)
+               if (url.resource === 'bugzilla.eng.vmware.com') {
                   if (url.protocol === 'https' && url.pathname === '/report.cgi' &&
                      url.search.includes('format=table')) {
                      return true
-                  } else {
-                     throw new Error(`Unsupported bugzilla url. It should be started with 'https://bugzilla.eng.vmware.com/report.cgi?format=table'`)
                   }
-               } else {
-                  throw new Error(`Unsupported host. Now we only support 'via.vmw.com' and 'bugzilla.eng.vmware.com'`)
                }
+               throw new Error(`Unsupported bugzilla url.\n` +
+                  `Currently we only support bugzilla tabular report. ` +
+                  `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table ` +
+                  `for creating the bugzilla tabular report and generate the link.'`)
             }
          }
       }
@@ -71,10 +107,10 @@ const ReportConfigurationSchema = new mongoose.Schema({
             validator: function(startDate) {
                const today = new Date()
                today.setHours(0, 0, 0, 0)
-               return !startDate || (startDate >= today &&
-                  (!this.repeatConfig.endDate || startDate < this.repeatConfig.endDate))
+               return !startDate ||
+                  (!this.repeatConfig.endDate || startDate < this.repeatConfig.endDate)
             },
-            message: () => `It should be greater than or equal to today, and less than end date.`
+            message: () => `It should be less than end date.`
          }
       },
       endDate: {

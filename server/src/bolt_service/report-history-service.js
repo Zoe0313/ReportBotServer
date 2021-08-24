@@ -1,9 +1,10 @@
 import { formatDateTime } from '../../common/utils.js'
 import logger from '../../common/logger.js'
-import { loadBlocks, getConversationsName, getUserTz } from '../../common/slack-helper.js'
-import { ReportHistory } from '../model/report-history.js'
+import {
+   loadBlocks, getConversationsName, getUserTz, findBlockById
+} from '../../common/slack-helper.js'
+import { ReportHistory, REPORT_HISTORY_STATUS } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
-import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import { performance } from 'perf_hooks'
 
@@ -41,29 +42,24 @@ export function registerReportHistoryServiceHandler(app) {
       if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
       }
-      const tz = await getUserTz(client, user)
+      const tz = await getUserTz(user)
       const t0 = performance.now()
 
       let offset = (state.page - 1) * LIMIT
-      const filterReport = body?.state?.values[state.filterBlockId]
+      const filterReport = body?.state?.values['block_history_filter_basic' + state.filterBlockId]
          ?.action_filter_by_report?.selected_option?.value
-      const filterConversation = body?.state?.values[state.filterBlockId]
-         ?.action_filter_by_conversation?.selected_conversation
-      const filterReportUser = body?.state?.values[state.filterBlockId]
-         ?.action_filter_by_report_user?.selected_user
-      const filterStartDate = body?.state?.values[state.filterBlockId]
+      const filterConversation = body?.state?.values['block_history_filter_basic' +
+         state.filterBlockId]?.action_filter_by_conversation?.selected_conversation
+      const filterStartDate = body?.state?.values['block_history_filter_date' + state.filterBlockId]
          ?.action_filter_by_start_date?.selected_date
-      const filterEndDate = body?.state?.values[state.filterBlockId]
+      const filterEndDate = body?.state?.values['block_history_filter_date' + state.filterBlockId]
          ?.action_filter_by_end_date?.selected_date
       const filters = { creator: user }
       if (filterReport && filterReport !== 'all') {
-         filters.reportConfigId = filterReport
+         filters.title = filterReport
       }
       if (filterConversation) {
          filters.conversations = filterConversation
-      }
-      if (filterReportUser) {
-         filters.mentionUsers = filterReportUser
       }
       if (filterStartDate || filterEndDate) {
          filters.sentTime = {}
@@ -74,28 +70,33 @@ export function registerReportHistoryServiceHandler(app) {
             filters.sentTime.$lte = filterEndDate
          }
       }
+      logger.info(JSON.stringify(filters))
       const count = await ReportHistory.countDocuments(filters)
       if (offset >= count) {
          state.page = 1
          offset = 0
       }
-      const [reportHistories, allReportConfigurations] = await Promise.all([
+      const [reportHistories, allReportHistories] = await Promise.all([
          ReportHistory.find(filters).skip(offset).limit(LIMIT).sort({
             sentTime: -1
          }),
-         ReportConfiguration.find({ creator: user, status: { $ne: REPORT_STATUS.CREATED } })
+         ReportHistory.find({ creator: user })
       ])
       state.count = count
       // list filter
       const listFilter = loadBlocks('report_history/list-filter')
-      listFilter[1].block_id = state.filterBlockId.toString()
-      if (allReportConfigurations.length > 0) {
-         listFilter[1].elements[0].options = allReportConfigurations.map(report => ({
+      listFilter[1].block_id = 'block_history_filter_basic' + state.filterBlockId.toString()
+      listFilter[2].block_id = 'block_history_filter_date' + state.filterBlockId.toString()
+      if (allReportHistories.length > 0) {
+         // dedup title of report history
+         listFilter[1].elements[0].options = [...new Set(allReportHistories.map(reportHistory => {
+            return reportHistory.title
+         }))].map(title => ({
             text: {
                type: 'plain_text',
-               text: report.title
+               text: title
             },
-            value: report._id
+            value: title
          }))
       }
       // list header
@@ -103,7 +104,10 @@ export function registerReportHistoryServiceHandler(app) {
       listHeader[0].text.text = `There are ${count} report histories in your account after conditions applied.`
       // list item detail
       let listItemDetail = loadBlocks('report_history/list-item-detail')
-      const selectedHistory = await ReportHistory.findOne({ ...filters, _id: state.selectedId })
+      const selectedHistory = reportHistories.find((reportHistory) => {
+         return reportHistory._id.toString() === state.selectedId
+      })
+      logger.debug(selectedHistory)
       if (state.selectedId == null || selectedHistory == null) {
          state.selectedId = null
          listItemDetail = []
@@ -114,12 +118,19 @@ export function registerReportHistoryServiceHandler(app) {
          ])
          logger.info(conversations)
          logger.info(mentionUsers)
-         listItemDetail[0].text.text = `*Title: ${selectedHistory.title}*`
-         listItemDetail[1].fields[0].text += selectedHistory.reportType
-         listItemDetail[1].fields[1].text += formatDateTime(selectedHistory.sentTime, tz)
-         listItemDetail[1].fields[2].text += conversations
-         listItemDetail[1].fields[3].text += mentionUsers
-         listItemDetail[2].text.text += selectedHistory.content.substr(0, 1000)
+         const detailsBlock = findBlockById(listItemDetail, 'block_report_history_details')
+         const contentBlock = findBlockById(listItemDetail, 'block_report_history_content')
+         detailsBlock.fields[0].text += selectedHistory.title
+         detailsBlock.fields[1].text += selectedHistory.status
+         detailsBlock.fields[2].text += selectedHistory.reportType
+         detailsBlock.fields[3].text += formatDateTime(selectedHistory.sentTime, tz)
+         detailsBlock.fields[4].text += conversations
+         detailsBlock.fields[5].text += mentionUsers
+         contentBlock.text.text += selectedHistory.content.substr(0, 1000)
+         // if the message has been deleted in the slack channels, do not display the delete button
+         if (selectedHistory.tsMap == null || selectedHistory.tsMap.size === 0) {
+            listItemDetail.splice(2, 1)
+         }
       }
       // list items
       const listItemTemplate = loadBlocks('report_history/list-item-template')[0]
@@ -131,6 +142,7 @@ export function registerReportHistoryServiceHandler(app) {
          listItem.accessory.value = history._id
          if (history._id.toString() === state.selectedId) {
             listItem.accessory.style = 'primary'
+            listItem.accessory.text.text = 'Close'
          }
          return listItem
       })
@@ -164,8 +176,8 @@ export function registerReportHistoryServiceHandler(app) {
       if (ack) {
          await ack()
       }
-      const blocks = listHeader.concat(listFilter).concat(listItemDetail)
-         .concat(listItems).concat(listPagination)
+      const blocks = listHeader.concat(listFilter).concat(listItems)
+         .concat(listItemDetail).concat(listPagination)
       if (isUpdate) {
          state.channel = body.channel ? body.channel.id : state.channel
          await client.chat.update({
@@ -240,21 +252,6 @@ export function registerReportHistoryServiceHandler(app) {
    })
 
    app.action('action_filter_by_conversation', async ({ ack, body, client }) => {
-      try {
-         await listReportHistories(true, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
-   })
-
-   app.action('action_filter_by_report_user', async ({ ack, body, client }) => {
       try {
          await listReportHistories(true, body.message?.ts, ack, body, client)
       } catch (e) {
@@ -409,6 +406,66 @@ export function registerReportHistoryServiceHandler(app) {
                'Please contact developers to resolve it.'
          })
          throw e
+      }
+   })
+
+   // delete report message in slack conversations/channels
+   app.action({
+      block_id: 'block_report_history_actions',
+      action_id: 'action_delete_report_message'
+   }, async ({ ack, body, client }) => {
+      const ts = body.message.ts
+      const state = await getState(ts)
+      try {
+         const selectedHistory = await ReportHistory.findOne({ _id: state.selectedId })
+         if (selectedHistory == null) {
+            throw new Error(`can not find the history since no history with id ${state.selectedId}`)
+         }
+         logger.info(`start to delete report message ${selectedHistory._id} at ${ts}`)
+         logger.info(JSON.stringify(selectedHistory.tsMap))
+         if (selectedHistory.tsMap == null || selectedHistory.tsMap.size === 0) {
+            await ack()
+         } else {
+            await ack()
+            const reqList = []
+            selectedHistory.tsMap.forEach((ts, conversation) => {
+               const req = client.chat.delete({
+                  channel: conversation,
+                  ts: ts
+               }).then(res => {
+                  logger.info(`succeed to delete report message ${selectedHistory} in ` +
+                     `slack channel ${conversation} at timestamp ` + `${ts}.`)
+                  return res
+               }).catch(e => {
+                  logger.error(`failed to delete report message ${selectedHistory} in ` +
+                     `slack channel ${conversation} at timestamp ${ts}. ` +
+                     `Error message: ${e}`)
+                  return null
+               })
+               reqList.push(req)
+            })
+            const results = await Promise.all(reqList)
+            logger.info(`Delete message results for ${selectedHistory}: ${JSON.stringify(results)}`)
+            results.forEach(result => {
+               if (result != null && result.ok && result.channel != null) {
+                  selectedHistory.tsMap.delete(result.channel)
+               }
+            })
+            // if all messages in slack channels were deleted, update the status to DELETED
+            if (selectedHistory.tsMap.size === 0) {
+               selectedHistory.status = REPORT_HISTORY_STATUS.DELETED
+            }
+            await selectedHistory.save()
+            await listReportHistories(true, ts, ack, body, client)
+         }
+      } catch (e) {
+         await ack()
+         await client.chat.postMessage({
+            channel: body.user.id,
+            blocks: [],
+            text: 'Failed to delete report message in Slack channels. ' +
+               'Please contact developers to resolve it.'
+         })
       }
    })
 }
