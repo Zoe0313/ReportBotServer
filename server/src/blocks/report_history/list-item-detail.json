@@ -1,6 +1,9 @@
 {
    "blocks": [
       {
+         "type": "divider"
+      },
+      {
          "type": "section",
          "block_id": "block_report_history_details",
          "fields": [
@@ -14,7 +17,7 @@
             },
             {
                "type": "mrkdwn",
-               "text": "*Report Type: *\n"
+               "text": "*Notification Type: *\n"
             },
             {
                "type": "mrkdwn",
@@ -59,7 +62,7 @@
                   },
                   "text": {
                      "type": "plain_text",
-                     "text": "Are you sure delete this report message in slack channels?"
+                     "text": "Are you sure delete this notification message sent in the slack conversations? If you delete, you will not see this notification message in that conversations."
                   },
                   "confirm": {
                      "type": "plain_text",

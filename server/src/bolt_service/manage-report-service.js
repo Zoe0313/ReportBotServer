@@ -161,7 +161,7 @@ export function registerManageReportServiceHandler(app) {
 
       // list header
       const listHeader = loadBlocks('report/list-header')
-      listHeader[0].text.text = `There are ${count} reports in your account.`
+      listHeader[0].text.text = `There are ${count} notifications in your account.`
 
       // list item detail
       let listItemDetail = loadBlocks('report/list-item-detail')
@@ -182,32 +182,32 @@ export function registerManageReportServiceHandler(app) {
             : 'No longer executed'
          logger.info(nextReportSendingTime)
          // report title
-         listItemDetail[0].text.text = `*Title: ${report.title}*`
+         listItemDetail[1].text.text = `*Title: ${report.title}*`
          // report type
-         listItemDetail[1].fields[0].text += report.reportType
+         listItemDetail[2].fields[0].text += report.reportType
          // report status
-         listItemDetail[1].fields[1].text += REPORT_STATUS_DISPLAY[report.status]
+         listItemDetail[2].fields[1].text += REPORT_STATUS_DISPLAY[report.status]
          // report channels to be sent
-         listItemDetail[1].fields[2].text += conversations
+         listItemDetail[2].fields[2].text += conversations
          // users to be notified
-         listItemDetail[1].fields[3].text += mentionUsers
+         listItemDetail[2].fields[3].text += mentionUsers
          // scheduler start date
-         listItemDetail[1].fields[4].text += formatDate(report.repeatConfig.startDate)
+         listItemDetail[2].fields[4].text += formatDate(report.repeatConfig.startDate)
          // scheduler end date
-         listItemDetail[1].fields[5].text += formatDate(report.repeatConfig.endDate)
+         listItemDetail[2].fields[5].text += formatDate(report.repeatConfig.endDate)
          // repeat config summary
-         listItemDetail[1].fields[6].text += displayTimeSetting(report, tz)
+         listItemDetail[2].fields[6].text += displayTimeSetting(report, tz)
          // next sending time
-         listItemDetail[1].fields[7].text += nextReportSendingTime
+         listItemDetail[2].fields[7].text += nextReportSendingTime
 
          // edit button
-         listItemDetail[2].elements[0].value = report._id
+         listItemDetail[3].elements[0].value = report._id
          // remove button
-         listItemDetail[2].elements[1].value = report._id
+         listItemDetail[3].elements[1].value = report._id
          // enable or disable button, only display one button
-         listItemDetail[2].elements.splice(report.status === REPORT_STATUS.ENABLED ? 2 : 3, 1)
+         listItemDetail[3].elements.splice(report.status === REPORT_STATUS.ENABLED ? 2 : 3, 1)
          // cancel next sending button
-         listItemDetail[2].elements[3].value = report._id
+         listItemDetail[3].elements[3].value = report._id
       }
 
       // list items
@@ -410,7 +410,7 @@ export function registerManageReportServiceHandler(app) {
          }
          const report = await ReportConfiguration.findById(id)
          const blocks = loadBlocks('modal/delete')
-         blocks[0].text.text += `*${report.title}*`
+         blocks[0].text.text += `*${report.title}*?`
          await ack()
          await client.views.open({
             trigger_id: body.trigger_id,

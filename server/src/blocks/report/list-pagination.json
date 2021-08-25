@@ -9,7 +9,7 @@
                "text": {
                   "type": "plain_text",
                   "emoji": true,
-                  "text": "Previous 5 Reports"
+                  "text": "Previous 5 Notifications"
                },
                "value": "0",
                "action_id": "action_previous_page"
@@ -19,7 +19,7 @@
                "text": {
                   "type": "plain_text",
                   "emoji": true,
-                  "text": "Next 5 Reports"
+                  "text": "Next 5 Notification"
                },
                "value": "0",
                "action_id": "action_next_page"

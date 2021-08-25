@@ -7,7 +7,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": "Last Step: Precheck and enable your new report configuration",
+            "text": "Last Step: Precheck and enable your new notification configuration",
             "emoji": true
          }
       },
@@ -15,7 +15,7 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "*This section is to show new report sample*"
+            "text": "*This section is to show new notification/report sample*"
          }
       },
       {
@@ -57,14 +57,14 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": ":mega: Notice: Please enable your new report configuration, or save as a draft. \n:mega: You can edit or delete through *Manage my reports*."
+            "text": ":mega: Notice: Please enable your new notification configuration, or save as a draft. \n:mega: You can edit or delete through *Manage my notifications*."
          }
       },
       {
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": ":slack: Any question please contact us <fakeLink.toEmployeeProfile.com|#vSlackbot Shanghai>"
+            "text": ":slack: Any question please contact us #vsan-slackbot"
          }
       },
       {

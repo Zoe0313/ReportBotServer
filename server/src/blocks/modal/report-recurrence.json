@@ -15,7 +15,7 @@
          "block_id": "repeatConfig.repeatType",
          "label": {
             "type": "plain_text",
-            "text": ":repeat: Select a repeat time",
+            "text": ":repeat: Repeat type",
             "emoji": true
          },
          "dispatch_action": true,

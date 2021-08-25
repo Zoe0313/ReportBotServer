@@ -4,7 +4,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": "Weekly report additional setting"
+            "text": "Weekly notification additional setting"
          }
       },
       {
@@ -12,7 +12,7 @@
          "type": "input",
          "label": {
             "type": "plain_text",
-            "text": ":calendar: Send the report every"
+            "text": ":calendar: Send the notification every"
          },
          "element": {
             "type": "checkboxes",
@@ -77,6 +77,10 @@
             "type": "plain_text",
             "text": ":clock2: Select a time for your report",
             "emoji": true
+         },
+         "hint": {
+            "type": "plain_text",
+            "text": "You can choose a time or input a specific time directly, e.g. 14:25"
          },
          "element": {
             "type": "timepicker",

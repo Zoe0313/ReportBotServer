@@ -101,7 +101,7 @@ export function registerReportHistoryServiceHandler(app) {
       }
       // list header
       const listHeader = loadBlocks('report_history/list-header')
-      listHeader[0].text.text = `There are ${count} report histories in your account after conditions applied.`
+      listHeader[0].text.text = `There are ${count} notification histories after conditions applied.`
       // list item detail
       let listItemDetail = loadBlocks('report_history/list-item-detail')
       const selectedHistory = reportHistories.find((reportHistory) => {
@@ -127,6 +127,9 @@ export function registerReportHistoryServiceHandler(app) {
          detailsBlock.fields[4].text += conversations
          detailsBlock.fields[5].text += mentionUsers
          contentBlock.text.text += selectedHistory.content.substr(0, 1000)
+         if (selectedHistory.content.length > 1000) {
+            contentBlock.text.text += `...(not display full message due to length limitation)`
+         }
          // if the message has been deleted in the slack channels, do not display the delete button
          if (selectedHistory.tsMap == null || selectedHistory.tsMap.size === 0) {
             listItemDetail.splice(2, 1)
@@ -135,8 +138,8 @@ export function registerReportHistoryServiceHandler(app) {
       // list items
       const listItemTemplate = loadBlocks('report_history/list-item-template')[0]
       const listItems = reportHistories.map(history => {
-         const content = `*${history.title} - ${history.reportType}*\n` +
-            `Sent at ${formatDateTime(history.sentTime, tz)}`
+         const content = `*${history.title} - ${history.reportType}* ` +
+            `was sent at ${formatDateTime(history.sentTime, tz)}`
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = history._id
