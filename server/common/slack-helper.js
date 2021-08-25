@@ -59,7 +59,6 @@ export async function verifyBotInChannel(channel) {
 }
 
 export function getConversationsName(conversationIds) {
-
    if (conversationIds == null) {
       return ''
    }
@@ -67,8 +66,9 @@ export function getConversationsName(conversationIds) {
       // if conversation is a channel
       if (channel.startsWith('C')) {
          return `<#${channel}>`
-         // if conversation is a user
-      } else if (channel.startsWith('U')) {
+      } else if (channel.startsWith('U') || channel.startsWith('W')) { // if conversation is a user
+         // some users can start with 'w`, please refer to
+         // https://api.slack.com/changelog/2016-08-11-user-id-format-changes
          return `<@${channel}>`
       }
       return `<#${channel}>`
@@ -76,7 +76,6 @@ export function getConversationsName(conversationIds) {
 }
 
 export function loadBlocks(name) {
-
    if (name.endsWith('null') || name.endsWith('undefined')) {
       return []
    }
@@ -116,26 +115,21 @@ export function transformInputValuesToObj(values) {
       } else {
          inputValue = payload.value
       }
-   
       set(inputObj, blockKey, inputValue)
    })
-
    return inputObj
 }
 
 export function initReportTypeBlocks(report, blocks) {
-
    if (report == null || report.reportType == null) {
       const reportTypeBlock = findBlockById(blocks, 'reportType')
       const reportTypeOption = reportTypeBlock.element.options
          .find(option => option.value === 'bugzilla')
-
       if (reportTypeOption != null) {
          reportTypeBlock.element.initial_option = reportTypeOption
       } else {
          throw new Error('bugzilla option can not be found in the block.')
       }
-
    } else {
       const reportSpecConfig = report.reportSpecConfig
 
