@@ -4,7 +4,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": "Daily report additional setting"
+            "text": "Daily notification additional setting"
          }
       },
       {
@@ -12,8 +12,12 @@
          "type": "input",
          "label": {
             "type": "plain_text",
-            "text": ":clock2: Send the report every:",
+            "text": ":clock2: Send the notification every:",
             "emoji": true
+         },
+         "hint": {
+            "type": "plain_text",
+            "text": "You can choose a time or input a specific time directly, e.g. 14:25"
          },
          "element": {
             "type": "timepicker",

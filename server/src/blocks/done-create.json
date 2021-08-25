@@ -7,7 +7,7 @@
          "type": "header",
          "text": {
             "type": "plain_text",
-            "text": ":ok_hand: You just created a new report!",
+            "text": ":ok_hand: You just created a new notification configuration!",
             "emoji": true
          }
       },
@@ -15,14 +15,14 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "Your report has been created as \"*Running*\" status."
+            "text": "Your notification configuration has been created as \"*ENABLED*\" status."
          }
       },
       {
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": ":slack: If any question please contact us <fakeLink.toEmployeeProfile.com|#vSAN Slackbot Shanghai>"
+            "text": ":slack: If any question please contact us #vsan-slackbot"
          }
       },
       {

@@ -7,7 +7,7 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "Hi, welcome to *vSAN Slackbot*! In this world, you can quickly schedule and manage your report. Please select the action as below:"
+            "text": "Hi, welcome to *vSAN Slackbot*! In this world, you can quickly schedule and manage your notification. Please select the action as below:"
          }
       },
       {
@@ -18,7 +18,7 @@
                "type": "button",
                "text": {
                   "type": "plain_text",
-                  "text": ":new: Create a report",
+                  "text": ":new: Create a notification",
                   "emoji": true
                },
                "value": "approve",
@@ -28,7 +28,7 @@
                "type": "button",
                "text": {
                   "type": "plain_text",
-                  "text": ":mag: Manage my reports",
+                  "text": ":mag: Manage my notifications",
                   "emoji": true
                },
                "value": "approve",
@@ -38,7 +38,7 @@
                "type": "button",
                "text": {
                   "type": "plain_text",
-                  "text": ":speech_balloon: Report Send History",
+                  "text": ":speech_balloon: Notification History",
                   "emoji": true
                },
                "value": "approve",
@@ -50,14 +50,14 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": ":link: Get started from <fakeLink.toEmployeeProfile.com|Slack Bot User Manual>"
+            "text": ":link: Get started from <https://confluence.eng.vmware.com/display/SABU/vSAN+Slackbot+User+Manual|Slack Bot User Manual>"
          }
       },
       {
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": ":slack: Contact us <fakeLink.toEmployeeProfile.com|#vSAN Slackbot Shanghai>"
+            "text": ":slack: Contact us #vsan-slackbot"
          }
       },
       {

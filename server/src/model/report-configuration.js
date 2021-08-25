@@ -18,7 +18,6 @@ const STATUS_ENUM = Object.values(REPORT_STATUS)
 const REPORT_TYPE_ENUM = ['bugzilla', 'perforce', 'svs', 'fastsvs', 'text', 'customized']
 const REPEAT_TYPE_ENUM = ['not_repeat', 'hourly', 'daily', 'weekly', 'monthly', 'cron_expression']
 
-const URL_REGEX = /((http|https):\/\/)[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:/~+#-]*[\w@?^=%&amp;/~+#-])?/
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-4]):([0-5][0-9])(:[0-5][0-9])?$/
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 

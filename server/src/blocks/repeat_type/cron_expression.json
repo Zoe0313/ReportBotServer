@@ -12,11 +12,15 @@
          "type": "input",
          "element": {
             "type": "plain_text_input",
-            "action_id": "action_cron_expression"
+            "action_id": "action_cron_expression",
+            "placeholder": {
+               "type": "plain_text",
+               "text": "E.g. 30 14 * * 2, it means 14:30PM on every Tueday"
+            }
          },
          "label": {
             "type": "plain_text",
-            "text": "Or enter the crontab expression in the window below.",
+            "text": "Enter the crontab expression",
             "emoji": true
          }
       },
@@ -24,7 +28,7 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "Example: 30 14 * * 2, it represents 14:30PM on every Tueday\n<https://crontab.guru.com/|Quick and simple editor for cron schedule expressions>"
+            "text": "<https://crontab.guru.com/|Quick and simple editor for cron schedule expressions>"
          }
       }
    ]

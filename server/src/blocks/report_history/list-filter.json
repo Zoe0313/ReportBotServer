@@ -4,7 +4,7 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "Filter report histories by conditions"
+            "text": "Filter notification history by conditions"
          },
          "accessory": {
             "type": "button",
@@ -23,7 +23,7 @@
                "type": "static_select",
                "placeholder": {
                   "type": "plain_text",
-                  "text": "Select report configuration",
+                  "text": "Select notification title",
                   "emoji": true
                },
                "options": [

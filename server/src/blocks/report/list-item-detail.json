@@ -1,10 +1,13 @@
 {
    "blocks": [
       {
+         "type": "divider"
+      },
+      {
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "*Report title*"
+            "text": "*Title*"
          }
       },
       {
@@ -12,7 +15,7 @@
          "fields": [
             {
                "type": "mrkdwn",
-               "text": "*Report Type: *\n"
+               "text": "*Nofitication Type: *\n"
             },
             {
                "type": "mrkdwn",
@@ -36,7 +39,7 @@
             },
             {
                "type": "mrkdwn",
-               "text": "*Repeat Time: *\n"
+               "text": "*Recurrence: *\n"
             },
             {
                "type": "mrkdwn",
@@ -82,11 +85,11 @@
                "confirm": {
                   "title": {
                      "type": "plain_text",
-                     "text": "Enable report"
+                     "text": "Enable notification"
                   },
                   "text": {
                      "type": "plain_text",
-                     "text": "Are you sure enable this report?"
+                     "text": "Are you sure enable this notification? If you enable it, the notification will be sent at the recurrence setting."
                   },
                   "confirm": {
                      "type": "plain_text",
@@ -110,11 +113,11 @@
                "confirm": {
                   "title": {
                      "type": "plain_text",
-                     "text": "Disable report"
+                     "text": "Disable notification"
                   },
                   "text": {
                      "type": "plain_text",
-                     "text": "Are you sure disable this report?"
+                     "text": "Are you sure disable this notification? If you disable it, this notification will not be sent."
                   },
                   "confirm": {
                      "type": "plain_text",
@@ -138,11 +141,11 @@
                "confirm": {
                   "title": {
                      "type": "plain_text",
-                     "text": "Cancel next report"
+                     "text": "Cancel next notification"
                   },
                   "text": {
                      "type": "plain_text",
-                     "text": "Are you sure cancel next report sending?"
+                     "text": "Are you sure cancel next notification sending?"
                   },
                   "confirm": {
                      "type": "plain_text",

@@ -7,14 +7,21 @@
             "type": "plain_text_input",
             "placeholder": {
                "type": "plain_text",
-               "text": "Bugzilla link"
+               "text": "Bugzilla link of tabular report"
             },
             "action_id": "action_report_link"
          },
          "label": {
             "type": "plain_text",
-            "text": ":four: Specific configuration for bugzilla report",
+            "text": ":four: Input bugzilla link",
             "emoji": true
+         }
+      },
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": "Refer to <https://bugzilla.eng.vmware.com/query.cgi?format=report-table|creating bugzilla tabular report>"
          }
       }
    ]

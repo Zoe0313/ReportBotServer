@@ -11,7 +11,7 @@
             "type": "multi_users_select",
             "placeholder": {
                "type": "plain_text",
-               "text": "Select users to be mentioned",
+               "text": "Users to be mentioned",
                "emoji": true
             },
             "action_id": "action_report_users"

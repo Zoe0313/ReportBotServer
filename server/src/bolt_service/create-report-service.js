@@ -35,7 +35,7 @@ export function registerCreateReportServiceHandler(app) {
                callback_id: 'view_create_report',
                title: {
                   type: 'plain_text',
-                  text: 'Create your new report'
+                  text: 'Create a notification'
                },
                blocks,
                submit: {
@@ -82,7 +82,7 @@ export function registerCreateReportServiceHandler(app) {
             callback_id: 'view_create_report',
             title: {
                type: 'plain_text',
-               text: 'Create your new report'
+               text: 'Create a notification'
             },
             blocks,
             submit: {
