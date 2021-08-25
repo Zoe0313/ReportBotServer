@@ -132,7 +132,10 @@ export function registerReportHistoryServiceHandler(app) {
          }
          // if the message has been deleted in the slack channels, do not display the delete button
          if (selectedHistory.tsMap == null || selectedHistory.tsMap.size === 0) {
-            listItemDetail.splice(2, 1)
+            const deleteButtonBlockIndex = listItemDetail.findIndex(block => {
+               return block.block_id === 'block_report_history_actions'
+            })
+            listItemDetail.splice(deleteButtonBlockIndex, 1)
          }
       }
       // list items
