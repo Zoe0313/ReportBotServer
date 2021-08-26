@@ -216,8 +216,9 @@ export function registerManageReportServiceHandler(app) {
       // list items
       const listItemTemplate = loadBlocks('report/list-item-template')[0]
       const listItems = reportConfigurations.map(report => {
+         const creator = user === process.env.ADMIN_USER_ID ? ` - ${getConversationsName([report.creator])}` : ''
          const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':black_square_for_stop:'
-         const content = `*${report.title} - ${report.reportType}* ${icon}\n${displayTimeSetting(report, tz)}`
+         const content = `*${report.title} - ${report.reportType}*${creator} ${icon}\n${displayTimeSetting(report, tz)}`
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = report._id
