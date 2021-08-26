@@ -148,7 +148,7 @@ export function registerManageReportServiceHandler(app) {
       const filter = {
          status: { $ne: REPORT_STATUS.CREATED }
       }
-      if (user !== process.env.ADMIN_USER_ID) {
+      if (!process.env.ADMIN_USER_ID.includes(user)) {
          filter.creator = user
       }
       const count = await ReportConfiguration.countDocuments(filter)
@@ -181,9 +181,10 @@ export function registerManageReportServiceHandler(app) {
             ? formatDateTime(new Date(nextInvocationTime), tz)
             : 'No longer executed'
          logger.info(nextReportSendingTime)
+
          // report title
          listItemDetail[1].text.text = `*Title: ${report.title}*`
-         if (user === process.env.ADMIN_USER_ID) {
+         if (process.env.ADMIN_USER_ID.includes(user)) {
             listItemDetail[1].text.text += `  created by ${getConversationsName([report.creator])}`
          }
          // report type
@@ -216,7 +217,7 @@ export function registerManageReportServiceHandler(app) {
       // list items
       const listItemTemplate = loadBlocks('report/list-item-template')[0]
       const listItems = reportConfigurations.map(report => {
-         const creator = user === process.env.ADMIN_USER_ID ? ` - ${getConversationsName([report.creator])}` : ''
+         const creator = process.env.ADMIN_USER_ID.includes(user) ? ` - ${getConversationsName([report.creator])}` : ''
          const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':black_square_for_stop:'
          const content = `*${report.title} - ${report.reportType}*${creator} ${icon}\n${displayTimeSetting(report, tz)}`
          const listItem = cloneDeep(listItemTemplate)
@@ -228,6 +229,7 @@ export function registerManageReportServiceHandler(app) {
          }
          return listItem
       })
+
       // list pagination
       let listPagination = loadBlocks('report/list-pagination')
       const listPaginationElements = []
