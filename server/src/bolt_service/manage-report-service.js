@@ -183,6 +183,9 @@ export function registerManageReportServiceHandler(app) {
          logger.info(nextReportSendingTime)
          // report title
          listItemDetail[1].text.text = `*Title: ${report.title}*`
+         if (user === process.env.ADMIN_USER_ID) {
+            listItemDetail[1].text.text += `  created by ${getConversationsName([report.creator])}`
+         }
          // report type
          listItemDetail[2].fields[0].text += report.reportType
          // report status
