@@ -1,5 +1,5 @@
 import { loadBlocks, updateUserTzCache } from '../../common/slack-helper.js'
-
+import logger from '../../common/logger.js'
 export function registerCommonServiceHandler(app) {
    // Reply in channel
    app.event('app_mention', async ({ event, say }) => {
@@ -36,6 +36,14 @@ export function registerCommonServiceHandler(app) {
    app.event('user_change', async ({ payload }) => {
       const userId = payload?.user?.id
       const tz = payload?.user?.tz
-      updateUserTzCache(userId, tz)
+      try {
+         if (tz != null) {
+            updateUserTzCache(userId, tz)
+         }
+      } catch (e) {
+         logger.error(`Failed to update tz when user_change event happened. ` +
+            `Payload: ${JSON.stringify(payload)}. ` + `Error: ${JSON.stringify(e)}`)
+         throw e
+      }
    })
 }

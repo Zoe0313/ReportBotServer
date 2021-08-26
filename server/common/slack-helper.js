@@ -33,10 +33,11 @@ export const getUserTz = async (userId) => {
 
 export const updateUserTzCache = (userId, tz) => {
    assert(userId != null, 'user Id is null when updating user tz cache.')
-   assert(tz != null, 'timezone is null when updating user tz cache')
 
    if (userTzCache[userId] != null) {
+      assert(tz != null, 'timezone is null when updating user tz cache')
       userTzCache[userId] = tz
+      logger.info(`${userId} update timezone to ${tz} caused by user_change event`)
    }
 }
 
