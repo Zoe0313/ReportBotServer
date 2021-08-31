@@ -34,6 +34,14 @@
                      "emoji": true
                   },
                   "value": "bugzilla"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Text",
+                     "emoji": true
+                  },
+                  "value": "text"
                }
             ]
          }

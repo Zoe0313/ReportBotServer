@@ -33,95 +33,103 @@ const execCommand = function(cmd, timeout) {
    })
 }
 
-const commonHandler = async (report) => {
-   logger.info(`schedule for ${report.title} ${report._id}`)
-   // const REPORT_TYPE_ENUM = ['bugzilla', 'perforce', 'svs', 'fastsvs', 'text', 'customized']
-   const handleExecCommand = async (command, report) => {
-      let reportHistory = null
-      try {
-         reportHistory = new ReportHistory({
-            reportConfigId: report._id,
-            title: report.title,
-            creator: report.creator,
-            reportType: report.reportType,
-            conversations: report.conversations,
-            mentionUsers: report.mentionUsers,
-            sentTime: null,
-            content: '',
-            status: REPORT_HISTORY_STATUS.PENDING
+const notificationExecutor = async (report, contentEvaluate) => {
+   let reportHistory = null
+   try {
+      reportHistory = new ReportHistory({
+         reportConfigId: report._id,
+         title: report.title,
+         creator: report.creator,
+         reportType: report.reportType,
+         conversations: report.conversations,
+         mentionUsers: report.mentionUsers,
+         sentTime: null,
+         content: '',
+         status: REPORT_HISTORY_STATUS.PENDING
+      })
+      await reportHistory.save()
+
+      // 10 mins timeout
+      let stdout = await contentEvaluate()
+      if (report.mentionUsers != null && report.mentionUsers.length > 0) {
+         const mentionUsers = '\n' + (await getConversationsName(report.mentionUsers))
+         stdout += mentionUsers
+      }
+      logger.info(`stdout of notification ${report.title}: ${stdout}`)
+
+      // post reports to slack channels
+      const results = await Promise.all(
+         report.conversations.map(conversation => {
+            return client.chat.postMessage({
+               channel: conversation,
+               text: stdout
+            }).catch((e) => {
+               logger.error(`failed to post message to conversation ${conversation}` +
+                  `since error: ${JSON.stringify(e)}`)
+               return null
+            })
          })
-         await reportHistory.save()
+      )
 
-         // 10 mins timeout
-         let stdout = await execCommand(command, 10 * 60 * 1000)
-         if (report.mentionUsers != null && report.mentionUsers.length > 0) {
-            const mentionUsers = '\n' + (await getConversationsName(report.mentionUsers))
-            stdout += mentionUsers
+      // update status and content of report history
+      reportHistory.sentTime = new Date()
+
+      const tsMap = Object.fromEntries(
+         results.filter(result => {
+            return result != null
+         }).map(result => {
+            return [result.channel, result.ts]
+         })
+      )
+      logger.info(`the tsMap of ${reportHistory._id} is ${JSON.stringify(tsMap)}`)
+      reportHistory.tsMap = tsMap
+      reportHistory.content = stdout
+      reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
+      await reportHistory.save()
+   } catch (e) {
+      logger.error(`failed to handle schedule job since error: ${JSON.stringify(e)}`)
+      if (reportHistory != null) {
+         if (reportHistory.sentTime === null) {
+            // record failed or timeout time
+            reportHistory.sentTime = new Date()
          }
-         logger.info(`stdout of command ${command}: ${stdout}`)
-
-         // post reports to slack channels
-         const results = await Promise.all(
-            report.conversations.map(conversation => {
-               return client.chat.postMessage({
-                  channel: conversation,
-                  text: stdout
-               }).catch((e) => {
-                  logger.error(`failed to post message to conversation ${conversation}` +
-                     `since error: ${JSON.stringify(e)}`)
-                  return null
-               })
-            })
-         )
-
-         // update status and content of report history
-         reportHistory.sentTime = new Date()
-
-         const tsMap = Object.fromEntries(
-            results.filter(result => {
-               return result != null
-            }).map(result => {
-               return [result.channel, result.ts]
-            })
-         )
-         logger.info(`the tsMap of ${reportHistory._id} is ${JSON.stringify(tsMap)}`)
-         reportHistory.tsMap = tsMap
-         reportHistory.content = stdout
-         reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
-         await reportHistory.save()
-      } catch (e) {
-         logger.error(`failed to handle schedule job since error: ${JSON.stringify(e)}`)
-         if (reportHistory != null) {
-            if (reportHistory.sentTime === null) {
-               // record failed or timeout time
-               reportHistory.sentTime = new Date()
-            }
-            reportHistory.content = e.message
-            if (e.signal === 'SIGTERM') {
-               reportHistory.status = REPORT_HISTORY_STATUS.TIMEOUT
-            } else {
-               reportHistory.status = REPORT_HISTORY_STATUS.FAILED
-            }
-            try {
-               await reportHistory.save()
-            } catch (e1) {
-               logger.error(`save failed report history failed again since error: ${JSON.stringify(e1)}`)
-            }
+         reportHistory.content = e.message
+         if (e.signal === 'SIGTERM') {
+            reportHistory.status = REPORT_HISTORY_STATUS.TIMEOUT
+         } else {
+            reportHistory.status = REPORT_HISTORY_STATUS.FAILED
+         }
+         try {
+            await reportHistory.save()
+         } catch (e1) {
+            logger.error(`save failed report history failed again since error: ${JSON.stringify(e1)}`)
          }
       }
    }
+}
+
+const commonHandler = async (report) => {
+   logger.info(`schedule for ${report.title} ${report._id}`)
+   // const REPORT_TYPE_ENUM = ['bugzilla', 'perforce', 'svs', 'fastsvs', 'text', 'customized']
 
    // exec the different report generator
+   const timeout = 10 * 60 * 1000
    switch (report.reportType) {
       case 'bugzilla':
          const scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
-         await handleExecCommand(`python3 ${scriptPath} --title '${report.title}' ` +
-            `--url '${report.reportSpecConfig.bugzillaLink}'`, report)
+         await notificationExecutor(report, async () => {
+            return await execCommand(`python3 ${scriptPath} --title '${report.title}' ` +
+               `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
+         })
+         break
+      case 'text':
+         await notificationExecutor(report, async () => {
+            return report.reportSpecConfig.text
+         })
          break
       // case 'perforce':
       // case 'svs':
       // case 'fastsvs':
-      // case 'text':
       // case 'customized':
       default:
          logger.error(`report type ${report.reportType} not supported.`)

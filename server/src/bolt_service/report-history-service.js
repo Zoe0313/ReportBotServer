@@ -126,8 +126,8 @@ export function registerReportHistoryServiceHandler(app) {
          detailsBlock.fields[3].text += formatDateTime(selectedHistory.sentTime, tz)
          detailsBlock.fields[4].text += conversations
          detailsBlock.fields[5].text += mentionUsers
-         contentBlock.text.text += selectedHistory.content.substr(0, 1000)
-         if (selectedHistory.content.length > 1000) {
+         contentBlock.text.text += selectedHistory.content.substr(0, 2000)
+         if (selectedHistory.content.length > 2000) {
             contentBlock.text.text += `...(not display full message due to length limitation)`
          }
          // if the message has been deleted in the slack channels, do not display the delete button
