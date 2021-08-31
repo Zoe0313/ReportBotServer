@@ -141,6 +141,12 @@ export function initReportTypeBlocks(report, blocks) {
                   .element.initial_value = reportSpecConfig.bugzillaLink
             }
             break
+         case 'text':
+            if (reportSpecConfig.text != null && reportSpecConfig.text.length > 0) {
+               findBlockById(blocks, 'reportSpecConfig.text')
+                  .element.initial_value = reportSpecConfig.text
+            }
+            break
          // case 'perforce':
          //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
          //       .element.initial_value = reportSpecConfig.bugzillaLink
@@ -150,10 +156,6 @@ export function initReportTypeBlocks(report, blocks) {
          //       .element.initial_value = reportSpecConfig.bugzillaLink
          //    break
          // case 'fastsvs':
-         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-         //       .element.initial_value = reportSpecConfig.bugzillaLink
-         //    break
-         // case 'text':
          //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
          //       .element.initial_value = reportSpecConfig.bugzillaLink
          //    break

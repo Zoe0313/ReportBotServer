@@ -95,6 +95,21 @@ const ReportConfigurationSchema = new mongoose.Schema({
                   `for creating the bugzilla tabular report and generate the link.'`)
             }
          }
+      },
+      text: {
+         type: String,
+         required: function(v) {
+            return this.reportType === 'text'
+         },
+         validate: {
+            validator: async function(v) {
+               if (v == null) {
+                  return true
+               }
+               return v.length > 0 && v.length <= 2000
+            },
+            message: props => 'The length of text message should greater than 0 and less than 2000.'
+         }
       }
    },
    repeatConfig: {
@@ -224,14 +239,6 @@ export { ReportConfiguration, REPORT_STATUS }
 //       "emoji": true
 //    },
 //    "value": "fastsvs"
-// },
-// {
-//    "text": {
-//       "type": "plain_text",
-//       "text": "Text",
-//       "emoji": true
-//    },
-//    "value": "text"
 // },
 // {
 //    "text": {

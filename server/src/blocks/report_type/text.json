@@ -2,18 +2,19 @@
    "blocks": [
       {
          "type": "input",
-         "block_id": "reportSpecConfig.bugzillaLink",
+         "block_id": "reportSpecConfig.text",
          "element": {
             "type": "plain_text_input",
+            "multiline": true,
             "placeholder": {
                "type": "plain_text",
-               "text": "Text link"
+               "text": "Input text message"
             },
-            "action_id": "action_report_link"
+            "action_id": "action_input_text"
          },
          "label": {
             "type": "plain_text",
-            "text": "Report Link",
+            "text": ":four: Text message",
             "emoji": true
          }
       }

@@ -75,7 +75,7 @@
          "type": "input",
          "label": {
             "type": "plain_text",
-            "text": ":clock2: Select a time for your report",
+            "text": ":clock2: Select a time for your notification",
             "emoji": true
          },
          "hint": {
@@ -87,7 +87,7 @@
             "initial_time": "08:00",
             "placeholder": {
                "type": "plain_text",
-               "text": "Select time for daily report",
+               "text": "Select time for weekly notification",
                "emoji": true
             },
             "action_id": "action_time"
