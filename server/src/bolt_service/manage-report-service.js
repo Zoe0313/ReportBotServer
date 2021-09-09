@@ -1,115 +1,31 @@
 import {
-   formatDate, formatDateTime, convertTimeWithTz, parseDateWithTz, merge
+   formatDate, formatDateTime, merge
 } from '../../common/utils.js'
 import logger from '../../common/logger.js'
 import {
    loadBlocks, getConversationsName, getUserTz,
-   transformInputValuesToObj, initReportTypeBlocks, findBlockById
+   transformInputValuesToObj, findBlockById, tryAndHandleError
 } from '../../common/slack-helper.js'
-import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
+import { displayTimeSetting } from './init-blocks-data-helper.js'
+import {
+   ReportConfiguration, REPORT_STATUS, flattenPerforceCheckinMembers
+} from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
 import {
-   registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation
+   registerScheduler, unregisterScheduler, nextInvocation, cancelNextInvocation, invokeNow
 } from '../scheduler-adapter.js'
+import { updateModal } from './create-report-service.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import mongoose from 'mongoose'
-import { performance } from 'perf_hooks'
+// import { performance } from 'perf_hooks'
 
 const LIMIT = 5
-
-const WEEK = {
-   1: 'Monday',
-   2: 'Tuesday ',
-   3: 'Wednesday ',
-   4: 'Thursday',
-   5: 'Friday',
-   6: 'Saturday',
-   0: 'Sunday'
-}
 
 const REPORT_STATUS_DISPLAY = {
    CREATED: 'Created',
    DRAFT: ':black_square_for_stop: Draft',
    DISABLED: ':black_square_for_stop: Disabled',
    ENABLED: ':white_check_mark: Enabled'
-}
-
-function displayTimeSetting(report, tz) {
-   const repeatConfig = report.repeatConfig
-   const dayOfWeekStr = repeatConfig.dayOfWeek
-      ? repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ')
-      : 'Empty'
-   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
-   switch (repeatConfig.repeatType) {
-      case 'not_repeat': {
-         const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
-         return `Not Repeat - ${formatDateTime(date, tz)}`
-      }
-      case 'hourly': return `Hourly - ${repeatConfig.minsOfHour} mins of every hour`
-      case 'daily': return `Daily - ${convertedTime} of every day`
-      case 'weekly': return `Weekly - ${dayOfWeekStr} - ${convertedTime}`
-      case 'monthly': return `Monthly - ${repeatConfig.dayOfMonth}th of every month - ${convertedTime}`
-      case 'cron_expression': return `Cron Expression - ${repeatConfig.cronExpression}`
-      default: return 'Unknown'
-   }
-}
-
-function setTimeSettingInitialValue(report, blocks, tz) {
-   const repeatConfig = report.repeatConfig
-   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
-   switch (repeatConfig.repeatType) {
-      case 'not_repeat':
-         const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
-         const dateStr = formatDateTime(date, tz)
-         if (dateStr != null && dateStr.split(' ').length === 2) {
-            findBlockById(blocks, 'repeatConfig.date')
-               .element.initial_date = dateStr.split(' ')[0]
-            findBlockById(blocks, 'repeatConfig.time')
-               .element.initial_time = dateStr.split(' ')[1]
-         }
-         break
-      case 'hourly':
-         if (repeatConfig.minsOfHour != null) {
-            findBlockById(blocks, 'repeatConfig.minsOfHour')
-               .element.initial_value = repeatConfig.minsOfHour.toString()
-         }
-         break
-      case 'daily':
-         if (convertedTime != null) {
-            findBlockById(blocks, 'repeatConfig.time')
-               .element.initial_time = convertedTime
-         }
-         break
-      case 'weekly':
-         const dayOfWeekOptions = findBlockById(blocks, 'repeatConfig.dayOfWeek')
-            .element.options
-            .filter(option => repeatConfig.dayOfWeek?.includes(parseInt(option.value)))
-         if (dayOfWeekOptions.length > 0) {
-            findBlockById(blocks, 'repeatConfig.dayOfWeek')
-               .element.initial_options = dayOfWeekOptions
-         }
-         if (convertedTime != null) {
-            findBlockById(blocks, 'repeatConfig.time')
-               .element.initial_time = convertedTime
-         }
-         break
-      case 'monthly':
-         if (repeatConfig.dayOfMonth != null) {
-            findBlockById(blocks, 'repeatConfig.dayOfMonth')
-               .element.initial_value = repeatConfig.dayOfMonth.toString()
-         }
-         if (convertedTime != null) {
-            findBlockById(blocks, 'repeatConfig.time')
-               .element.initial_time = convertedTime
-         }
-         break
-      case 'cron_expression':
-         if (repeatConfig.cronExpression != null) {
-            findBlockById(blocks, 'repeatConfig.cronExpression')
-               .element.initial_value = repeatConfig.cronExpression
-         }
-         break
-   }
 }
 
 async function getState(ts) {
@@ -157,7 +73,10 @@ export function registerManageReportServiceHandler(app) {
          offset = 0
       }
       state.count = count
-      const reportConfigurations = await ReportConfiguration.find(filter).skip(offset).limit(LIMIT)
+      const reportConfigurations = await ReportConfiguration.find(filter)
+         .skip(offset).limit(LIMIT).sort({
+            updatedAt: -1
+         })
 
       // list header
       const listHeader = loadBlocks('report/list-header')
@@ -188,7 +107,10 @@ export function registerManageReportServiceHandler(app) {
             listItemDetail[1].text.text += `  created by ${getConversationsName([report.creator])}`
          }
          // report type
-         listItemDetail[2].fields[0].text += report.reportType
+         const reportTypeOptions = findBlockById(loadBlocks('modal/report-basic'), 'reportType')
+            .element.options
+         listItemDetail[2].fields[0].text += reportTypeOptions.find(
+            option => option.value === report.reportType).text.text
          // report status
          listItemDetail[2].fields[1].text += REPORT_STATUS_DISPLAY[report.status]
          // report channels to be sent
@@ -210,8 +132,6 @@ export function registerManageReportServiceHandler(app) {
          listItemDetail[3].elements[1].value = report._id
          // enable or disable button, only display one button
          listItemDetail[3].elements.splice(report.status === REPORT_STATUS.ENABLED ? 2 : 3, 1)
-         // cancel next sending button
-         listItemDetail[3].elements[3].value = report._id
       }
 
       // list items
@@ -273,26 +193,17 @@ export function registerManageReportServiceHandler(app) {
       block_id: 'block_welcome',
       action_id: 'action_list'
    }, async ({ ack, body, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async () => {
          await listReports(false, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to open report configs list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to open notification configs list.')
    })
 
    // Choose report to display detail
    app.action('action_choose_report_item', async ({ ack, body, payload, say, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
 
-      try {
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
          const selected = payload.value
          logger.info('choose report id ' + selected)
          if (state.selectedId === selected) {
@@ -302,16 +213,7 @@ export function registerManageReportServiceHandler(app) {
          }
          await saveState(state)
          await listReports(true, ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report configs list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to view notification detail.')
    })
 
    // previous 5 reports
@@ -320,9 +222,9 @@ export function registerManageReportServiceHandler(app) {
       action_id: 'action_previous_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
 
-      try {
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
          if (state.page > 1) {
             state.page -= 1
             await saveState(state)
@@ -330,16 +232,7 @@ export function registerManageReportServiceHandler(app) {
          } else {
             await ack()
          }
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report configs list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to display previous 5 notification.')
    })
 
    // next 5 reports
@@ -348,9 +241,9 @@ export function registerManageReportServiceHandler(app) {
       action_id: 'action_next_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
 
-      try {
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
          const count = await ReportConfiguration.countDocuments()
          if (state.page * LIMIT < count) {
             state.page += 1
@@ -359,26 +252,16 @@ export function registerManageReportServiceHandler(app) {
          } else {
             await ack()
          }
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report configs list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to display next 5 notification.')
    })
 
    // change report status
    app.action('action_change_report_status', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
-
-      try {
+      const status = payload.value
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
          const id = state.selectedId
-         const status = payload.value
          logger.info(`change report status, id: ${id}, status: ${status}`)
          if (!id) {
             throw new Error('report id is null')
@@ -386,21 +269,18 @@ export function registerManageReportServiceHandler(app) {
          await ReportConfiguration.updateOne({ _id: id }, { status })
          const report = await ReportConfiguration.findById(id)
          if (report.status === 'ENABLED') {
-            registerSchedule(report)
+            registerScheduler(report)
          } else {
-            unregisterSchedule(id)
+            unregisterScheduler(id)
          }
          await listReports(true, ts, ack, body, client)
-      } catch (e) {
-         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
+            thread_ts: ts,
             blocks: [],
-            text: 'Failed to update report configs list. ' +
-               'Please contact developers to resolve it.'
+            text: `Change status to ${status} successful.`
          })
-         throw e
-      }
+      }, `Failed to change notification status to ${status}.`)
    })
 
    // display remove modal
@@ -408,15 +288,15 @@ export function registerManageReportServiceHandler(app) {
       block_id: 'block_list_detail_actions',
       action_id: 'action_remove_report'
    }, async ({ ack, body, payload, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async () => {
          const id = payload.value
          logger.info(`display remove report confirm modal, id: ${id}`)
          if (!id) {
             throw Error('id is null when remove report')
          }
          const report = await ReportConfiguration.findById(id)
-         const blocks = loadBlocks('modal/delete')
-         blocks[0].text.text += `*${report.title}*?`
+         const blocks = loadBlocks('modal/confirmation')
+         blocks[0].text.text = `Are you sure remove the notification configuration *${report.title}*?`
          await ack()
          await client.views.open({
             trigger_id: body.trigger_id,
@@ -435,149 +315,53 @@ export function registerManageReportServiceHandler(app) {
                }
             }
          })
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to open remove confirmation modal. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to display remove confirmation modal.')
    })
 
    // confirm remove
    app.view('view_remove_confirmation', async ({ ack, body, payload, client }) => {
       const ts = payload.private_metadata
-      const state = await getState(ts)
-      try {
+
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
          const id = state.selectedId
          logger.info(`remove report, id: ${id} ts: ${ts}`)
          if (!id) {
             throw Error('id is null when remove report')
          }
          await ReportConfiguration.deleteOne({ _id: id })
-         unregisterSchedule(id)
-         // await client.chat.postMessage({
-         //     channel: body.user.id,
-         //     blocks: [],
-         //     text: 'Removed successful.'
-         // })
+         unregisterScheduler(id)
          await listReports(true, ts, ack, body, client)
-      } catch (e) {
-         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
+            thread_ts: ts,
             blocks: [],
-            text: 'Failed to delete the report configuration, ' +
-               'please contact developers to resolve it.'
+            text: 'Removed notification successful.'
          })
-         throw e
-      }
+      }, 'Failed to remove notification.')
    })
 
    // display edit modal
    app.action({
       block_id: 'block_list_detail_actions',
       action_id: 'action_edit_report'
-   }, async ({ ack, body, payload, client }) => {
-      try {
-         const id = payload.value
+   }, async ({ ack, body, client }) => {
+      tryAndHandleError({ ack, body, client }, async () => {
+         const ts = body.message.ts
+         const state = await getState(ts)
+         const id = state.selectedId
          if (!id) {
-            throw new Error('report id is null when edit report')
+            throw new Error('report id is null')
          }
-         logger.info(`edit report, id: ${id}`)
-         const user = body.user?.id
-         if (user == null) {
-            throw new Error('User is none in body, can not list the reports.')
-         }
-         const tz = await getUserTz(user)
-         const report = await ReportConfiguration.findById(id)
-         logger.info('open edit report config modal')
-         logger.info(report)
-
-         const reportModalBasic = loadBlocks('modal/report-basic')
-         const reportModalReportType = loadBlocks(`report_type/${report.reportType}`)
-         const reportModalAdvanced = loadBlocks('modal/report-advanced')
-         const reportModalRecurrence = loadBlocks('modal/report-recurrence')
-         const reportModalRepeatType = loadBlocks(`repeat_type/${report.repeatConfig.repeatType}`)
-         const reportModalTime = loadBlocks('modal/report-time')
-         const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
-            .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
-         findBlockById(blocks, 'title').element.initial_value = report.title
-         if (report.conversations.length > 0) {
-            findBlockById(blocks, 'conversations').element.initial_conversations =
-               report.conversations
-         }
-         if (report.mentionUsers.length > 0) {
-            findBlockById(blocks, 'mentionUsers').element.initial_users = report.mentionUsers
-         }
-         if (report.repeatConfig.startDate != null) {
-            findBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
-               formatDate(report.repeatConfig.startDate)
-         }
-         if (report.repeatConfig.endDate != null) {
-            findBlockById(blocks, 'repeatConfig.endDate').element.initial_date =
-               formatDate(report.repeatConfig.endDate)
-         }
-
-         const reportTypeBlock = findBlockById(blocks, 'reportType')
-         reportTypeBlock.element.action_id = 'action_report_type_edit'
-         const reportTypeOption = reportTypeBlock.element.options
-            .find(option => option.value === report.reportType)
-         if (reportTypeOption != null) {
-            reportTypeBlock.element.initial_option = reportTypeOption
-         }
-
-         const repeatTypeBlock = findBlockById(blocks, 'repeatConfig.repeatType')
-         repeatTypeBlock.element.action_id = 'action_repeat_type_edit'
-         const repeatTypeOption = repeatTypeBlock.element.options
-            .find(option => option.value === report.repeatConfig.repeatType)
-         if (repeatTypeOption != null) {
-            repeatTypeBlock.element.initial_option = repeatTypeOption
-         }
-         initReportTypeBlocks(report, blocks)
-         setTimeSettingInitialValue(report, blocks, tz)
-         if (ack) {
-            await ack()
-         }
-         await client.views.open({
-            trigger_id: body.trigger_id,
-            view: {
-               type: 'modal',
-               callback_id: 'view_edit_report',
-               private_metadata: body.message.ts,
-               title: {
-                  type: 'plain_text',
-                  text: 'Edit your report'
-               },
-               blocks,
-               submit: {
-                  type: 'plain_text',
-                  text: 'Submit'
-               }
-            },
-            submit_disabled: true
-         })
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to open edit report configuration modal. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+         await updateModal({ ack, body, client }, { isInit: true, id })
+      }, 'Failed to open edit notification modal.')
    })
 
    // confirm edit
    app.view('view_edit_report', async ({ ack, body, payload, view, client }) => {
       const ts = payload.private_metadata
-      const state = await getState(ts)
-
-      try {
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
          const id = state.selectedId
          logger.info(`edit report, id: ${id}`)
          if (!id) {
@@ -587,7 +371,7 @@ export function registerManageReportServiceHandler(app) {
          const tz = await getUserTz(user)
          const oldReport = await ReportConfiguration.findById(id)
          if (!oldReport) {
-            return
+            throw new Error(`cannot find report ${id} in db`)
          }
          const inputObj = transformInputValuesToObj(view.state.values)
          logger.info(inputObj)
@@ -601,10 +385,29 @@ export function registerManageReportServiceHandler(app) {
          logger.info(report)
 
          await report.save()
-         registerSchedule(report)
+         if (report.reportType === 'perforce_checkin') {
+            flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
+               .then(flattenMembers => {
+                  ReportConfiguration.findByIdAndUpdate(report._id, {
+                     reportSpecConfig: {
+                        perforceCheckIn: {
+                           flattenMembers
+                        }
+                     }
+                  })
+                  logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(flattenMembers)}`)
+               })
+         }
+         registerScheduler(report)
          logger.info(`Edit successful. report id ${id}`)
          await listReports(true, ts, ack, body, client)
-      } catch (e) {
+         await client.chat.postMessage({
+            channel: body.user.id,
+            thread_ts: ts,
+            blocks: [],
+            text: 'Edited notification successful.'
+         })
+      }, async (e) => {
          if (e instanceof mongoose.Error.ValidationError) {
             const ackErrors = {}
             Object.keys(e.errors).forEach(errorKey => {
@@ -624,116 +427,84 @@ export function registerManageReportServiceHandler(app) {
             })
             throw e
          }
-      }
+      })
+   })
+
+   const actionText = {
+      invoke_now: 'send the notification to selected channels now',
+      invoke_to_me_now: 'send the notification to me now',
+      cancel_next: 'cancel next invocation of notification'
+   }
+
+   // display confirmation modal for more actions overflow
+   app.action({
+      block_id: 'block_list_detail_title',
+      action_id: 'action_report_more_actions'
+   }, async ({ ack, body, payload, client }) => {
+      const action = payload.selected_option.value
+      const ts = body.message.ts
+
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
+         const id = state.selectedId
+         if (!id) {
+            throw Error('id is null when remove report')
+         }
+         logger.info(`display confirmation modal, action: ${action}, id: ${id}`)
+         const report = await ReportConfiguration.findById(id)
+         const blocks = loadBlocks('modal/confirmation')
+         blocks[0].text.text = `Are you sure ${actionText[action]} *${report.title}*?`
+         await ack()
+         await client.views.open({
+            trigger_id: body.trigger_id,
+            view: {
+               type: 'modal',
+               callback_id: 'view_more_action_confirmation',
+               private_metadata: JSON.stringify({
+                  action, ts, id
+               }),
+               title: {
+                  type: 'plain_text',
+                  text: 'Confirmation'
+               },
+               blocks,
+               submit: {
+                  type: 'plain_text',
+                  text: 'Yes'
+               }
+            }
+         })
+      }, 'Failed to open confirmation modal.')
    })
 
    // confirm cancel next report sending
-   app.action('action_cancel_next_report', async ({ ack, body, payload, client }) => {
-      const ts = body.message.ts
-      const state = await getState(ts)
-      try {
-         const id = state.selectedId
-         logger.info(`cancel next report sending, id: ${id} ts: ${ts}`)
+   app.view('view_more_action_confirmation', async ({ ack, body, client }) => {
+      logger.info(`view_more_action_confirmation private_metadata: ${body.view.private_metadata}`)
+      const privateMetadata = JSON.parse(body.view.private_metadata)
+      const action = privateMetadata.action
+      tryAndHandleError({ ack, body, client }, async () => {
+         const id = privateMetadata.id
          if (!id) {
             throw new Error('report id is null')
          }
-         await cancelNextInvocation(id)
-         await listReports(true, ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to cancel next sending report.' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
-   })
-
-   const updateModal = async ({ ack, payload, body, client }) => {
-      const ts = body.view.private_metadata
-      const state = await getState(ts)
-      const id = state.selectedId
-      logger.info('change repeat type id ' + id)
-      if (!id) {
-         throw new Error('report id is null')
-      }
-      const reportType = body.view.state.values?.reportType
-         ?.action_report_type_edit?.selected_option?.value
-      const repeatType = body.view.state.values['repeatConfig.repeatType']
-         ?.action_repeat_type_edit?.selected_option?.value
-      logger.info(`select report type ${reportType} of report scheduler`)
-      logger.info(`select repeat type ${repeatType} of report scheduler`)
-
-      const reportModalBasic = loadBlocks('modal/report-basic')
-      const reportModalReportType = loadBlocks(`report_type/${reportType}`)
-      const reportModalAdvanced = loadBlocks('modal/report-advanced')
-      const reportModalRecurrence = loadBlocks('modal/report-recurrence')
-      const reportModalTime = loadBlocks('modal/report-time')
-      const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
-      const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
-         .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
-      const reportTypeBlock = findBlockById(blocks, 'reportType')
-      reportTypeBlock.element.action_id = 'action_report_type_edit'
-      const repeatTypeBlock = findBlockById(blocks, 'repeatConfig.repeatType')
-      repeatTypeBlock.element.action_id = 'action_repeat_type_edit'
-      await ack()
-      await client.views.update({
-         view_id: body.view.id,
-         hash: body.view.hash,
-         view: {
-            type: 'modal',
-            callback_id: 'view_edit_report',
-            private_metadata: ts,
-            title: {
-               type: 'plain_text',
-               text: 'Edit your report'
-            },
-            blocks,
-            submit: {
-               type: 'plain_text',
-               text: 'Submit'
-            }
+         const ts = privateMetadata.ts
+         logger.info(`execute ${action}, id: ${id}`)
+         switch (action) {
+            case 'invoke_now':
+               invokeNow(id)
+               await ack()
+               break
+            case 'invoke_to_me_now':
+               invokeNow(id, body.user.id)
+               await ack()
+               break
+            case 'cancel_next':
+               await cancelNextInvocation(id)
+               await listReports(true, ts, ack, body, client)
+               break
+            default:
+               throw new Error('unknow action for action_report_more_actions')
          }
-      })
-   }
-
-   // change report type
-   app.action({
-      block_id: 'reportType',
-      action_id: 'action_report_type_edit'
-   }, async (event) => {
-      try {
-         await updateModal(event)
-      } catch (e) {
-         await event.ack()
-         await event.client.chat.postMessage({
-            channel: event.body.user.id,
-            blocks: [],
-            text: 'Failed to cancel next sending report.' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
-   })
-
-   // change repet type
-   app.action({
-      block_id: 'repeatConfig.repeatType',
-      action_id: 'action_repeat_type_edit'
-   }, async (event) => {
-      try {
-         await updateModal(event)
-      } catch (e) {
-         await event.ack()
-         await event.client.chat.postMessage({
-            channel: event.body.user.id,
-            blocks: [],
-            text: 'Failed to cancel next sending report.' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, `Failed to ${actionText[action]}.`)
    })
 }

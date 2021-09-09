@@ -5,9 +5,40 @@
       },
       {
          "type": "section",
+         "block_id": "block_list_detail_title",
          "text": {
             "type": "mrkdwn",
             "text": "*Title*"
+         },
+         "accessory": {
+				"type": "overflow",
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Send Notification Now",
+							"emoji": true
+						},
+						"value": "invoke_now"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Send Notification to Me Now",
+							"emoji": true
+						},
+						"value": "invoke_to_me_now"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Cancel Next Notification",
+							"emoji": true
+						},
+						"value": "cancel_next"
+					}
+            ],
+            "action_id": "action_report_more_actions"
          }
       },
       {
@@ -118,34 +149,6 @@
                   "text": {
                      "type": "plain_text",
                      "text": "Are you sure disable this notification? If you disable it, this notification will not be sent."
-                  },
-                  "confirm": {
-                     "type": "plain_text",
-                     "text": "Confirm"
-                  },
-                  "deny": {
-                     "type": "plain_text",
-                     "text": "Close"
-                  }
-               }
-            },
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "emoji": true,
-                  "text": "Cancel Next"
-               },
-               "value": "Cancel Next",
-               "action_id": "action_cancel_next_report",
-               "confirm": {
-                  "title": {
-                     "type": "plain_text",
-                     "text": "Cancel next notification"
-                  },
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Are you sure cancel next notification sending?"
                   },
                   "confirm": {
                      "type": "plain_text",

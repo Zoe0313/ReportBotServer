@@ -9,7 +9,9 @@ import {
 } from './bolt_service/index.js'
 import { registerApiRouters } from './api_service/index.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
-import { registerSchedule } from './scheduler-adapter.js'
+import {
+   registerScheduler, registerPerforceInfoScheduler, registerPerforceMembersScheduler
+} from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 import { connectMongoDatabase } from '../common/db-utils.js'
 import { initSlackClient } from '../common/slack-helper.js'
@@ -19,7 +21,11 @@ dotenv.config()
 // connect to mongodb
 connectMongoDatabase(async () => {
    const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
-   reports.forEach(report => registerSchedule(report))
+   reports.forEach(report => registerScheduler(report))
+   const updatePerforceInfoJob = registerPerforceInfoScheduler()
+   logger.info(`next invocation of p4 info update is ${updatePerforceInfoJob.nextInvocation()}`)
+   const flattenMembersJob = registerPerforceMembersScheduler()
+   logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)
 })
 
 // init express receiver for HTTP request

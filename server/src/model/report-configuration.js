@@ -4,8 +4,9 @@ import parseUrl from 'parse-url'
 import axios from 'axios'
 import logger from '../../common/logger.js'
 import {
-   verifyBotInChannel
+   verifyBotInChannel, getUsersName
 } from '../../common/slack-helper.js'
+import { PerforceInfo } from './perforce-info.js'
 
 const REPORT_STATUS = {
    CREATED: 'CREATED',
@@ -15,11 +16,28 @@ const REPORT_STATUS = {
 }
 
 const STATUS_ENUM = Object.values(REPORT_STATUS)
-const REPORT_TYPE_ENUM = ['bugzilla', 'perforce', 'svs', 'fastsvs', 'text', 'customized']
+const REPORT_TYPE_ENUM = ['bugzilla', 'perforce_checkin', 'svs', 'fastsvs', 'text', 'customized']
 const REPEAT_TYPE_ENUM = ['not_repeat', 'hourly', 'daily', 'weekly', 'monthly', 'cron_expression']
 
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-4]):([0-5][0-9])(:[0-5][0-9])?$/
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+
+const PerforceCheckInMembersFilterSchema = new mongoose.Schema({
+   members: {
+      type: [String],
+      required: true
+   },
+   condition: {
+      type: String,
+      enum: ['include', 'exclude'],
+      required: true
+   },
+   type: {
+      type: String,
+      enum: ['selected', 'direct_reporters', 'all_reporters'],
+      required: true
+   }
+})
 
 const ReportConfigurationSchema = new mongoose.Schema({
    title: { type: String, required: true },
@@ -108,7 +126,49 @@ const ReportConfigurationSchema = new mongoose.Schema({
                }
                return v.length > 0 && v.length <= 2000
             },
-            message: props => 'The length of text message should greater than 0 and less than 2000.'
+            message: 'The length of text message should greater than 0 and less than 2000.'
+         }
+      },
+      perforceCheckIn: {
+         membersFilters: {
+            type: [PerforceCheckInMembersFilterSchema],
+            validate: {
+               validator: function(v) {
+                  return this.repeatConfig.repeatType !== 'perforce_checkin' || v?.length > 0
+               },
+               message: `Should select at least one member filters when use perforce checkin report type.`
+            }
+         },
+         flattenMembers: { // flatten members will be computed by members filters
+            type: [String]
+         },
+         branches: {
+            type: [String],
+            required: function(v) {
+               return this.reportType === 'perforce_checkin'
+            },
+            validate: {
+               validator: async function(v) {
+                  if (v == null) {
+                     return true
+                  }
+                  let allBranches = []
+                  try {
+                     allBranches = (await PerforceInfo.find())
+                        .map(perforceInfo => {
+                           return perforceInfo.branches
+                              .map(branch => `${perforceInfo.project}/${branch}`)
+                        }).flat()
+                  } catch (e) {
+                     logger.error(e)
+                     throw new Error(`Internal server error, please contact developers.`)
+                  }
+                  const notExistBranches = v.filter(branch => !allBranches.includes(branch))
+                  if (notExistBranches.length > 0) {
+                     throw new Error(`${notExistBranches.join(',')} are not belonged to selected project.`)
+                  }
+               }
+            }
          }
       }
    },
@@ -136,7 +196,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
                return !endDate || (endDate >= today &&
                   (!this.repeatConfig.startDate || this.repeatConfig.startDate < endDate))
             },
-            message: () => `It should be greater than or equal to today, and greater than start date.`
+            message: `It should be greater than or equal to today, and greater than start date.`
          }
       },
       cronExpression: {
@@ -196,7 +256,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
             validator: function(v) {
                return this.repeatConfig.repeatType !== 'weekly' || v?.length > 0
             },
-            message: props => `Should select at least one day of week.`
+            message: `Should select at least one day of week.`
          },
          enum: [0, 1, 2, 3, 4, 5, 6]
       },
@@ -214,7 +274,89 @@ const ReportConfigurationSchema = new mongoose.Schema({
 
 const ReportConfiguration = mongoose.model('ReportConfiguration', ReportConfigurationSchema)
 
-export { ReportConfiguration, REPORT_STATUS }
+// get direct reporters username of given members through LDAP API
+const getDirectReporters = async (members) => {
+   return await Promise.all(members.map(member => {
+      const body = {
+         _source: ['username'],
+         from: 0,
+         size: 1000,
+         query: {
+            match: {
+               direct_manager_username: member
+            }
+         }
+      }
+      return axios.post('https://ldap-data.svc-stage.eng.vmware.com/ldap/_search', body)
+         .then(res => {
+            // avoid someone report to himself in case causing endless loop
+            return res.data.hits?.hits?.map(hit => hit._source.username)
+               ?.filter(user => !members.includes(user)) || []
+         })
+   })).then(membersList => membersList.flat())
+}
+
+// flatten p4 checkin members based on members filters
+const flattenPerforceCheckinMembers = async (membersFilters) => {
+   if (membersFilters == null || membersFilters.length === 0) {
+      return []
+   }
+   logger.debug(`flatten members from members filters ${JSON.stringify(membersFilters)}`)
+   const members = (await Promise.all(membersFilters.map(membersFilter => {
+      if (membersFilter.type === 'selected') {
+         // get users name from users slack id
+         return getUsersName(membersFilter.members).then(selectedMembers => {
+            return {
+               condition: membersFilter.condition,
+               members: selectedMembers
+            }
+         })
+      } else if (membersFilter.type === 'direct_reporters') {
+         return getUsersName(membersFilter.members).then(selectedMembers => {
+            return getDirectReporters(selectedMembers)
+               .then(directReporters => ({
+                  condition: membersFilter.condition,
+                  // including direct reporters and selected members
+                  members: directReporters.concat(selectedMembers)
+               }))
+         })
+      } else if (membersFilter.type === 'all_reporters') {
+         // recursive function of getting all reports by given members
+         const getAllReporters = async (members, startTime) => {
+            if (members == null || members.length === 0 ||
+               // if timeout, then return directly
+               new Date().getTime() - startTime > 10 * 60 * 1000) {
+               return []
+            }
+            const directReporters = await getDirectReporters(members)
+            // including all reporters and selected members
+            return members.concat(await getAllReporters(directReporters, startTime))
+         }
+         return getUsersName(membersFilter.members).then(selectedMembers => {
+            return getAllReporters(selectedMembers, new Date().getTime()).then(allReporters => {
+               return {
+                  condition: membersFilter.condition,
+                  members: allReporters
+               }
+            })
+         })
+      } else {
+         throw new Error('invalid member filter type')
+      }
+   }))).reduce((acc, curVal) => {
+      if (curVal.condition === 'include') {
+         return [...new Set(acc.concat(curVal.members))]
+      } else if (curVal.condition === 'exclude') {
+         return acc.filter(member => !curVal.members.includes(member))
+      } else {
+         throw new Error('invalid member filter condition')
+      }
+   }, [])
+   logger.debug(`get all flatten members ${JSON.stringify(members)}`)
+   return members
+}
+
+export { ReportConfiguration, REPORT_STATUS, flattenPerforceCheckinMembers }
 
 // {
 //    "text": {

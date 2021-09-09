@@ -38,6 +38,14 @@
                {
                   "text": {
                      "type": "plain_text",
+                     "text": "Perforce branch checkin report",
+                     "emoji": true
+                  },
+                  "value": "perforce_checkin"                
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
                      "text": "Text",
                      "emoji": true
                   },
@@ -78,7 +86,6 @@
                "text": "E.g. vSAN product bugs report",
                "type": "plain_text"
             },
-
             "action_id": "action_title"
          },
          "label": {

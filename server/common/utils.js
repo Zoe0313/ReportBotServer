@@ -1,6 +1,7 @@
 import moment from 'moment-timezone'
 import logger from './logger.js'
 import mergeWith from 'lodash/mergeWith.js'
+import { exec } from 'child_process'
 
 export function formatDate(date) {
    if (date == null || date === '') {
@@ -58,5 +59,18 @@ export function merge(object, source) {
       if (Array.isArray(object)) {
          return source
       }
+   })
+}
+
+export function execCommand(cmd, timeout) {
+   return new Promise((resolve, reject) => {
+      exec(cmd, { timeout }, (error, stdout, stderr) => {
+         if (error) {
+            logger.error(`failed to execute command ${cmd}, error message: ${stderr}`)
+            reject(error)
+         } else {
+            resolve(stdout)
+         }
+      })
    })
 }
