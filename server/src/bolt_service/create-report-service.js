@@ -1,11 +1,80 @@
 import logger from '../../common/logger.js'
 import { formatDate, merge } from '../../common/utils.js'
 import {
-   loadBlocks, getUserTz, initReportTypeBlocks, transformInputValuesToObj, findBlockById
+   loadBlocks, getUserTz, transformInputValuesToObj, tryAndHandleError
 } from '../../common/slack-helper.js'
-import { ReportConfiguration, REPORT_STATUS } from '../model/report-configuration.js'
-import { registerSchedule } from '../scheduler-adapter.js'
+import { initReportBlocks } from './init-blocks-data-helper.js'
+import {
+   ReportConfiguration, REPORT_STATUS, flattenPerforceCheckinMembers
+} from '../model/report-configuration.js'
+import { PerforceInfo } from '../model/perforce-info.js'
+import { registerScheduler } from '../scheduler-adapter.js'
 import mongoose from 'mongoose'
+import { matchSorter } from 'match-sorter'
+import { performance } from 'perf_hooks'
+
+export async function updateModal({ ack, body, client }, options) {
+   const isInit = options?.isInit || false
+   const isNew = options?.isNew || false
+   const ts = isInit ? body.message?.ts : body.view?.private_metadata
+
+   const user = body.user?.id
+   if (user == null) {
+      throw new Error('User is none in body, can not list the reports.')
+   }
+   const tz = await getUserTz(user)
+
+   let report = null
+   if (isInit && isNew) {
+      report = {}
+   } else if (isInit && !isNew) {
+      report = await ReportConfiguration.findById(options?.id)
+   } else {
+      report = transformInputValuesToObj(body.view.state.values)
+   }
+   const reportType = report.reportType || 'bugzilla'
+   const repeatType = report.repeatConfig?.repeatType
+   logger.info(`select report type ${reportType} of report scheduler`)
+   logger.info(`select repeat type ${repeatType} of report scheduler`)
+
+   const reportModalBasic = loadBlocks('modal/report-basic')
+   const reportModalReportType = loadBlocks(`report_type/${reportType}`)
+   const reportModalAdvanced = loadBlocks('modal/report-advanced')
+   const reportModalRecurrence = loadBlocks('modal/report-recurrence')
+   const reportModalRepeatType = repeatType != null ? loadBlocks(`repeat_type/${repeatType}`) : []
+   const reportModalTime = loadBlocks('modal/report-time')
+   const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
+      .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
+   initReportBlocks(report, blocks, options, tz)
+   if (ack) {
+      await ack()
+   }
+   let callbackId = body.view?.callback_id
+   if (isInit) {
+      callbackId = isNew ? 'view_create_report' : 'view_edit_report'
+   }
+   const viewOption = {
+      trigger_id: isInit ? body.trigger_id : undefined,
+      view_id: isInit ? undefined : body.view.id,
+      hash: isInit ? undefined : body.view.hash,
+      view: {
+         type: 'modal',
+         callback_id: callbackId,
+         private_metadata: ts,
+         title: {
+            type: 'plain_text',
+            text: isNew ? 'New Notification' : 'Edit Notification'
+         },
+         blocks,
+         submit: {
+            type: 'plain_text',
+            text: 'Submit'
+         }
+      }
+   }
+   console.log(blocks)
+   isInit ? await client.views.open(viewOption) : await client.views.update(viewOption)
+}
 
 export function registerCreateReportServiceHandler(app) {
    // New report message configuration
@@ -13,107 +82,36 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'block_welcome',
       action_id: 'action_create'
    }, async ({ ack, body, client }) => {
-      logger.info('open create report config modal')
-      if (ack) {
-         await ack()
-      }
-      try {
-         const reportModalBasic = loadBlocks('modal/report-basic')
-         const reportTypeBlock = loadBlocks('report_type/bugzilla')
-         const reportAdvanced = loadBlocks('modal/report-advanced')
-         const reportModalRecurrence = loadBlocks('modal/report-recurrence')
-         const reportModalTime = loadBlocks('modal/report-time')
-         const blocks = reportModalBasic.concat(reportTypeBlock).concat(reportAdvanced)
-            .concat(reportModalRecurrence).concat(reportModalTime)
-         findBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
-            formatDate(new Date())
-         initReportTypeBlocks(null, blocks)
-         await client.views.open({
-            trigger_id: body.trigger_id,
-            view: {
-               type: 'modal',
-               callback_id: 'view_create_report',
-               title: {
-                  type: 'plain_text',
-                  text: 'Create a notification'
-               },
-               blocks,
-               submit: {
-                  type: 'plain_text',
-                  text: 'Submit'
-               }
-            },
-            submit_disabled: true
-         })
-      } catch (e) {
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to open create report configuration modal. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      tryAndHandleError({ ack, body, client }, async () => {
+         logger.info('open create report config modal')
+         await updateModal({ ack, body, client }, { isInit: true, isNew: true })
+      }, 'Failed to open create report configuration modal.')
    })
-
-   const updateModal = async ({ ack, payload, body, client }) => {
-      await ack()
-
-      const reportType = body.view.state.values?.reportType
-         ?.action_report_type?.selected_option?.value
-      const repeatType = body.view.state.values['repeatConfig.repeatType']
-         ?.action_repeat_type?.selected_option?.value
-      logger.info(`select report type ${reportType} of report scheduler`)
-      logger.info(`select repeat type ${repeatType} of report scheduler`)
-
-      const reportModalBasic = loadBlocks('modal/report-basic')
-      const reportModalReportType = loadBlocks(`report_type/${reportType}`)
-      const reportAdvanced = loadBlocks('modal/report-advanced')
-      const reportModalRecurrence = loadBlocks('modal/report-recurrence')
-      const reportModalRepeatType = loadBlocks(`repeat_type/${repeatType}`)
-      const reportModalTime = loadBlocks('modal/report-time')
-      const blocks = reportModalBasic.concat(reportModalReportType).concat(reportAdvanced)
-         .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
-      await client.views.update({
-         view_id: body.view.id,
-         hash: body.view.hash,
-         view: {
-            type: 'modal',
-            callback_id: 'view_create_report',
-            title: {
-               type: 'plain_text',
-               text: 'Create a notification'
-            },
-            blocks,
-            submit: {
-               type: 'plain_text',
-               text: 'Submit'
-            }
-         }
-      })
-   }
 
    app.action({
       block_id: 'repeatConfig.repeatType',
       action_id: 'action_repeat_type'
    }, async (event) => {
-      await updateModal(event)
+      tryAndHandleError(event, async () => {
+         await updateModal(event)
+      }, 'Failed to change repeat type.')
    })
 
    app.action({
       block_id: 'reportType',
       action_id: 'action_report_type'
    }, async (event) => {
-      await updateModal(event)
+      tryAndHandleError(event, async () => {
+         await updateModal(event)
+      }, 'Failed to change notification type.')
    })
 
    // Precheck and create a report request
    app.view('view_create_report', async ({ ack, body, view, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async () => {
          const user = body.user.id
          const tz = await getUserTz(user)
          const inputObj = transformInputValuesToObj(view.state.values)
-
          const report = new ReportConfiguration(
             merge(inputObj, {
                creator: user,
@@ -125,8 +123,25 @@ export function registerCreateReportServiceHandler(app) {
             })
          )
          logger.debug(report)
+         logger.debug(JSON.stringify(report.reportSpecConfig.perforceCheckIn.membersFilters))
 
          const saved = await report.save()
+
+         // if perforce_checkin type, flatten member list and save to report configuration
+         if (report.reportType === 'perforce_checkin') {
+            flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
+               .then(flattenMembers => {
+                  ReportConfiguration.findByIdAndUpdate(report._id, {
+                     reportSpecConfig: {
+                        perforceCheckIn: {
+                           flattenMembers
+                        }
+                     }
+                  })
+                  logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(flattenMembers)}`)
+               })
+         }
+
          logger.info(`Create successful. saved report id ${saved._id}`)
          const blocks = loadBlocks('precheck-report')
          // create inited status report
@@ -138,7 +153,7 @@ export function registerCreateReportServiceHandler(app) {
             blocks: blocks,
             text: 'Precheck your new report'
          })
-      } catch (e) {
+      }, async (e) => {
          if (e instanceof mongoose.Error.ValidationError) {
             const ackErrors = {}
             Object.keys(e.errors).forEach(errorKey => {
@@ -153,23 +168,23 @@ export function registerCreateReportServiceHandler(app) {
             await client.chat.postMessage({
                channel: body.user.id,
                blocks: [],
+               thread_ts: body.message.ts,
                text: 'Failed to open precheck confirmation. ' +
                   'Please contact developers to resolve it.'
             })
             throw e
          }
-      }
+      })
    })
 
    // Listen to the action_create_done action
    app.action({
       block_id: 'block_create_last',
       action_id: 'action_create_done'
-   }, async ({ ack, payload, body, say, client }) => {
-      await ack()
-      try {
+   }, async ({ ack, payload, body, client }) => {
+      tryAndHandleError({ ack, body, client }, async () => {
+         await ack()
          // change to enable status
-         logger.info(body)
          const ts = body.message.ts
          const id = payload.value
          if (!ts || !id) {
@@ -181,7 +196,7 @@ export function registerCreateReportServiceHandler(app) {
          logger.info(`report : ${report}`)
          report.status = REPORT_STATUS.ENABLED
          await report.save()
-         registerSchedule(report)
+         registerScheduler(report)
          const blocks = loadBlocks('done-create')
          await client.chat.update({
             channel: body.channel.id,
@@ -189,24 +204,16 @@ export function registerCreateReportServiceHandler(app) {
             blocks: blocks,
             text: 'Create and enable new report configuration!'
          })
-      } catch (e) {
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to enable new report configuration. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to save and enable notiifcation configuration.')
    })
 
    // Listen to the action_create_save action
    app.action({
       block_id: 'block_create_last',
       action_id: 'action_create_save'
-   }, async ({ ack, payload, body, say, client }) => {
-      await ack()
-      try {
+   }, async ({ ack, payload, body, client }) => {
+      tryAndHandleError({ ack, body, client }, async () => {
+         await ack()
          // change to draft status
          const ts = body.message.ts
          const id = payload.value
@@ -220,24 +227,16 @@ export function registerCreateReportServiceHandler(app) {
             blocks: [],
             text: 'Saved draft report configuration.'
          })
-      } catch (e) {
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to save report configuration as draft. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to save notiifcation configuration as draft.')
    })
 
    // Listen to the action_create_cancel action
    app.action({
       block_id: 'block_create_last',
       action_id: 'action_create_cancel'
-   }, async ({ ack, payload, body, say, client }) => {
-      await ack()
-      try {
+   }, async ({ ack, payload, body, client }) => {
+      tryAndHandleError({ ack, body, client }, async () => {
+         await ack()
          // remove record in db
          const ts = body.message.ts
          const id = payload.value
@@ -249,14 +248,80 @@ export function registerCreateReportServiceHandler(app) {
             blocks: [],
             text: 'Cancel creation.'
          })
-      } catch (e) {
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to cancel this report configuration. ' +
-               'Please contact developers to resolve it.'
+      }, 'Failed to cancel this report configuration.')
+   })
+
+   // Responding to the external_select options request for perforce branches
+   app.options('action_perforce_select_branches', async ({ ack, options }) => {
+      const t0 = performance.now()
+      const keyword = options.value
+      logger.info(`keyword: ${keyword}, get all perforce braneches in db`)
+      const allBranches = (await PerforceInfo.find())
+         .map(perforceInfo => {
+            return perforceInfo.branches
+               .map(branch => `${perforceInfo.project}/${branch}`)
+         }).flat()
+      logger.debug(`get branches in db cost ${performance.now() - t0}`)
+
+      // match keyword and sort by score
+      // refer to match-sorter https://www.npmjs.com/package/match-sorter
+      if (allBranches != null && allBranches.length > 0) {
+         const sortedBranchesWithLimit = matchSorter(allBranches, keyword).slice(0, 20)
+         logger.debug(`sort branches cost ${performance.now() - t0}`)
+         logger.info(`0 - 20 branches stored are ${sortedBranchesWithLimit}`)
+         const options = sortedBranchesWithLimit.map(branch => ({
+            text: {
+               type: 'plain_text',
+               text: branch
+            },
+            value: branch
+         }))
+         await ack({
+            options: options
          })
-         throw e
+         logger.debug(`ack branches cost ${performance.now() - t0}`)
+      } else {
+         await ack()
       }
+   })
+
+   // Listern to add member filter
+   app.action({
+      block_id: 'block_perforce_add_member_filter',
+      action_id: 'action_perforce_add_member_filter'
+   }, async (event) => {
+      tryAndHandleError(event, async () => {
+         await updateModal(event, { addMembersFilter: true })
+      }, 'Fail to add new members filter.')
+   })
+
+   // Listen to member filter condition
+   app.action({
+      block_id: /^reportSpecConfig\.perforceCheckIn\.membersFilters[[0-9]*]/,
+      action_id: 'condition'
+   }, async (event) => {
+      tryAndHandleError(event, async () => {
+         await updateModal(event)
+      }, 'Failed to change condition of members filter.')
+   })
+
+   // Listen to member filter type
+   app.action({
+      block_id: /^reportSpecConfig\.perforceCheckIn\.membersFilters[[0-9]*]/,
+      action_id: 'type'
+   }, async (event) => {
+      tryAndHandleError(event, async () => {
+         await updateModal(event)
+      }, 'Failed to change type of members filter.')
+   })
+
+   // Listen to remove member filter button and update modal
+   app.action({
+      block_id: /^block_remove_member_filter_[0-9]*/,
+      action_id: 'action_remove_member_filter'
+   }, async (event) => {
+      tryAndHandleError(event, async () => {
+         await updateModal(event, { removeMembersFilter: { index: parseInt(event.payload.value) } })
+      }, 'Fail to remove members filter.')
    })
 }

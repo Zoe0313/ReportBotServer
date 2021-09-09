@@ -14,7 +14,7 @@ const myFormat = format.printf((info) => {
 const options = {
    file: {
       level: 'debug',
-      filename: `./log/slackbot-server-${today}.log`,
+      filename: `/slackbot/log/slackbot-server-${today}.log`,
       handleExceptions: true
    },
    console: {

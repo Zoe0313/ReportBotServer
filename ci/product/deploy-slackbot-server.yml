@@ -28,11 +28,11 @@ spec:
       labels:
         app: slackbot-server
         role: slackbot-server
-        environment: stage
+        environment: product
     spec:
       containers:
       - name: slackbot-server
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-server:0.9.4
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-server:1.0.0
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
@@ -49,16 +49,16 @@ spec:
             memory: "500Mi"
             cpu: "200m"
         volumeMounts:
-        - name: slackbot-log
+        - name: slackbot-nfs-log
           mountPath: /slackbot/log
-        - name: slackbot-downloads
+        - name: slackbot-nfs-downloads
           mountPath: /slackbot/downloads
       volumes:
-        - name: slackbot-log
+        - name: slackbot-nfs-log
           nfs:
             server: pa-archive.eng.vmware.com
             path: /slackbot-aas/log
-        - name: slackbot-downloads
+        - name: slackbot-nfs-downloads
           nfs:
             server: pa-archive.eng.vmware.com
             path: /slackbot-aas/downloads

@@ -2,11 +2,13 @@ import dotenv from 'dotenv'
 
 import schedule from 'node-schedule'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
-import { REPORT_STATUS } from '../src/model/report-configuration.js'
-import { parseDateWithTz, convertTimeWithTz } from '../common/utils.js'
+import {
+   REPORT_STATUS, flattenPerforceCheckinMembers, ReportConfiguration
+} from '../src/model/report-configuration.js'
+import { updateP4Branches } from '../src/model/perforce-info.js'
+import { parseDateWithTz, convertTimeWithTz, execCommand } from '../common/utils.js'
 import { getConversationsName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
-import { exec } from 'child_process'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
 // check timezone
@@ -19,19 +21,6 @@ logger.info('system time zone ' + systemTz)
 const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
-
-const execCommand = function(cmd, timeout) {
-   return new Promise((resolve, reject) => {
-      exec(cmd, { timeout }, (error, stdout, stderr) => {
-         if (error) {
-            logger.error(`failed to execute command ${cmd}, error message: ${stderr}`)
-            reject(error)
-         } else {
-            resolve(stdout)
-         }
-      })
-   })
-}
 
 const notificationExecutor = async (report, contentEvaluate) => {
    let reportHistory = null
@@ -50,7 +39,7 @@ const notificationExecutor = async (report, contentEvaluate) => {
       await reportHistory.save()
 
       // 10 mins timeout
-      let stdout = await contentEvaluate()
+      let stdout = await contentEvaluate(report)
       if (report.mentionUsers != null && report.mentionUsers.length > 0) {
          const mentionUsers = '\n' + (await getConversationsName(report.mentionUsers))
          stdout += mentionUsers
@@ -82,12 +71,16 @@ const notificationExecutor = async (report, contentEvaluate) => {
          })
       )
       logger.info(`the tsMap of ${reportHistory._id} is ${JSON.stringify(tsMap)}`)
+      if (tsMap.size === 0) {
+         throw new Error('Sent notification to all conversations failed.')
+      }
       reportHistory.tsMap = tsMap
       reportHistory.content = stdout
       reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
       await reportHistory.save()
    } catch (e) {
-      logger.error(`failed to handle schedule job since error: ${JSON.stringify(e)}`)
+      logger.error(`failed to handle schedule job since error:`)
+      logger.error(e)
       if (reportHistory != null) {
          if (reportHistory.sentTime === null) {
             // record failed or timeout time
@@ -108,35 +101,51 @@ const notificationExecutor = async (report, contentEvaluate) => {
    }
 }
 
-const commonHandler = async (report) => {
+const schedulerCommonHandler = async (report) => {
    logger.info(`schedule for ${report.title} ${report._id}`)
-   // const REPORT_TYPE_ENUM = ['bugzilla', 'perforce', 'svs', 'fastsvs', 'text', 'customized']
+   await notificationExecutor(report, contentEvaluate)
+}
 
+const contentEvaluate = async (report) => {
    // exec the different report generator
    const timeout = 10 * 60 * 1000
+   let scriptPath = ''
    switch (report.reportType) {
       case 'bugzilla':
-         const scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
-         await notificationExecutor(report, async () => {
-            return await execCommand(`python3 ${scriptPath} --title '${report.title}' ` +
+         scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
+         return await execCommand(`python3 ${scriptPath} --title '${report.title}' ` +
                `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
-         })
-         break
       case 'text':
-         await notificationExecutor(report, async () => {
-            return report.reportSpecConfig.text
-         })
-         break
-      // case 'perforce':
+         return report.reportSpecConfig.text
+      case 'perforce_checkin':
+         scriptPath = generatorPath + 'src/notification/p4_report.py'
+         let startTime = report.createdAt.getTime()
+         const reportHistories = await ReportHistory.find({
+            reportConfigId: report._id,
+            status: REPORT_HISTORY_STATUS.SUCCEED
+         }).sort({ sentTime: -1 })
+
+         // check time range is from last triggered time to current time
+         if (reportHistories.length > 0) {
+            startTime = reportHistories[0].sentTime.getTime()
+         }
+
+         return await execCommand(`
+            python3 ${scriptPath} \
+            --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
+            --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
+            --startTime ${startTime} \
+            --endTime ${new Date().getTime()}
+            `, timeout)
       // case 'svs':
       // case 'fastsvs':
       // case 'customized':
       default:
-         logger.error(`report type ${report.reportType} not supported.`)
+         throw new Error(`report type ${report.reportType} not supported.`)
    }
 }
 
-const unregisterSchedule = function (id) {
+const unregisterScheduler = function (id) {
    if (id == null) {
       throw new Error('scheduler id is null, can not unregister scheduler')
    }
@@ -151,7 +160,7 @@ const unregisterSchedule = function (id) {
    delete scheduleJobStore[id.toString()]
 }
 
-const registerSchedule = function (report) {
+const registerScheduler = function (report) {
    if (process.env.ENABLE_SCHEDULE !== 'true' && process.env.ENABLE_SCHEDULE !== true) {
       return
    }
@@ -208,7 +217,7 @@ const registerSchedule = function (report) {
    }
 
    job = schedule.scheduleJob(scheduleOption, function (report) {
-      commonHandler(report)
+      schedulerCommonHandler(report)
    }.bind(null, report))
    if (job != null) {
       scheduleJobStore[report._id] = job
@@ -246,4 +255,58 @@ const cancelNextInvocation = function (id) {
    }
 }
 
-export { registerSchedule, unregisterSchedule, nextInvocation, cancelNextInvocation }
+const invokeNow = async function (id, sendToUserId) {
+   if (id == null) {
+      throw new Error('scheduler id is null, can not cancel next report sending')
+   }
+   logger.info(`start to immediately invoke for job ${id}`)
+   const job = scheduleJobStore[id.toString()]
+   if (job != null) {
+      if (sendToUserId) {
+         const report = await ReportConfiguration.findById(id)
+         const stdout = await contentEvaluate(report)
+         client.chat.postMessage({
+            channel: sendToUserId,
+            text: stdout
+         })
+      } else {
+         job.invoke()
+      }
+   } else {
+      logger.warn(`failed to immediately invoke since no job for ${id}`)
+   }
+}
+
+// register scheduler for updating branches of all perforce projects in db
+const registerPerforceInfoScheduler = function () {
+   const job = schedule.scheduleJob('0 21 * * *', function () {
+      updateP4Branches()
+   })
+   return job
+}
+
+// register scheduler for flatten members of all perforce checkin report in db
+const registerPerforceMembersScheduler = function () {
+   const job = schedule.scheduleJob('30 21 * * *', async function () {
+      const allMembersFilters = (await ReportConfiguration.find({ reportType: 'perforce_checkin' }))
+         .map(report => ({
+            report,
+            membersFilters: report.reportSpecConfig?.perforceCheckIn?.membersFilters || []
+         }))
+      await Promise.all(allMembersFilters.map(report => {
+         return flattenPerforceCheckinMembers(report.membersFilters).then(members => {
+            if (report.reportSpecConfig?.perforceCheckIn != null) {
+               report.reportSpecConfig.perforceCheckIn.flattenMembers = members
+               report.save()
+            }
+         })
+      }))
+   })
+   return job
+}
+
+export {
+   registerScheduler, unregisterScheduler, nextInvocation,
+   cancelNextInvocation, invokeNow,
+   registerPerforceInfoScheduler, registerPerforceMembersScheduler
+}

@@ -1,5 +1,5 @@
 import { ReportConfiguration } from '../model/report-configuration.js'
-import { registerSchedule, unregisterSchedule } from '../scheduler-adapter.js'
+import { registerScheduler, unregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
 import { merge } from '../../common/utils.js'
@@ -46,7 +46,7 @@ export function registerApiRouters(receiver, app) {
       try {
          logger.info(req.body)
          const report = await new ReportConfiguration(req.body).save()
-         registerSchedule(report)
+         registerScheduler(report)
          res.json(report)
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
@@ -67,7 +67,7 @@ export function registerApiRouters(receiver, app) {
          const report = merge(oldReport, req.body)
          logger.info(`original report: ${oldReport}\nnew report: ${report}`)
          await report.save()
-         registerSchedule(report)
+         registerScheduler(report)
          res.json(report)
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
@@ -85,7 +85,7 @@ export function registerApiRouters(receiver, app) {
       logger.info(req.params.id)
       const result = await ReportConfiguration.findByIdAndRemove(req.params.id)
       if (result) {
-         unregisterSchedule(req.params.id)
+         unregisterScheduler(req.params.id)
          res.json({ result: true })
       } else {
          res.json({ result: false, message: 'Delete report configuration failed' })

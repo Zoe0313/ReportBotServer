@@ -1,7 +1,7 @@
 import { formatDateTime } from '../../common/utils.js'
 import logger from '../../common/logger.js'
 import {
-   loadBlocks, getConversationsName, getUserTz, findBlockById
+   loadBlocks, getConversationsName, getUserTz, findBlockById, tryAndHandleError
 } from '../../common/slack-helper.js'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
@@ -210,104 +210,58 @@ export function registerReportHistoryServiceHandler(app) {
       block_id: 'block_welcome',
       action_id: 'action_history'
    }, async ({ ack, body, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
          await listReportHistories(false, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to display report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to display notification sent history list.')
    })
 
    app.action('action_clear_filters', async ({ ack, body, client }) => {
-      const state = await getState(body.message?.ts)
-      try {
+      const ts = body.message.ts
+
+      tryAndHandleError({ ack, body, client }, async() => {
+         const state = await getState(ts)
          state.filterBlockId += 1
          await saveState(state)
-         await listReportHistories(true, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
+         await listReportHistories(true, ts, ack, body, client)
          await client.chat.postMessage({
             channel: body.user.id,
+            thread_ts: ts,
             blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
+            text: `Clear all filters successful.`
          })
-         throw e
-      }
+      }, 'Failed to clear filters of history list.')
    })
 
    app.action('action_filter_by_report', async ({ ack, body, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
          await listReportHistories(true, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to change filter of notification config.')
    })
 
    app.action('action_filter_by_conversation', async ({ ack, body, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
          await listReportHistories(true, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to change filter of converstaion.')
    })
 
    app.action('action_filter_by_start_date', async ({ ack, body, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
          await listReportHistories(true, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to change filter of sent start date.')
    })
 
    app.action('action_filter_by_end_date', async ({ ack, body, client }) => {
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
          await listReportHistories(true, body.message?.ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to change filter of sent end date.')
    })
 
    // Choose report history to display detail
    app.action('action_choose_report_history_item', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
 
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
+         const state = await getState(ts)
          const selectedId = payload.value
          logger.info('choose report id ' + selectedId)
          if (state.selectedId === selectedId) {
@@ -317,16 +271,7 @@ export function registerReportHistoryServiceHandler(app) {
          }
          await saveState(state)
          await listReportHistories(true, ts, ack, body, client)
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to view detail of notification history.')
    })
 
    // previous 5 reports
@@ -335,9 +280,9 @@ export function registerReportHistoryServiceHandler(app) {
       action_id: 'action_previous_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
 
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
+         const state = await getState(ts)
          if (state.page > 1) {
             state.page -= 1
             await saveState(state)
@@ -345,16 +290,7 @@ export function registerReportHistoryServiceHandler(app) {
          } else {
             await ack()
          }
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to display previous 5 notification history.')
    })
 
    // jump to page
@@ -363,9 +299,9 @@ export function registerReportHistoryServiceHandler(app) {
       action_id: 'action_cur_page'
    }, async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
 
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
+         const state = await getState(ts)
          const page = parseInt(payload.selected_option.value)
          if (page != null && !isNaN(page)) {
             state.page = page
@@ -374,16 +310,7 @@ export function registerReportHistoryServiceHandler(app) {
          } else {
             await ack()
          }
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to jump page.')
    })
 
    // next 5 reports
@@ -392,9 +319,9 @@ export function registerReportHistoryServiceHandler(app) {
       action_id: 'action_next_page'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
 
-      try {
+      tryAndHandleError({ ack, body, client }, async() => {
+         const state = await getState(ts)
          const count = state.count
          if (state.page * LIMIT < count) {
             state.page += 1
@@ -403,16 +330,7 @@ export function registerReportHistoryServiceHandler(app) {
          } else {
             await ack()
          }
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to update report sent history list. ' +
-               'Please contact developers to resolve it.'
-         })
-         throw e
-      }
+      }, 'Failed to display next 5 notification history.')
    })
 
    // delete report message in slack conversations/channels
@@ -422,7 +340,8 @@ export function registerReportHistoryServiceHandler(app) {
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
       const state = await getState(ts)
-      try {
+
+      tryAndHandleError({ ack, body, client }, async() => {
          const selectedHistory = await ReportHistory.findOne({ _id: state.selectedId })
          if (selectedHistory == null) {
             throw new Error(`can not find the history since no history with id ${state.selectedId}`)
@@ -460,18 +379,16 @@ export function registerReportHistoryServiceHandler(app) {
             // if all messages in slack channels were deleted, update the status to DELETED
             if (selectedHistory.tsMap.size === 0) {
                selectedHistory.status = REPORT_HISTORY_STATUS.DELETED
+               await client.chat.postMessage({
+                  channel: body.user.id,
+                  thread_ts: ts,
+                  blocks: [],
+                  text: `Delete sent notification in selected conversations successful.`
+               })
             }
             await selectedHistory.save()
             await listReportHistories(true, ts, ack, body, client)
          }
-      } catch (e) {
-         await ack()
-         await client.chat.postMessage({
-            channel: body.user.id,
-            blocks: [],
-            text: 'Failed to delete report message in Slack channels. ' +
-               'Please contact developers to resolve it.'
-         })
-      }
+      }, 'Failed to delete sent notification in selected conversations.')
    })
 }

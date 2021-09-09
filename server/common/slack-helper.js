@@ -3,6 +3,7 @@ import fs from 'fs'
 import cloneDeep from 'lodash/cloneDeep.js'
 import set from 'lodash/set.js'
 import assert from 'assert'
+import { PerforceInfo } from '../src/model/perforce-info.js'
 
 let slackClient = null
 const userTzCache = {}
@@ -41,6 +42,21 @@ export const updateUserTzCache = (userId, tz) => {
    }
 }
 
+export async function verifyBranchInProject(project, branches) {
+   if (project == null || project === '') {
+      logger.error(`project is null when verifying the branches info`)
+      return false
+   }
+   const branchesInfo = await PerforceInfo.findOne({ project }).branches
+   let flag = true
+   branches.forEach(branch => {
+      if (!branchesInfo.includes(branch)) {
+         flag = false
+      }
+   })
+   return flag
+}
+
 export async function verifyBotInChannel(channel) {
    assert(slackClient != null, 'slackClient is not initialized in slack helper.')
 
@@ -76,6 +92,14 @@ export function getConversationsName(conversationIds) {
    }).join(', ')
 }
 
+export async function getUsersName(users) {
+   return await Promise.all(users.map(user => {
+      return slackClient.users.info({ user }).then(res => {
+         return res.user.name
+      })
+   }))
+}
+
 export function loadBlocks(name) {
    if (name.endsWith('null') || name.endsWith('undefined')) {
       return []
@@ -92,11 +116,8 @@ export function loadBlocks(name) {
 
 export function transformInputValuesToObj(values) {
    const inputObj = {}
-
-   Object.keys(values).forEach(blockKey => {
-      const payload = Object.values(values[blockKey])[0]
+   const getInputValueOfPayload = (payload) => {
       let inputValue = null
-
       if (payload.selected_option != null) {
          inputValue = payload.selected_option.value
       } else if (payload.selected_options != null) {
@@ -116,59 +137,46 @@ export function transformInputValuesToObj(values) {
       } else {
          inputValue = payload.value
       }
-      set(inputObj, blockKey, inputValue)
+      return inputValue
+   }
+   Object.keys(values).forEach(blockKey => {
+      const blockValue = values[blockKey]
+      if (Object.keys(blockValue).length === 1) {
+         const payload = Object.values(blockValue)[0]
+         const inputValue = getInputValueOfPayload(payload)
+         set(inputObj, blockKey, inputValue)
+      } else {
+         Object.keys(blockValue).forEach(actionKey => {
+            const payload = blockValue[actionKey]
+            const inputValue = getInputValueOfPayload(payload)
+            set(inputObj, `${blockKey}.${actionKey}`, inputValue)
+         })
+      }
    })
    return inputObj
 }
 
-export function initReportTypeBlocks(report, blocks) {
-   if (report == null || report.reportType == null) {
-      const reportTypeBlock = findBlockById(blocks, 'reportType')
-      const reportTypeOption = reportTypeBlock.element.options
-         .find(option => option.value === 'bugzilla')
-      if (reportTypeOption != null) {
-         reportTypeBlock.element.initial_option = reportTypeOption
-      } else {
-         throw new Error('bugzilla option can not be found in the block.')
-      }
-   } else {
-      const reportSpecConfig = report.reportSpecConfig
-
-      switch (report.reportType) {
-         case 'bugzilla':
-            if (reportSpecConfig.bugzillaLink != null && reportSpecConfig.bugzillaLink.length > 0) {
-               findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-                  .element.initial_value = reportSpecConfig.bugzillaLink
-            }
-            break
-         case 'text':
-            if (reportSpecConfig.text != null && reportSpecConfig.text.length > 0) {
-               findBlockById(blocks, 'reportSpecConfig.text')
-                  .element.initial_value = reportSpecConfig.text
-            }
-            break
-         // case 'perforce':
-         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-         //       .element.initial_value = reportSpecConfig.bugzillaLink
-         //    break
-         // case 'svs':
-         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-         //       .element.initial_value = reportSpecConfig.bugzillaLink
-         //    break
-         // case 'fastsvs':
-         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-         //       .element.initial_value = reportSpecConfig.bugzillaLink
-         //    break
-         // case 'customized':
-         //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-         //       .element.initial_value = reportSpecConfig.bugzillaLink
-         //    break
-         default:
-            throw new Error(`report type ${report.reportType} is not supported`)
-      }
-   }
-}
-
 export function findBlockById(blocks, blockId) {
    return blocks.find(block => block.block_id === blockId)
+}
+
+export async function tryAndHandleError({ ack, body, client }, func, errorHandler) {
+   try {
+      await func()
+   } catch (e) {
+      await ack()
+      if (typeof errorHandler === 'function') {
+         logger.info('trigger custom error handler')
+         await errorHandler(e)
+      } else if (typeof errorHandler === 'string' || errorHandler instanceof String) {
+         logger.info(`trigger default error handler with message ${errorHandler}`)
+         await client.chat.postMessage({
+            channel: body.user.id,
+            thread_ts: body.message?.ts,
+            text: (errorHandler || 'Failed to open create report configuration modal.') +
+               ' Please contact developers to resolve it.'
+         })
+         throw e
+      }
+   }
 }
