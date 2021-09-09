@@ -1,9 +1,6 @@
-# Slackbot Server Dockerfile
-FROM nikolaik/python-nodejs:python3.8-nodejs14
-
-RUN apt-get install tzdata
-RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-ENV TZ=Asia/Shanghai
+# slackbot dockerfile
+FROM centos/python-36-centos7
+USER root
 
 # upgrade python, install python lib
 RUN python -m pip install --upgrade pip
@@ -25,14 +22,10 @@ RUN pip install pandas
 # set perforce environment
 ENV P4PORT perforce.eng.vmware.com:1666
 
-RUN npm install -g nodemon
+# set work directory
+RUN mkdir -p ~/slackbot/
+WORKDIR /slackbot/
+ENV PYTHONPATH /slackbot/
+# COPY ./ /slackbot/
 
-WORKDIR slackbot
-
-COPY . .
-
-WORKDIR server
-
-RUN npm install && cp .env.product .env
-
-CMD [ "npm", "run", "start" ]
+CMD '/bin/bash'
