@@ -16,14 +16,14 @@ def parseArgs():
    return parser.parse_args()
 
 if __name__ == '__main__':
-
-   # url = "https://via.vmw.com/EUQt"
-   args = parseArgs()
-   component2count, component2shortUrl = getCountNShortUrlDict(args.url)
+   title = "bugzilla test"
+   url = "https://via.vmw.com/EUQt"
+   # args = parseArgs()
+   component2count, component2shortUrl = getCountNShortUrlDict(url)
    today = datetime.today()
    # message = "TEST: 70u3 bugs(P0&P1) by components daily report"
-   message = args.title + '\n'
-   component2count = {k: v for k, v in sorted(component2count.items(), key=lambda item: int(item[1]), reverse=1)}
+   message = title + '\n'
+   # component2count = {k: v for k, v in sorted(component2count.items(), key=lambda item: int(item[1]), reverse=1)}
    if not component2count:
       message += "No bugs, quit now."
    else:

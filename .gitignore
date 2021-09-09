@@ -52,3 +52,11 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
+
+.idea/
+
+**/config/
+**/download/
+
+/ci/docker/
+/generator/src/main.py
