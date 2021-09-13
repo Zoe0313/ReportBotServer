@@ -5,7 +5,8 @@ import {
    registerCommonServiceHandler,
    registerCreateReportServiceHandler,
    registerManageReportServiceHandler,
-   registerReportHistoryServiceHandler
+   registerReportHistoryServiceHandler,
+	registerRequestApiTokenServiceHandler
 } from './bolt_service/index.js'
 import { registerApiRouters } from './api_service/index.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
@@ -84,6 +85,7 @@ registerCommonServiceHandler(app)
 registerCreateReportServiceHandler(app)
 registerManageReportServiceHandler(app)
 registerReportHistoryServiceHandler(app)
+registerRequestApiTokenServiceHandler(app)
 
 // register handlers for restful HTTP APIs
 registerApiRouters(receiver, app)

@@ -43,6 +43,16 @@
                },
                "value": "approve",
                "action_id": "action_history"
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "text": ":hammer: Request API Token",
+                  "emoji": true
+               },
+               "value": "approve",
+               "action_id": "action_request_api_token"
             }
          ]
       },
