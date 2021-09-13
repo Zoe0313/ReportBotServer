@@ -16,6 +16,7 @@ import threading
 import queue
 from six import with_metaclass
 import requests
+from pymongo import MongoClient
 
 token_info = {}
 HOST_NAME = "https://%s" % platform.uname()[1]
@@ -53,6 +54,19 @@ class Singleton(type):
                cls._instances[cls] = instance
       return cls._instances[cls]
 
+class SlackMongoConnection(with_metaclass(Singleton)):
+   def __init__(self):
+      self.mongoClient = MongoClient("mongodb://slackbot-server-db.ara.decc.vmware.com", port=27017)
+      self.db = self.mongoClient.slackbot
+
+   def queryToken(self, token):
+      results = self.db.user_api_tokens_poc.find({'token': token})
+
+      if results.count() < 1:
+         return None
+      rec = results[0]
+      return rec.get('id')
+
 
 class TaskMonitor(with_metaclass(Singleton)):
    def __init__(self):
@@ -78,6 +92,7 @@ class TaskMonitor(with_metaclass(Singleton)):
                # TODO: if it's done, remove it from db, or update status there
                channelIds = task_info.get('channel-id')
                message = task_info.get('message')[0]
+               token = task_info.get('token')[0]
 
                for channelId in channelIds:
                   SendSlackNotification(channelId=channelId, message=message)
@@ -116,16 +131,30 @@ class SlackbotRestApiServiceHTTPRequestHandler(BaseHTTPRequestHandler):
 
       if "slack/message" in parse_result.path:
          channelIds = query_params.get("channel-id")
-         message = query_params.get("message")[0]
+         message = query_params.get("message")
+         token = query_params.get("token")
 
-         TaskMonitor().addTask(query_params)
-         return_code, body = 200, {
-            "status": {
-               "message": "Task is submitted: channelIds: %s ,"
-                          " message %s" % (channelIds, message),
+         if (message is None or len(message) == 0) or (token is None or len(token) != 1):
+            return_code, body = 400, {
+               "errorMsg": "invalid request"
             }
-         }
+            self.send_result(return_code, body)
+            return
 
+         userId = SlackMongoConnection().queryToken(token[0])
+         print(userId)
+         if userId is None:
+            return_code, body = 401, {
+               "errorMsg": "token %s invalid" % token
+            }
+         else:
+            TaskMonitor().addTask(query_params)
+            return_code, body = 200, {
+               "status": {
+                  "message": "Task is submitted: channelIds: %s ,"
+                             " message %s" % (channelIds, message),
+               }
+            }
       self.send_result(return_code, body)
 
    def do_GET(self):
