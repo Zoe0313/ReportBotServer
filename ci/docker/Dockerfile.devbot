@@ -33,4 +33,6 @@ WORKDIR server
 
 RUN npm install && cp .env.stage .env
 
+EXPOSE 3000
+
 CMD [ "npm", "run", "start" ]

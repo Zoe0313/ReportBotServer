@@ -9,5 +9,5 @@ export {
    registerManageReportServiceHandler,
    registerReportHistoryServiceHandler,
    registerCommonServiceHandler,
-	registerRequestApiTokenServiceHandler
+   registerRequestApiTokenServiceHandler
 }

@@ -65,7 +65,7 @@ class SlackMongoConnection(with_metaclass(Singleton)):
       if results.count() < 1:
          return None
       rec = results[0]
-      return rec.get('id')
+      return rec.get('userId')
 
 
 class TaskMonitor(with_metaclass(Singleton)):
