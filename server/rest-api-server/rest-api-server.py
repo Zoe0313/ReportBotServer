@@ -122,7 +122,7 @@ class SlackbotRestApiServiceHTTPRequestHandler(BaseHTTPRequestHandler):
       body = {
          "error": {
             "code": 400,
-            "message": "Unsupported by this svs monitoring service by now.",
+            "message": "Unsupported by this slackbot rest api service by now.",
             "status": "Bad_Request"
          }
       }
@@ -162,38 +162,15 @@ class SlackbotRestApiServiceHTTPRequestHandler(BaseHTTPRequestHandler):
       body = {
          "error": {
             "code": 400,
-            "message": "Unsupported by this svs monitoring service by now.",
+            "message": "Unsupported by this slackbot rest api service by now.",
             "status": "Bad_Request"
          }
       }
-      parse_result = urlsplit(self.path)
-      query_params = parse_qs(parse_result.query)
-
-      if "review-with-svs" in parse_result.path:
-         reviewboard_ids = query_params.get("reviewboard-id")
-         if all(p.isalnum() for p in reviewboard_ids) and \
-            len(reviewboard_ids) == 1:
-            # TODO: start task here, and return result
-            result = "successful"
-            return_code, body = 200, {
-               "status": {
-                  "message": "GET Task for reviewboard %s: %s" % (
-                     reviewboard_ids, result),
-               }
-            }
-         else:
-            return_code, body = 404, {
-               "error": {
-                  "code": 404,
-                  "message": "Invalid SVS patch id or reviewboard id",
-                  "status": "Not_Found"
-               }
-            }
-
       self.send_result(return_code, body)
 
 
 if __name__ == "__main__":
+
    httpd = HTTPServer(("", PORT_NUMBER), SlackbotRestApiServiceHTTPRequestHandler)
    print(time.asctime(), "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER))
    httpd.socket = ssl.wrap_socket(
