@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
         - name: slack-rest-api-server
-          image: shtest-docker-local.artifactory.eng.vmware.com/stage/slackbot/svs-monitor-for-rb:0.1.0
+          image: shtest-docker-local.artifactory.eng.vmware.com/stage/slackbot/rest-api-server:0.2.0
           env:
             - name: POD_IP
               valueFrom:
