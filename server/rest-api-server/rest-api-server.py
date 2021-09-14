@@ -60,11 +60,12 @@ class SlackMongoConnection(with_metaclass(Singleton)):
       self.db = self.mongoClient.slack_bot
 
    def queryToken(self, token):
-      results = self.db.user_api_tokens_poc.find({'token': token})
+      results = self.db.user_api_tokens_pocs.find({'token': token})
 
       if results.count() < 1:
          return None
       rec = results[0]
+      print(rec)
       return rec.get('userName')
 
 
