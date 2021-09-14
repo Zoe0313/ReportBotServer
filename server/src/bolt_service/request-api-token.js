@@ -24,6 +24,18 @@ async function requestApiTokenForUser(userId, regenerate) {
    return apiToken.token
 }
 
+async function queryApiTokenForUser(userId) {
+   if (userId == null) {
+      throw Error('user id is required for querying API token.')
+   }
+
+   const apiToken = await SlackbotApiToken.findOne({ userId })
+   if (apiToken == null) {
+      return null
+   }
+   return apiToken.token
+}
+
 export function registerRequestApiTokenServiceHandler(app) {
    async function requestApiToken(ack, body, client, regenerate = false) {
       logger.info('Request api token for ' + body.user?.id)
@@ -79,5 +91,15 @@ export function registerRequestApiTokenServiceHandler(app) {
       tryAndHandleError({ ack, body, client }, async () => {
          await requestApiToken(ack, body, client, true)
       }, 'Failed to regenerate API token of current user.')
+   })
+
+   app.message(/^my\s+token/i, async ({ say, body }) => {
+      const userId = body.event?.user
+      const token = await queryApiTokenForUser(userId)
+      if (token == null) {
+         await say('You don\'t have token requested')
+      } else {
+         await say('Your API token is ' + token)
+      }
    })
 }
