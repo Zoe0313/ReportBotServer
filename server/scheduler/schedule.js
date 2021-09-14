@@ -18,6 +18,7 @@ dotenv.config()
 const systemTz = moment.tz.guess()
 logger.info('system time zone ' + systemTz)
 
+const projectRootPath = path.join(path.resolve(), '..')
 const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
@@ -118,7 +119,7 @@ const contentEvaluate = async (report) => {
       case 'text':
          return report.reportSpecConfig.text
       case 'perforce_checkin':
-         scriptPath = generatorPath + 'src/notification/p4_report.py'
+         scriptPath = generatorPath + 'src/notification/perforce_checkin_report.py'
          let startTime = report.createdAt.getTime()
          const reportHistories = await ReportHistory.find({
             reportConfigId: report._id,
@@ -129,13 +130,13 @@ const contentEvaluate = async (report) => {
          if (reportHistories.length > 0) {
             startTime = reportHistories[0].sentTime.getTime()
          }
-
          return await execCommand(`
-            python3 ${scriptPath} \
+            PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
+            --title '${report.title}' \
             --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
             --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
-            --startTime ${startTime} \
-            --endTime ${new Date().getTime()}
+            --startTime ${startTime / 1000} \
+            --endTime ${new Date().getTime() / 1000}
             `, timeout)
       // case 'svs':
       // case 'fastsvs':
@@ -216,9 +217,10 @@ const registerScheduler = function (report) {
          throw new Error('invalid repeat type')
    }
 
-   job = schedule.scheduleJob(scheduleOption, function (report) {
-      schedulerCommonHandler(report)
-   }.bind(null, report))
+   job = schedule.scheduleJob(scheduleOption, async function (report) {
+      const currentReport = await ReportConfiguration.findById(id)
+      schedulerCommonHandler(currentReport)
+   })
    if (job != null) {
       scheduleJobStore[report._id] = job
       logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)

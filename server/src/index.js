@@ -24,6 +24,9 @@ connectMongoDatabase(async () => {
    const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
    reports.forEach(report => registerScheduler(report))
    const updatePerforceInfoJob = registerPerforceInfoScheduler()
+   if (process.env.NODE_ENV !== 'development') {
+      updatePerforceInfoJob.invoke()
+   }
    logger.info(`next invocation of p4 info update is ${updatePerforceInfoJob.nextInvocation()}`)
    const flattenMembersJob = registerPerforceMembersScheduler()
    logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)

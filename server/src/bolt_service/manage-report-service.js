@@ -387,15 +387,12 @@ export function registerManageReportServiceHandler(app) {
          await report.save()
          if (report.reportType === 'perforce_checkin') {
             flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
-               .then(flattenMembers => {
-                  ReportConfiguration.findByIdAndUpdate(report._id, {
-                     reportSpecConfig: {
-                        perforceCheckIn: {
-                           flattenMembers
-                        }
-                     }
-                  })
+               .then(async flattenMembers => {
+                  const currentReport = await ReportConfiguration.findById(id)
+                  currentReport.reportSpecConfig.perforceCheckIn.flattenMembers = flattenMembers
+                  await currentReport.save()
                   logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(flattenMembers)}`)
+                  logger.debug(JSON.stringify(await ReportConfiguration.findById(id)))
                })
          }
          registerScheduler(report)

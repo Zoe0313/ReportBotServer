@@ -8,7 +8,6 @@ import { merge } from '../../common/utils.js'
 export function registerApiRouters(receiver, app) {
    receiver.router.use(async (req, res, next) => {
       const token = req.get('Authorization')?.substring('Bearer '.length)
-      console.log(token)
       const apiToken = await SlackbotApiToken.findOne({ token })
       if (apiToken == null || apiToken.userId == null) {
          res.status(401)

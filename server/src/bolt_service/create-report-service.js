@@ -72,7 +72,6 @@ export async function updateModal({ ack, body, client }, options) {
          }
       }
    }
-   console.log(blocks)
    isInit ? await client.views.open(viewOption) : await client.views.update(viewOption)
 }
 
@@ -130,17 +129,15 @@ export function registerCreateReportServiceHandler(app) {
          // if perforce_checkin type, flatten member list and save to report configuration
          if (report.reportType === 'perforce_checkin') {
             flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
-               .then(flattenMembers => {
-                  ReportConfiguration.findByIdAndUpdate(report._id, {
-                     reportSpecConfig: {
-                        perforceCheckIn: {
-                           flattenMembers
-                        }
-                     }
-                  })
+               .then(async flattenMembers => {
+                  const currentReport = await ReportConfiguration.findById(report._id)
+                  currentReport.reportSpecConfig.perforceCheckIn.flattenMembers = flattenMembers
+                  await currentReport.save()
                   logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(flattenMembers)}`)
+                  logger.debug(JSON.stringify(await ReportConfiguration.findById(report._id)))
                })
          }
+         registerScheduler(report)
 
          logger.info(`Create successful. saved report id ${saved._id}`)
          const blocks = loadBlocks('precheck-report')
