@@ -56,8 +56,8 @@ class Singleton(type):
 
 class SlackMongoConnection(with_metaclass(Singleton)):
    def __init__(self):
-      self.mongoClient = MongoClient("mongodb://slackbot-server-db.ara.decc.vmware.com", port=27017)
-      self.db = self.mongoClient.slackbot
+      self.mongoClient = MongoClient("mongodb://slackbot-server-db.ara.decc.vmware.com/", port=27017)
+      self.db = self.mongoClient.slack_bot
 
    def queryToken(self, token):
       results = self.db.user_api_tokens_poc.find({'token': token})
@@ -65,7 +65,7 @@ class SlackMongoConnection(with_metaclass(Singleton)):
       if results.count() < 1:
          return None
       rec = results[0]
-      return rec.get('userId')
+      return rec.get('userName')
 
 
 class TaskMonitor(with_metaclass(Singleton)):
