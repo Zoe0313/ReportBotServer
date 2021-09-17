@@ -24,8 +24,8 @@ class PerforceSpider(object):
       self.p4Path = '/build/apps/bin/p4 -u {}'.format(SERVICE_ACCOUNT)
       self.title = args.title.strip('"')
       self.branchList = args.branches.split(",")
-      # perforce use UTC7 time. The UTC7 time is 15 hours later than the system time.
-      utc7 = datetime.timezone(offset=-datetime.timedelta(hours=15))
+      # perforce use UTC7 time. The UTC7 time is 7 hours later than the system time.
+      utc7 = datetime.timezone(offset=-datetime.timedelta(hours=7))
       startTime = datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S")
       endTime = datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S")
       self.checkTime = "{0},{1}".format(startTime, endTime)

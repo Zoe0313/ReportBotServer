@@ -6,6 +6,10 @@ import {
    convertTimeWithTz, formatDateTime, formatDate, parseDateWithTz
 } from '../../common/utils.js'
 import cloneDeep from 'lodash/cloneDeep.js'
+import {
+   ReportConfiguration, flattenPerforceCheckinMembers
+} from '../model/report-configuration.js'
+import { TeamGroup } from '../model/team-group.js'
 
 const WEEK = {
    1: 'Monday',
@@ -28,10 +32,14 @@ const MEMBERS_FILTER_HINT = {
    all_reporters: 'selected users and all direct & indirect reporters of selected users'
 }
 
-function initRecurrenceSettingValue(report, blocks, tz) {
+function initRecurrenceSettingValue(report, blocks, options, tz) {
+   const isNew = options?.isNew
    if (report.repeatConfig?.startDate != null) {
       findBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
          formatDate(report.repeatConfig.startDate)
+   } else if (isNew) {
+      findBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
+         formatDate(new Date())
    }
    if (report.repeatConfig?.endDate != null) {
       findBlockById(blocks, 'repeatConfig.endDate').element.initial_date =
@@ -106,8 +114,9 @@ function initRecurrenceSettingValue(report, blocks, tz) {
    }
 }
 
-export function initReportBlocks(report, blocks, options, tz) {
+export async function initReportBlocks(report, blocks, options, tz) {
    const isInit = options?.isInit
+   const isNew = options?.isNew
    const reportTypeBlock = findBlockById(blocks, 'reportType')
    const reportType = report.reportType || 'bugzilla'
    if (isInit) {
@@ -127,7 +136,7 @@ export function initReportBlocks(report, blocks, options, tz) {
       if (report.mentionUsers?.length > 0) {
          findBlockById(blocks, 'mentionUsers').element.initial_users = report.mentionUsers
       }
-      initRecurrenceSettingValue(report, blocks, tz)
+      initRecurrenceSettingValue(report, blocks, options, tz)
    }
    const reportSpecConfig = report.reportSpecConfig
    switch (reportType) {
@@ -154,6 +163,25 @@ export function initReportBlocks(report, blocks, options, tz) {
                      },
                      value: branch
                   }))
+         }
+         if (isInit) {
+            const teams = await TeamGroup.find({
+               code: { $in: reportSpecConfig.perforceCheckIn.teams }
+            })
+            if (teams.length > 0) {
+               findBlockById(blocks, 'reportSpecConfig.perforceCheckIn.teams')
+                  .element.initial_options = teams
+                     .map(team => ({
+                        text: {
+                           type: 'plain_text',
+                           text: team.name
+                        },
+                        value: team.code
+                     }))
+            } else if (!isNew) {
+               findBlockById(blocks, 'reportSpecConfig.perforceCheckIn.teams')
+                  .element.initial_options = undefined
+            }
          }
          const membersFilters = reportSpecConfig?.perforceCheckIn?.membersFilters || []
          if (options?.addMembersFilter) {
@@ -236,4 +264,20 @@ export function displayTimeSetting(report, tz) {
       case 'cron_expression': return `Cron Expression - ${repeatConfig.cronExpression}`
       default: return 'Unknown'
    }
+}
+
+export function updateFlattenMembers(report) {
+   return flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
+      .then(async flattenMembers => {
+         const teams = await TeamGroup.find({
+            code: { $in: report.reportSpecConfig.perforceCheckIn.teams }
+         })
+         const selectedTeamsMembers = teams.map(team => team.members).flat()
+         const currentReport = await ReportConfiguration.findById(report._id)
+         const allMembers = [...new Set(selectedTeamsMembers.concat(flattenMembers))]
+         currentReport.reportSpecConfig.perforceCheckIn.flattenMembers = allMembers
+         await currentReport.save()
+         logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(allMembers)}`)
+         logger.debug(JSON.stringify(await ReportConfiguration.findById(report._id)))
+      })
 }

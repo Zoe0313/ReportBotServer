@@ -11,7 +11,8 @@ import {
 import { registerApiRouters } from './api_service/index.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
-   registerScheduler, registerPerforceInfoScheduler, registerPerforceMembersScheduler
+   registerScheduler, registerPerforceInfoScheduler,
+   registerPerforceMembersScheduler, registerTeamGroupScheduler
 } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 import { connectMongoDatabase } from '../common/db-utils.js'
@@ -24,12 +25,15 @@ connectMongoDatabase(async () => {
    const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
    reports.forEach(report => registerScheduler(report))
    const updatePerforceInfoJob = registerPerforceInfoScheduler()
-   if (process.env.NODE_ENV !== 'development') {
-      updatePerforceInfoJob.invoke()
-   }
    logger.info(`next invocation of p4 info update is ${updatePerforceInfoJob.nextInvocation()}`)
    const flattenMembersJob = registerPerforceMembersScheduler()
    logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)
+   const updateTeamGroupJob = registerTeamGroupScheduler()
+   logger.info(`next invocation of team group members update is ${updateTeamGroupJob.nextInvocation()}`)
+   if (process.env.NODE_ENV !== 'development') {
+      updatePerforceInfoJob.invoke()
+      updateTeamGroupJob.invoke()
+   }
 })
 
 // init express receiver for HTTP request
