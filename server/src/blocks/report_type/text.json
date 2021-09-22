@@ -14,7 +14,7 @@
          },
          "label": {
             "type": "plain_text",
-            "text": ":four: Text message",
+            "text": ":four: Plain text message",
             "emoji": true
          }
       }

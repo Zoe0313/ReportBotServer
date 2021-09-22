@@ -28,7 +28,7 @@ const TeamGroup = mongoose.model('TeamGroup', TeamGroupSchema)
 const updateTeamGroup = async () => {
    const initTeams = [{
       code: 'vsan',
-      name: 'vsan',
+      name: 'vsan engineer',
       membersFilters: [{
          condition: 'include',
          type: 'all_reporters',

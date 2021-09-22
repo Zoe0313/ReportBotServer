@@ -7,6 +7,7 @@ import urllib3
 import certifi
 import logging
 import sys
+import hashlib
 from datetime import datetime
 from bs4 import BeautifulSoup
 sys.path.append('../')
@@ -107,7 +108,10 @@ def getCountNShortUrlDict(url):
          component2url[component] = initial_url
    component2count = {}
    fillTheDict(component2url, component2count)
-   fileName = PATH + url[-4:] + '.json'
+   encodedUrl = url.encode()
+   hashUrl = hashlib.sha256(encodedUrl)
+   fileName = PATH + hashUrl.hexdigest() + '.json'
+   logger.debug("cache filename:" + fileName)
    if not os.path.exists(fileName):
       saveShortUrlDict(fileName, {})
    component2shortUrl = loadShortUrlDict(fileName)

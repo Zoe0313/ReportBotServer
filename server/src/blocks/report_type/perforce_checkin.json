@@ -12,7 +12,7 @@
 			"block_id": "reportSpecConfig.perforceCheckIn.branches",
 			"label": {
 				"type": "plain_text",
-				"text": "Pick projects and branches from the list"
+				"text": "Search projects and branches from the list"
 			},
 			"hint": {
 				"type": "plain_text",
@@ -24,7 +24,7 @@
 				"type": "multi_external_select",
 				"placeholder": {
 					"type": "plain_text",
-					"text": "Search perforce branches"
+					"text": "E.g. bora/main"
 				}
 			}
 		},
@@ -34,7 +34,7 @@
          "optional": true,
 			"label": {
 				"type": "plain_text",
-				"text": "Team list"
+				"text": "Team group"
 			},
 			"element": {
 				"type": "multi_external_select",
@@ -42,7 +42,7 @@
 				"min_query_length": 0,
 				"placeholder": {
 					"type": "plain_text",
-					"text": "Search team name",
+					"text": "Search team name. E.g. vsan engineer",
 					"emoji": true
 				},
             "initial_options": [

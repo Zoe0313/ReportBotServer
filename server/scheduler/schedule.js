@@ -114,9 +114,11 @@ const contentEvaluate = async (report) => {
    let scriptPath = ''
    switch (report.reportType) {
       case 'bugzilla':
+         // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'
          scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
-         return await execCommand(`python3 ${scriptPath} --title '${report.title}' ` +
-               `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
+         return await execCommand(`PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
+            `--title '${report.title}' ` +
+            `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
       case 'text':
          return report.reportSpecConfig.text
       case 'perforce_checkin':
