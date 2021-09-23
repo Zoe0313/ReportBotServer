@@ -32,7 +32,7 @@ const updateTeamGroup = async () => {
       membersFilters: [{
          condition: 'include',
          type: 'all_reporters',
-         // include vgunturu(WAAPGUG8J), WPVQ9M7QT(WPVQ9M7QT), bstoicov(WAAGN7CBE) all
+         // include vgunturu(WAAPGUG8J), vsubhashini(WPVQ9M7QT), bstoicov(WAAGN7CBE) all
          members: ['WAAPGUG8J', 'WPVQ9M7QT', 'WAAGN7CBE']
       },
       {

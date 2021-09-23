@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: slackbot-server
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-server:0.9.4
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-server:1.2
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
@@ -49,16 +49,23 @@ spec:
             memory: "500Mi"
             cpu: "200m"
         volumeMounts:
-        - name: slackbot-log
+        - name: slackbot-nfs
           mountPath: /slackbot/log
-        - name: slackbot-downloads
-          mountPath: /slackbot/downloads
+        - name: apps-volume
+          mountPath: /build/apps
+        - name: toolchain-volume
+          mountPath: /build/toolchain
       volumes:
-        - name: slackbot-log
+        - name: slackbot-nfs
           nfs:
             server: pa-archive.eng.vmware.com
-            path: /slackbot-aas/log
-        - name: slackbot-downloads
+            path: /slackbot-aas
+        - name: apps-volume
           nfs:
-            server: pa-archive.eng.vmware.com
-            path: /slackbot-aas/downloads
+            server: build-apps.eng.vmware.com
+            path: /apps
+        - name: toolchain-volume
+          nfs:
+            server: build-toolchain.eng.vmware.com
+            path: /toolchain
+
