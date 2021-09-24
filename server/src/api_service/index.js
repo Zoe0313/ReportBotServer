@@ -11,7 +11,7 @@ export function registerApiRouters(receiver, app) {
       const apiToken = await SlackbotApiToken.findOne({ token })
       if (apiToken == null || apiToken.userId == null) {
          res.status(401)
-         res.json({ message: 'Authorization failed' })
+         res.json({ message: 'Authorization failure' })
          return
       }
       res.locals.userId = apiToken.userId

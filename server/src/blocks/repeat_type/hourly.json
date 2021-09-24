@@ -18,7 +18,7 @@
             "type": "plain_text_input",
             "placeholder": {
                "type": "plain_text",
-               "text": "E.g. 30"
+               "text": "Valid input: 0 - 59, e.g. 30"
             },
             "action_id": "action_mins_of_hour"
          }
