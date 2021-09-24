@@ -9,6 +9,8 @@ Utils.py
 
 import os
 import subprocess
+import time
+import functools
 import datetime
 from generator.src.utils.Logger import logger
 
@@ -21,15 +23,15 @@ def runCmd(cmd, nTimeOut=300):
       stdout, stderr = process.communicate()
    return stdout, stderr
 
-def printRunningTime(func):
+def logExecutionTime(func):
+   @functools.wraps(func)
    def wrapper(*args, **kwargs):
-      startTime = datetime.datetime.now()
-      ret = func(*args, **kwargs)
-      endTime = datetime.datetime.now()
-      dt = endTime - startTime
-      output = 'Function [%s] ElaspeTime: %.3fs' % (func.__name__, dt.total_seconds())
+      startTime = time.perf_counter()
+      res = func(*args, **kwargs)
+      endTime = time.perf_counter()
+      output = '{} took {:.3f}s'.format(func.__name__, endTime - startTime)
       logger.info(output)
-      return ret
+      return res
    return wrapper
 
 def getOneDay(dtDay, formatter="%Y%m%d"):
@@ -48,4 +50,20 @@ def removeOldFiles(path, dtDay=15, keyWord=""):
             try:
                os.remove(filePath)
             except Exception as e:
-               logger.error('remove file error: ', e)
+               logger.exception(f'removeOldFiles error: {e}')
+
+def noIntervalPolling(func):
+   count = 0
+   @functools.wraps(func)
+   def wrapper(*args, **kwargs):
+      nonlocal count
+      count += 1
+      try:
+         return func(*args, **kwargs)
+      except Exception as e:
+         output = 'polling times: {}, Function [{}] err: {}'.format(count, func.__name__, e)
+         logger.exception(output)
+         if count < 3:
+            return wrapper(*args, **kwargs)
+      return "error"
+   return wrapper
