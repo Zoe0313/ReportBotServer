@@ -56,7 +56,7 @@ tags
 .idea/
 
 **/config/
-**/download/
+**/tmp/
 
 /ci/docker/
 /generator/src/main.py

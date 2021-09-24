@@ -9,9 +9,10 @@ perforce_checkin_report.py
 
 import os
 import re
+import time
 import datetime
 from collections import defaultdict, namedtuple
-from generator.src.utils.Utils import runCmd, printRunningTime
+from generator.src.utils.Utils import runCmd, logExecutionTime
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD
 Record = namedtuple('Record', ['cln', 'summary', 'user', 'time', 'bugId'])
@@ -25,29 +26,32 @@ class PerforceSpider(object):
       self.branchList = args.branches.split(",")
       # perforce use UTC7 time. The UTC7 time is 15 hours later than the system time.
       utc7 = datetime.timezone(offset=-datetime.timedelta(hours=15))
-      self.checkTime = "{0},{1}".format(datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S"),
-                                       datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S"))
+      startTime = datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S")
+      endTime = datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S")
+      self.checkTime = "{0},{1}".format(startTime, endTime)
       self.userList = args.users.split(",")
       self.showTitle = 'Title: {0}\nBranch: {1}\nCheckin Time(PST): {2} --- {3}'.\
-         format(self.title,
-                " & ".join(self.branchList),
-                datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d %H:%M:%S"),
-                datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d %H:%M:%S"))
+         format(self.title, " & ".join(self.branchList), startTime, endTime)
 
    def loginSystem(self):
       os.environ['P4CONFIG'] = ""
       os.environ['P4USER'] = SERVICE_ACCOUNT
       cmdStr = "echo '{0}' | {1} login".format(SERVICE_PASSWORD, self.p4Path)
-      stdout, stderr = runCmd(cmdStr)
-      if stderr:
-         logger.error(f"Perforce login error: {stderr}")
-         return False
-      return True
+      isLogin = False
+      for count in range(3):
+         stdout, stderr = runCmd(cmdStr)
+         if stderr:
+            logger.error(f"{count} times Perforce login error: {stderr}")
+            time.sleep(0.5)
+         else:
+            isLogin = True
+            break
+      return isLogin
 
-   @printRunningTime
+   @logExecutionTime
    def getReport(self):
       if not self.loginSystem():
-         return "Perforce login failed."
+         return "Perforce internal error"
 
       message = []
       message.append(self.showTitle)
@@ -64,7 +68,7 @@ class PerforceSpider(object):
                             (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
          bodyFormatter = " " * (columnLength["User"] + 6) + "{:<%ds}{:<%ds}{:<%ds}{}" % \
                           (columnLength["CLN"], columnLength["Time"], columnLength["PR"])
-         message.append(headerFormatter.format("User", "CLN", "Time", "PR", "Summary"))
+         message.append(headerFormatter.format("User", "CLN", "Time", "Bug Number", "Summary"))
 
          userName = ''
          for user in self.userList:
