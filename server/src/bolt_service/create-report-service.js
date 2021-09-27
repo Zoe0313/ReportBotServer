@@ -3,11 +3,12 @@ import { formatDate, merge } from '../../common/utils.js'
 import {
    loadBlocks, getUserTz, transformInputValuesToObj, tryAndHandleError
 } from '../../common/slack-helper.js'
-import { initReportBlocks } from './init-blocks-data-helper.js'
+import { initReportBlocks, updateFlattenMembers } from './init-blocks-data-helper.js'
 import {
-   ReportConfiguration, REPORT_STATUS, flattenPerforceCheckinMembers
+   ReportConfiguration, REPORT_STATUS
 } from '../model/report-configuration.js'
 import { PerforceInfo } from '../model/perforce-info.js'
+import { TeamGroup } from '../model/team-group.js'
 import { registerScheduler } from '../scheduler-adapter.js'
 import mongoose from 'mongoose'
 import { matchSorter } from 'match-sorter'
@@ -45,13 +46,17 @@ export async function updateModal({ ack, body, client }, options) {
    const reportModalTime = loadBlocks('modal/report-time')
    const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
       .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
-   initReportBlocks(report, blocks, options, tz)
+   await initReportBlocks(report, blocks, options, tz)
    if (ack) {
       await ack()
    }
    let callbackId = body.view?.callback_id
    if (isInit) {
       callbackId = isNew ? 'view_create_report' : 'view_edit_report'
+   }
+   let title = body.view?.title?.text
+   if (isInit) {
+      title = isNew ? 'New Notification' : 'Edit Notification'
    }
    const viewOption = {
       trigger_id: isInit ? body.trigger_id : undefined,
@@ -63,7 +68,7 @@ export async function updateModal({ ack, body, client }, options) {
          private_metadata: ts,
          title: {
             type: 'plain_text',
-            text: isNew ? 'New Notification' : 'Edit Notification'
+            text: title
          },
          blocks,
          submit: {
@@ -72,7 +77,6 @@ export async function updateModal({ ack, body, client }, options) {
          }
       }
    }
-   console.log(blocks)
    isInit ? await client.views.open(viewOption) : await client.views.update(viewOption)
 }
 
@@ -129,18 +133,9 @@ export function registerCreateReportServiceHandler(app) {
 
          // if perforce_checkin type, flatten member list and save to report configuration
          if (report.reportType === 'perforce_checkin') {
-            flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
-               .then(flattenMembers => {
-                  ReportConfiguration.findByIdAndUpdate(report._id, {
-                     reportSpecConfig: {
-                        perforceCheckIn: {
-                           flattenMembers
-                        }
-                     }
-                  })
-                  logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(flattenMembers)}`)
-               })
+            updateFlattenMembers(report)
          }
+         registerScheduler(report)
 
          logger.info(`Create successful. saved report id ${saved._id}`)
          const blocks = loadBlocks('precheck-report')
@@ -280,6 +275,37 @@ export function registerCreateReportServiceHandler(app) {
             options: options
          })
          logger.debug(`ack branches cost ${performance.now() - t0}`)
+      } else {
+         await ack()
+      }
+   })
+
+   // Responding to multi_external_select options request for teams
+   app.options('action_select_teams', async ({ ack, options, payload }) => {
+      const t0 = performance.now()
+      const keyword = options.value
+      logger.info(`keyword: ${keyword}, get all team lists in db`)
+      const allTeams = await TeamGroup.find()
+      const allTeamNames = allTeams.map(team => team.name)
+      logger.debug(`get all team names ${allTeamNames} in db cost ${performance.now() - t0}`)
+
+      // match keyword and sort by score
+      // refer to match-sorter https://www.npmjs.com/package/match-sorter
+      if (allTeamNames != null && allTeamNames.length > 0) {
+         const sortedTeamNamesWithLimit = matchSorter(allTeamNames, keyword).slice(0, 20)
+         logger.debug(`sort team names cost ${performance.now() - t0}`)
+         logger.info(`0 - 20 teams stored are ${sortedTeamNamesWithLimit}`)
+         const options = sortedTeamNamesWithLimit.map(teamName => ({
+            text: {
+               type: 'plain_text',
+               text: teamName
+            },
+            value: allTeams.find(team => team.name === teamName)?.code
+         })).filter(option => option.value != null)
+         await ack({
+            options: options
+         })
+         logger.debug(`ack team names cost ${performance.now() - t0}`)
       } else {
          await ack()
       }

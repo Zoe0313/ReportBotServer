@@ -1,55 +1,83 @@
 {
-   "blocks": [
-      {
-         "type": "section",
-         "text": {
-            "type": "mrkdwn",
-            "text": "*:four: Perforce branch checkin report specific configuration*"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "reportSpecConfig.perforceCheckIn.branches",
-         "label": {
-            "type": "plain_text",
-            "text": "Pick projects and branches from the list"
-         },
-         "hint": {
-            "type": "plain_text",
-            "text": "Display top 20 matching results. Currently we only support bora and vsan-mgmt-ui projects, if you need to add more projects, please contact us."
-         },
-         "element": {
-            "action_id": "action_perforce_select_branches",
-            "min_query_length": 3,
-            "type": "multi_external_select",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Search perforce branches"
-            }
-         }
-      },
-      {
-         "type": "section",
-         "text": {
-            "type": "mrkdwn",
-            "text": "*You can add member filters to restrict teammates to be reported*"
-         }
-      },
-      {
-         "type": "actions",
-         "block_id": "block_perforce_add_member_filter",
-         "elements": [
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "text": "Add member filter",
-                  "emoji": true
-               },
-               "value": "more",
-               "action_id": "action_perforce_add_member_filter"
-            }
-         ]
-      }
-   ]
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*:four: Perforce branch checkin report specific configuration*"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "reportSpecConfig.perforceCheckIn.branches",
+			"label": {
+				"type": "plain_text",
+				"text": "Search projects and branches from the list"
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "Display top 20 matching results. Currently we only support bora and vsan-mgmt-ui projects, if you need to add more projects, please contact us."
+			},
+			"element": {
+				"action_id": "action_perforce_select_branches",
+				"min_query_length": 3,
+				"type": "multi_external_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "E.g. bora/main"
+				}
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "reportSpecConfig.perforceCheckIn.teams",
+         "optional": true,
+			"label": {
+				"type": "plain_text",
+				"text": "Team group"
+			},
+			"element": {
+				"type": "multi_external_select",
+				"action_id": "action_select_teams",
+				"min_query_length": 0,
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Search team name. E.g. vsan engineer",
+					"emoji": true
+				},
+            "initial_options": [
+               {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "vsan"
+                  },
+                  "value": "vsan"
+               }
+            ]
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*You can add member filters to restrict teammates to be reported*"
+			}
+		},
+		{
+			"type": "actions",
+			"block_id": "block_perforce_add_member_filter",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Add member filter",
+						"emoji": true
+					},
+					"value": "more",
+					"action_id": "action_perforce_add_member_filter"
+				}
+			]
+		}
+	]
 }

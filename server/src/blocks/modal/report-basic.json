@@ -46,7 +46,7 @@
                {
                   "text": {
                      "type": "plain_text",
-                     "text": "Text",
+                     "text": "Plain text",
                      "emoji": true
                   },
                   "value": "text"

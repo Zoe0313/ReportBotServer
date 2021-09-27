@@ -142,6 +142,9 @@ const ReportConfigurationSchema = new mongoose.Schema({
          flattenMembers: { // flatten members will be computed by members filters
             type: [String]
          },
+         teams: {
+            type: [String]
+         },
          branches: {
             type: [String],
             required: function(v) {
@@ -356,7 +359,12 @@ const flattenPerforceCheckinMembers = async (membersFilters) => {
    return members
 }
 
-export { ReportConfiguration, REPORT_STATUS, flattenPerforceCheckinMembers }
+export {
+   ReportConfiguration,
+   PerforceCheckInMembersFilterSchema,
+   REPORT_STATUS,
+   flattenPerforceCheckinMembers
+}
 
 // {
 //    "text": {

@@ -5,12 +5,14 @@ import {
    registerCommonServiceHandler,
    registerCreateReportServiceHandler,
    registerManageReportServiceHandler,
-   registerReportHistoryServiceHandler
+   registerReportHistoryServiceHandler,
+   registerRequestApiTokenServiceHandler
 } from './bolt_service/index.js'
 import { registerApiRouters } from './api_service/index.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
-   registerScheduler, registerPerforceInfoScheduler, registerPerforceMembersScheduler
+   registerScheduler, registerPerforceInfoScheduler,
+   registerPerforceMembersScheduler, registerTeamGroupScheduler
 } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 import { connectMongoDatabase } from '../common/db-utils.js'
@@ -26,6 +28,12 @@ connectMongoDatabase(async () => {
    logger.info(`next invocation of p4 info update is ${updatePerforceInfoJob.nextInvocation()}`)
    const flattenMembersJob = registerPerforceMembersScheduler()
    logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)
+   const updateTeamGroupJob = registerTeamGroupScheduler()
+   logger.info(`next invocation of team group members update is ${updateTeamGroupJob.nextInvocation()}`)
+   if (process.env.NODE_ENV !== 'development') {
+      updatePerforceInfoJob.invoke()
+      updateTeamGroupJob.invoke()
+   }
 })
 
 // init express receiver for HTTP request
@@ -84,6 +92,7 @@ registerCommonServiceHandler(app)
 registerCreateReportServiceHandler(app)
 registerManageReportServiceHandler(app)
 registerReportHistoryServiceHandler(app)
+registerRequestApiTokenServiceHandler(app)
 
 // register handlers for restful HTTP APIs
 registerApiRouters(receiver, app)

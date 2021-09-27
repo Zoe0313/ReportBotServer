@@ -6,9 +6,9 @@ import {
    loadBlocks, getConversationsName, getUserTz,
    transformInputValuesToObj, findBlockById, tryAndHandleError
 } from '../../common/slack-helper.js'
-import { displayTimeSetting } from './init-blocks-data-helper.js'
+import { displayTimeSetting, updateFlattenMembers } from './init-blocks-data-helper.js'
 import {
-   ReportConfiguration, REPORT_STATUS, flattenPerforceCheckinMembers
+   ReportConfiguration, REPORT_STATUS
 } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
 import {
@@ -386,17 +386,7 @@ export function registerManageReportServiceHandler(app) {
 
          await report.save()
          if (report.reportType === 'perforce_checkin') {
-            flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
-               .then(flattenMembers => {
-                  ReportConfiguration.findByIdAndUpdate(report._id, {
-                     reportSpecConfig: {
-                        perforceCheckIn: {
-                           flattenMembers
-                        }
-                     }
-                  })
-                  logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(flattenMembers)}`)
-               })
+            updateFlattenMembers(report)
          }
          registerScheduler(report)
          logger.info(`Edit successful. report id ${id}`)

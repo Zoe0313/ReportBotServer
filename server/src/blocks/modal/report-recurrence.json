@@ -15,7 +15,7 @@
          "block_id": "repeatConfig.repeatType",
          "label": {
             "type": "plain_text",
-            "text": ":repeat: Repeat type",
+            "text": ":repeat: Recurrence",
             "emoji": true
          },
          "dispatch_action": true,
@@ -24,7 +24,7 @@
             "action_id": "action_repeat_type",
             "placeholder": {
                "type": "plain_text",
-               "text": "Repeat type",
+               "text": "Recurrence type",
                "emoji": true
             },
             "options": [

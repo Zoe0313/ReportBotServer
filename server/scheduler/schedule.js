@@ -1,16 +1,17 @@
 import dotenv from 'dotenv'
-
 import schedule from 'node-schedule'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
 import {
    REPORT_STATUS, flattenPerforceCheckinMembers, ReportConfiguration
 } from '../src/model/report-configuration.js'
 import { updateP4Branches } from '../src/model/perforce-info.js'
+import { updateTeamGroup } from '../src/model/team-group.js'
 import { parseDateWithTz, convertTimeWithTz, execCommand } from '../common/utils.js'
 import { getConversationsName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
+import cronParser from 'cron-parser'
 // check timezone
 import moment from 'moment-timezone'
 
@@ -18,6 +19,7 @@ dotenv.config()
 const systemTz = moment.tz.guess()
 logger.info('system time zone ' + systemTz)
 
+const projectRootPath = path.join(path.resolve(), '..')
 const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
@@ -112,30 +114,49 @@ const contentEvaluate = async (report) => {
    let scriptPath = ''
    switch (report.reportType) {
       case 'bugzilla':
-         scriptPath = generatorPath + 'bugzilla/reportGenerator.py'
-         return await execCommand(`python3 ${scriptPath} --title '${report.title}' ` +
-               `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
+         // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'
+         scriptPath = generatorPath + 'src/notification/bugzilla_report.py'
+         return await execCommand(`PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
+            `--title '${report.title}' ` +
+            `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
       case 'text':
          return report.reportSpecConfig.text
       case 'perforce_checkin':
-         scriptPath = generatorPath + 'src/notification/p4_report.py'
-         let startTime = report.createdAt.getTime()
-         const reportHistories = await ReportHistory.find({
-            reportConfigId: report._id,
-            status: REPORT_HISTORY_STATUS.SUCCEED
-         }).sort({ sentTime: -1 })
-
-         // check time range is from last triggered time to current time
-         if (reportHistories.length > 0) {
-            startTime = reportHistories[0].sentTime.getTime()
+         scriptPath = generatorPath + 'src/notification/perforce_checkin_report.py'
+         let startTime = new Date()
+         const endTime = new Date()
+         switch (report.repeatConfig.repeatType) {
+            case 'hourly':
+               startTime.setHours(endTime.getHours() - 1)
+               break
+            case 'daily':
+               startTime.setDate(endTime.getDate() - 1)
+               break
+            case 'weekly':
+               startTime.setDate(endTime.getDate() - 7)
+               break
+            case 'monthly':
+               startTime.setMonth(endTime.getMonth() - 1)
+               break
+            case 'cron_expression':
+               const interval = cronParser.parseExpression(report.repeatConfig.cronExpression)
+               startTime = interval.prev()
+               console.log(startTime)
+               break
+            default:
+               // not_repeat type is default
+               startTime.setDate(endTime.getDate() - 1)
+               break
          }
+         logger.info(JSON.stringify(startTime))
 
          return await execCommand(`
-            python3 ${scriptPath} \
+            PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
+            --title '${report.title}' \
             --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
             --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
-            --startTime ${startTime} \
-            --endTime ${new Date().getTime()}
+            --startTime ${startTime.getTime() / 1000} \
+            --endTime ${endTime.getTime() / 1000}
             `, timeout)
       // case 'svs':
       // case 'fastsvs':
@@ -216,9 +237,10 @@ const registerScheduler = function (report) {
          throw new Error('invalid repeat type')
    }
 
-   job = schedule.scheduleJob(scheduleOption, function (report) {
-      schedulerCommonHandler(report)
-   }.bind(null, report))
+   job = schedule.scheduleJob(scheduleOption, async function (report) {
+      const currentReport = await ReportConfiguration.findById(id)
+      schedulerCommonHandler(currentReport)
+   })
    if (job != null) {
       scheduleJobStore[report._id] = job
       logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
@@ -287,7 +309,7 @@ const registerPerforceInfoScheduler = function () {
 
 // register scheduler for flatten members of all perforce checkin report in db
 const registerPerforceMembersScheduler = function () {
-   const job = schedule.scheduleJob('30 21 * * *', async function () {
+   const job = schedule.scheduleJob('10 21 * * *', async function () {
       const allMembersFilters = (await ReportConfiguration.find({ reportType: 'perforce_checkin' }))
          .map(report => ({
             report,
@@ -305,8 +327,15 @@ const registerPerforceMembersScheduler = function () {
    return job
 }
 
+const registerTeamGroupScheduler = function () {
+   const job = schedule.scheduleJob('20 21 * * *', async function () {
+      updateTeamGroup()
+   })
+   return job
+}
 export {
    registerScheduler, unregisterScheduler, nextInvocation,
    cancelNextInvocation, invokeNow,
-   registerPerforceInfoScheduler, registerPerforceMembersScheduler
+   registerPerforceInfoScheduler, registerPerforceMembersScheduler,
+   registerTeamGroupScheduler
 }
