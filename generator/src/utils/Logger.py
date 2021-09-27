@@ -14,7 +14,7 @@ import os
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s[:%(lineno)d] - %(message)s"
 DATE_FORMAT = "%Y/%m/%d %H:%M:%S %p"
 
-dirPath = os.path.join(os.path.abspath(__file__).split("/generator")[0], "log")
+dirPath = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/log")
 if not os.path.exists(dirPath):
     os.mkdir(dirPath)
 
