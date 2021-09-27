@@ -5,9 +5,8 @@
 **/*.log
 **/log/
 
-# downloads
-**/download/
-**/tmp/
+# persist
+**/persist/
 
 # kubeconfig credentials
 ci/kubeconfig

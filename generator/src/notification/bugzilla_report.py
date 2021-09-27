@@ -21,9 +21,8 @@ from generator.src.utils.Utils import removeOldFiles, logExecutionTime, noInterv
 from generator.src.utils.MiniQueryFunctions import long2short
 from generator.src.utils.Logger import logger
 
-downloadDir = os.path.join(os.path.abspath(__file__).split("/generator")[0], "tmp")
-if not os.path.exists(downloadDir):
-   os.mkdir(downloadDir)
+downloadDir = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp")
+os.makedirs(downloadDir, exist_ok=True)
 
 # transfer Horizontal/Vertical Axis name to query param
 axis2param = {
