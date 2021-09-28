@@ -164,12 +164,12 @@ export async function tryAndHandleError({ ack, body, client }, func, errorHandle
    try {
       await func()
    } catch (e) {
-      await ack()
       if (typeof errorHandler === 'function') {
          logger.info('trigger custom error handler')
          await errorHandler(e)
       } else if (typeof errorHandler === 'string' || errorHandler instanceof String) {
          logger.info(`trigger default error handler with message ${errorHandler}`)
+         await ack()
          await client.chat.postMessage({
             channel: body.user.id,
             thread_ts: body.message?.ts,

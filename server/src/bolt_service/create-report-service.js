@@ -149,6 +149,7 @@ export function registerCreateReportServiceHandler(app) {
             text: 'Precheck your new report'
          })
       }, async (e) => {
+         logger.debug(e)
          if (e instanceof mongoose.Error.ValidationError) {
             const ackErrors = {}
             Object.keys(e.errors).forEach(errorKey => {
