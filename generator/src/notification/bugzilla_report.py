@@ -67,10 +67,11 @@ class BugzillaSpider(object):
       df.loc['Total'] = [df[col].sum() for col in columnList]  # Horizontal Total
       df['Total'] = [rowSeries.sum() for _, rowSeries in df.iterrows()]  # Vertical Total
       df = df[df['Total'] > 0]  # drop count=0 lines
-      df = df.sort_values(by="Total", axis=0, ascending=True)
-      # df = df.sort_values(by="Total", axis=1, ascending=True)  # sort by Horizontal Total?
-      if len(columnList) == 1 and columnList[0] == 'Number of bugs':
+      if len(columnList) == 1:
+         df = df.sort_values(by="Total", axis=0, ascending=False)
          df = df.drop(columns=['Total'])
+      else:
+         df = df.sort_values(by="Total", axis=0, ascending=True)
       return df
 
    def getSplitTable(self, csvFile):
@@ -179,23 +180,48 @@ class BugzillaSpider(object):
       longUrlList = html.xpath('//*[@id="reportContainer"]//td//a//@href')
       if len(longUrlList) > 0:
          lastLongUrl = longUrlList[-1]
-         completeLastLongUrl = self.foreUrl.format(parse.unquote(lastLongUrl))
+         completeLastLongUrl = self.foreUrl.format(lastLongUrl)
          key = hashlib.sha256(completeLastLongUrl.encode()).hexdigest()
          pklFile = os.path.join(downloadDir, f"{key}.pkl")
          shortUrlDict = self.readMemoryShortUrl(pklFile)
          for url in longUrlList:
-            longUrl = self.foreUrl.format(parse.unquote(url))
+            longUrl = self.foreUrl.format(url)
             urlTail = longUrl.split(completeLastLongUrl)[1][1:] if url != lastLongUrl else 'Total'
+            urlTail = parse.unquote(urlTail)
             shortUrlDict[urlTail] = shortUrlDict.get(urlTail) if shortUrlDict.get(urlTail) else long2short(longUrl)
          self.writeMemoryShortUrl(pklFile, shortUrlDict)
       return shortUrlDict
 
+   def outputSimpleTable(self, dfData, shortUrlDict):
+      indexNameList = dfData.index.values.tolist() if dfData.index.values.tolist() else []
+      columnName = dfData.columns.values.tolist()[0]
+      message = []
+      message.append('Count         {0}'.format(dfData.index.name))
+      message.append('---------------------------')
+      for indexName in indexNameList:
+         resultLine = ""
+         count = dfData.loc[indexName][columnName]
+         shortUrlKey = self.getKeyName(indexName, columnName)
+         shortUrl = '' if 0 == count else shortUrlDict.get(shortUrlKey, '')
+         resultLine += '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
+         resultLine += '                '
+         if int(count) < 100:
+            resultLine += '  '
+         if int(count) < 10:
+            resultLine += '  '
+         resultLine += indexName
+         message.append(resultLine)
+      return message
+
    def generateTable(self, title, dfData, shortUrlDict):
       multiValue = '' if "single" == title else title.split(':')[1].strip()
       message = [] if "single" == title else [title]
-      message.append("```")
-      indexNameList = dfData.index.values.tolist() if dfData.index.values.tolist() else []
       columnNameList = dfData.columns.values.tolist() if dfData.columns.values.tolist() else []
+      if 1 == len(columnNameList):
+         return self.outputSimpleTable(dfData, shortUrlDict)
+
+      indexNameList = dfData.index.values.tolist() if dfData.index.values.tolist() else []
+      message.append("```")
       firstHeaderName = dfData.index.name
       nameLen = max([len(name) for name in [firstHeaderName] + indexNameList])
       lineFormatter = "{:<%ds}   " % nameLen
