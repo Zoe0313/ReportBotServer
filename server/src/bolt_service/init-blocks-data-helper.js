@@ -58,7 +58,16 @@ function initRecurrenceSettingValue(report, blocks, options, tz) {
    if (repeatConfig == null) {
       return
    }
-   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
+   const { time, dayOffset } = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
+   const dayOfWeek = repeatConfig.dayOfWeek?.map(day => {
+      return (day + dayOffset) > 6 ? 0 : ((day + dayOffset) < 0 ? 6 : (day + dayOffset))
+   }) || []
+   const dayOfMonth = repeatConfig.dayOfMonth
+      ? (repeatConfig.dayOfMonth + dayOffset) > 31
+         ? 1
+         : ((repeatConfig.dayOfMonth + dayOffset) < 1 ? 31 : (repeatConfig.dayOfMonth + dayOffset))
+      : null
+
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
          const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
@@ -77,32 +86,32 @@ function initRecurrenceSettingValue(report, blocks, options, tz) {
          }
          break
       case 'daily':
-         if (convertedTime != null) {
+         if (time != null) {
             findBlockById(blocks, 'repeatConfig.time')
-               .element.initial_time = convertedTime
+               .element.initial_time = time
          }
          break
       case 'weekly':
          const dayOfWeekOptions = findBlockById(blocks, 'repeatConfig.dayOfWeek')
             .element.options
-            .filter(option => repeatConfig.dayOfWeek?.includes(parseInt(option.value)))
+            .filter(option => dayOfWeek?.includes(parseInt(option.value)))
          if (dayOfWeekOptions.length > 0) {
             findBlockById(blocks, 'repeatConfig.dayOfWeek')
                .element.initial_options = dayOfWeekOptions
          }
-         if (convertedTime != null) {
+         if (time != null) {
             findBlockById(blocks, 'repeatConfig.time')
-               .element.initial_time = convertedTime
+               .element.initial_time = time
          }
          break
       case 'monthly':
-         if (repeatConfig.dayOfMonth != null) {
+         if (dayOfMonth != null) {
             findBlockById(blocks, 'repeatConfig.dayOfMonth')
-               .element.initial_value = repeatConfig.dayOfMonth.toString()
+               .element.initial_value = dayOfMonth.toString()
          }
-         if (convertedTime != null) {
+         if (time != null) {
             findBlockById(blocks, 'repeatConfig.time')
-               .element.initial_time = convertedTime
+               .element.initial_time = time
          }
          break
       case 'cron_expression':
@@ -248,19 +257,23 @@ export async function initReportBlocks(report, blocks, options, tz) {
 
 export function displayTimeSetting(report, tz) {
    const repeatConfig = report.repeatConfig
-   const dayOfWeekStr = repeatConfig.dayOfWeek
-      ? repeatConfig.dayOfWeek.map(day => WEEK[day]).join(', ')
-      : 'Empty'
-   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
+   const { time, dayOffset } = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
+   const dayOfWeekStr = repeatConfig.dayOfWeek?.map(day => {
+      return (day + dayOffset) > 6 ? 0 : ((day + dayOffset) < 0 ? 6 : (day + dayOffset))
+   })?.map(day => WEEK[day])?.join(', ') || 'Empty'
+   const dayOfMonth = (repeatConfig.dayOfMonth + dayOffset) > 31
+      ? 1
+      : ((repeatConfig.dayOfMonth + dayOffset) < 1 ? 31 : (repeatConfig.dayOfMonth + dayOffset))
+
    switch (repeatConfig.repeatType) {
       case 'not_repeat': {
          const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
          return `Not Repeat - ${formatDateTime(date, tz)}`
       }
       case 'hourly': return `Hourly - ${repeatConfig.minsOfHour} mins of every hour`
-      case 'daily': return `Daily - ${convertedTime} of every day`
-      case 'weekly': return `Weekly - ${dayOfWeekStr} - ${convertedTime}`
-      case 'monthly': return `Monthly - ${repeatConfig.dayOfMonth}th of every month - ${convertedTime}`
+      case 'daily': return `Daily - ${time} of every day`
+      case 'weekly': return `Weekly - ${dayOfWeekStr} - ${time}`
+      case 'monthly': return `Monthly - ${dayOfMonth}th of every month - ${time}`
       case 'cron_expression': return `Cron Expression - ${repeatConfig.cronExpression}`
       default: return 'Unknown'
    }

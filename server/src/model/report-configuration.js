@@ -85,11 +85,12 @@ const ReportConfigurationSchema = new mongoose.Schema({
                      const res = await axios.get(v, {
                         maxRedirects: 0,
                         validateStatus: function (status) {
-                           return status >= 200 && status <= 302
+                           return status >= 200 && status <= 303
                         }
                      })
                      if (res.headers.location != null) {
                         link = res.headers.location
+                        logger.debug(`original link is: ${link}`)
                      } else {
                         throw new Error(`failed to get the original link of ${v}.`)
                      }

@@ -6,7 +6,7 @@ import {
 } from '../src/model/report-configuration.js'
 import { updateP4Branches } from '../src/model/perforce-info.js'
 import { updateTeamGroup } from '../src/model/team-group.js'
-import { parseDateWithTz, convertTimeWithTz, execCommand } from '../common/utils.js'
+import { parseDateWithTz, execCommand } from '../common/utils.js'
 import { getConversationsName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
@@ -200,7 +200,6 @@ const registerScheduler = function (report) {
    const repeatConfig = report.repeatConfig
    let scheduleOption = { start: repeatConfig.startDate, end: repeatConfig.endDate }
    let rule = new schedule.RecurrenceRule()
-   const convertedTime = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, systemTz)
 
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
@@ -213,24 +212,28 @@ const registerScheduler = function (report) {
          scheduleOption.rule = rule
          break
       case 'daily':
-         rule.hour = convertedTime.split(':')[0]
-         rule.minute = convertedTime.split(':')[1]
+         rule.hour = repeatConfig.time.split(':')[0]
+         rule.minute = repeatConfig.time.split(':')[1]
+         scheduleOption.tz = repeatConfig.tz
          scheduleOption.rule = rule
          break
       case 'weekly':
          rule.dayOfWeek = repeatConfig.dayOfWeek
-         rule.hour = convertedTime.split(':')[0]
-         rule.minute = convertedTime.split(':')[1]
+         rule.hour = repeatConfig.time.split(':')[0]
+         rule.minute = repeatConfig.time.split(':')[1]
+         scheduleOption.tz = repeatConfig.tz
          scheduleOption.rule = rule
          break
       case 'monthly':
          rule.date = repeatConfig.dayOfMonth
-         rule.hour = convertedTime.split(':')[0]
-         rule.minute = convertedTime.split(':')[1]
+         rule.hour = repeatConfig.time.split(':')[0]
+         rule.minute = repeatConfig.time.split(':')[1]
+         scheduleOption.tz = repeatConfig.tz
          scheduleOption.rule = rule
          break
       case 'cron_expression':
          rule = repeatConfig.cronExpression
+         scheduleOption.tz = repeatConfig.tz
          scheduleOption.rule = rule
          break
       default:
@@ -242,6 +245,7 @@ const registerScheduler = function (report) {
       schedulerCommonHandler(currentReport)
    })
    if (job != null) {
+      logger.debug(`next invocation of report ${report.title} ${job.nextInvocation()}`)
       scheduleJobStore[report._id] = job
       logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
    } else {
