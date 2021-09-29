@@ -20,6 +20,7 @@ export function formatDateTime(date, tz) {
       return ''
    }
    try {
+      // 2021-01-01 08:00 Asia/Shanghai => 2021-01-01 00:00 UTC => 2021-01-01 00:00
       return moment(date).tz(tz || 'Asia/Shanghai').format('YYYY-MM-DD HH:mm')
    } catch (e) {
       logger.warn(e)
@@ -32,6 +33,7 @@ export function parseDateWithTz(dateStr, tz) {
       return null
    }
    try {
+      // 2021-01-01 08:00 => 2021-01-01 08:00 Asia/Shanghai
       return moment.tz(dateStr, tz || 'Asia/Shanghai').toDate()
    } catch (e) {
       logger.warn(e)
@@ -41,16 +43,20 @@ export function parseDateWithTz(dateStr, tz) {
 
 export function convertTimeWithTz(timeStr, oldTz, curTz) {
    if (timeStr == null) {
-      return null
+      return { time: null, dayOffset: 0 }
    }
    try {
       const todayWithConfigTime = formatDate(new Date()) + ' ' + timeStr
       const dateWithOldTZ = parseDateWithTz(todayWithConfigTime, oldTz)
-      const timeWithNewTZ = formatDateTime(dateWithOldTZ, curTz).split(' ')[1]
-      return timeWithNewTZ
+      const dateWithNewTZ = formatDateTime(dateWithOldTZ, curTz)
+      const timeWithNewTZ = dateWithNewTZ.split(' ')[1]
+      return {
+         time: timeWithNewTZ,
+         dayOffset: new Date(dateWithNewTZ).getDate() - new Date(todayWithConfigTime).getDate()
+      }
    } catch (e) {
       logger.warn(e)
-      return timeStr
+      return { time: timeStr, dayOffset: 0 }
    }
 }
 

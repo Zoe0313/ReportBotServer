@@ -64,13 +64,13 @@ export function registerRequestApiTokenServiceHandler(app) {
          await client.chat.update({
             ts: body.message.ts,
             channel: body.channel.id,
-            text: '',
+            text: 'Re-generated token',
             blocks
          })
       } else {
          await client.chat.postMessage({
             channel: userId,
-            text: '',
+            text: 'Generated token',
             blocks
          })
       }

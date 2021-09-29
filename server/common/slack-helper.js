@@ -37,6 +37,7 @@ export const updateUserTzCache = (userId, tz) => {
 
    if (userTzCache[userId] != null) {
       assert(tz != null, 'timezone is null when updating user tz cache')
+      logger.info(`user ${userId} timezone is updated from ${userTzCache[userId]} to ${tz}`)
       userTzCache[userId] = tz
       logger.info(`${userId} update timezone to ${tz} caused by user_change event`)
    }
@@ -167,6 +168,7 @@ export async function tryAndHandleError({ ack, body, client }, func, errorHandle
       if (typeof errorHandler === 'function') {
          logger.info('trigger custom error handler')
          await errorHandler(e)
+         await ack()
       } else if (typeof errorHandler === 'string' || errorHandler instanceof String) {
          logger.info(`trigger default error handler with message ${errorHandler}`)
          await ack()
