@@ -55,7 +55,7 @@
 				"min_query_length": 0,
 				"placeholder": {
 					"type": "plain_text",
-					"text": "Search team group name. E.g. slackbot",
+					"text": "Type and search team group name. E.g. vsan-slackbot-admins",
 					"emoji": true
 				}
 			}

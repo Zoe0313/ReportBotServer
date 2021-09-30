@@ -123,7 +123,7 @@ function initRecurrenceSettingValue(report, blocks, options, tz) {
    }
 }
 
-export async function initReportBlocks(report, blocks, options, tz) {
+export async function initReportBlocks(report, view, blocks, options, tz) {
    const isInit = options?.isInit
    const isNew = options?.isNew
    const reportTypeBlock = findBlockById(blocks, 'reportType')
@@ -251,19 +251,15 @@ export async function initReportBlocks(report, blocks, options, tz) {
          throw new Error(`report type ${report.reportType} is not supported`)
    }
 
-   // init the advanced option blocks
-   // if (isInit) {
-
-   // }
    const advancedBlocks = loadBlocks('modal/report-advanced').filter(block => {
       return block.block_id != null && block.block_id !== 'advancedOptions'
    })
    const advancedOptionBlock = findBlockById(blocks, 'advancedOptions')
+   const oldAdvancedOptionBlock = findBlockById(view?.blocks || [], 'advancedOptions')
    const isAdvancedOptionInitOpen =
       report.mentionUsers?.length > 0 || report.mentionGroups?.length > 0
 
-   if ((isInit && isAdvancedOptionInitOpen) ||
-      options?.advancedOption === 'open') {
+   const displayAdvancedOptions = () => {
       if (report.mentionUsers?.length > 0) {
          findBlockById(blocks, 'mentionUsers').element.initial_users = report.mentionUsers
       }
@@ -273,9 +269,8 @@ export async function initReportBlocks(report, blocks, options, tz) {
       advancedOptionBlock.accessory.text.text = 'delete'
       advancedOptionBlock.accessory.value = 'delete'
       advancedOptionBlock.accessory.style = 'danger'
-   } else if ((isInit && !isAdvancedOptionInitOpen) ||
-      options?.advancedOption === 'delete' ||
-      advancedOptionBlock.accessory.value === 'open') {
+   }
+   const hideAdvancedOptions = () => {
       advancedBlocks.map(block => block.block_id).forEach(blockId => {
          const blockIndex = blocks.findIndex(block => block.block_id === blockId)
          blocks.splice(blockIndex, 1)
@@ -283,6 +278,17 @@ export async function initReportBlocks(report, blocks, options, tz) {
       advancedOptionBlock.accessory.text.text = 'open'
       advancedOptionBlock.accessory.value = 'open'
       advancedOptionBlock.accessory.style = 'primary'
+   }
+   if ((isInit && isAdvancedOptionInitOpen) ||
+      options?.advancedOption === 'open') {
+      displayAdvancedOptions()
+   } else if ((isInit && !isAdvancedOptionInitOpen) ||
+      options?.advancedOption === 'delete') {
+      hideAdvancedOptions()
+   } else if (oldAdvancedOptionBlock?.accessory?.value === 'delete') {
+      displayAdvancedOptions()
+   } else if (oldAdvancedOptionBlock?.accessory?.value === 'open') {
+      hideAdvancedOptions()
    }
 }
 

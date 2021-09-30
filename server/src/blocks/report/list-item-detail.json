@@ -58,7 +58,7 @@
             },
             {
                "type": "mrkdwn",
-               "text": "*Mention Users: *\n"
+               "text": "*Mention Users/Groups: *\n"
             },
             {
                "type": "mrkdwn",

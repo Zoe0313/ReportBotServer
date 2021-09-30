@@ -27,13 +27,16 @@ const client = new WebClient(process.env.SLACK_BOT_TOKEN)
 const notificationExecutor = async (report, contentEvaluate) => {
    let reportHistory = null
    try {
+      const mentionUsers = report.mentionUsers?.concat(
+         report.mentionGroups?.map(group => group.value) || []) || []
+      logger.debug(`mentionusers: ${mentionUsers}`)
       reportHistory = new ReportHistory({
          reportConfigId: report._id,
          title: report.title,
          creator: report.creator,
          reportType: report.reportType,
          conversations: report.conversations,
-         mentionUsers: report.mentionUsers,
+         mentionUsers: mentionUsers,
          sentTime: null,
          content: '',
          status: REPORT_HISTORY_STATUS.PENDING
@@ -41,11 +44,7 @@ const notificationExecutor = async (report, contentEvaluate) => {
       await reportHistory.save()
 
       // 10 mins timeout
-      let stdout = await contentEvaluate(report)
-      if (report.mentionUsers != null && report.mentionUsers.length > 0) {
-         const mentionUsers = '\n' + (await getConversationsName(report.mentionUsers))
-         stdout += mentionUsers
-      }
+      const stdout = await contentEvaluate(report)
       logger.info(`stdout of notification ${report.title}: ${stdout}`)
 
       // post reports to slack channels
@@ -112,15 +111,18 @@ const contentEvaluate = async (report) => {
    // exec the different report generator
    const timeout = 10 * 60 * 1000
    let scriptPath = ''
+   let stdout = ''
    switch (report.reportType) {
       case 'bugzilla':
          // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'
          scriptPath = generatorPath + 'src/notification/bugzilla_report.py'
-         return await execCommand(`PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
+         stdout = await execCommand(`PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
             `--title '${report.title}' ` +
             `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
+         break
       case 'text':
-         return report.reportSpecConfig.text
+         stdout = report.reportSpecConfig.text
+         break
       case 'perforce_checkin':
          scriptPath = generatorPath + 'src/notification/perforce_checkin_report.py'
          let startTime = new Date()
@@ -150,7 +152,7 @@ const contentEvaluate = async (report) => {
          }
          logger.info(JSON.stringify(startTime))
 
-         return await execCommand(`
+         stdout = await execCommand(`
             PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
             --title '${report.title}' \
             --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
@@ -158,12 +160,21 @@ const contentEvaluate = async (report) => {
             --startTime ${startTime.getTime() / 1000} \
             --endTime ${endTime.getTime() / 1000}
             `, timeout)
+         break
       // case 'svs':
       // case 'fastsvs':
       // case 'customized':
       default:
          throw new Error(`report type ${report.reportType} not supported.`)
    }
+   const mentionUsers = report.mentionUsers?.concat(
+      report.mentionGroups?.map(group => group.value) || []) || []
+   logger.debug(`mentionusers: ${mentionUsers}`)
+   if (mentionUsers != null && mentionUsers.length > 0) {
+      const mentionUserNames = '\n' + (await getConversationsName(mentionUsers))
+      stdout += mentionUserNames
+   }
+   return stdout
 }
 
 const unregisterScheduler = function (id) {

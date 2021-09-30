@@ -47,7 +47,7 @@ export async function updateModal({ ack, body, client }, options) {
    const reportModalTime = loadBlocks('modal/report-time')
    const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
       .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
-   await initReportBlocks(report, blocks, options, tz)
+   await initReportBlocks(report, body.view, blocks, options, tz)
    if (ack) {
       await ack()
    }
@@ -121,6 +121,8 @@ export function registerCreateReportServiceHandler(app) {
             merge(inputObj, {
                creator: user,
                status: REPORT_STATUS.CREATED,
+               mentionUsers: inputObj.mentionUsers || [],
+               mentionGroups: inputObj.mentionGroups || [],
                reportSpecConfig: {
                   perforceCheckIn: {
                      branches: inputObj.reportSpecConfig.perforceCheckIn?.branches

@@ -84,10 +84,14 @@ export function getConversationsName(conversationIds) {
       // if conversation is a channel
       if (channel.startsWith('C')) {
          return `<#${channel}>`
-      } else if (channel.startsWith('U') || channel.startsWith('W')) { // if conversation is a user
+      } else if (channel.startsWith('U') || channel.startsWith('W')) {
+         // if conversation is a user
          // some users can start with 'w`, please refer to
          // https://api.slack.com/changelog/2016-08-11-user-id-format-changes
          return `<@${channel}>`
+      } else if (channel.startsWith('S')) {
+         // if conversation is a user group
+         return `<!subteam^${channel}>`
       }
       return `<#${channel}>`
    }).join(', ')
