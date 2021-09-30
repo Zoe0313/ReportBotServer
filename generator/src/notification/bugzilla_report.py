@@ -252,7 +252,7 @@ class BugzillaSpider(object):
 
       csvRes = self.getCsvContent(html)
       message = []
-      message.append("Title: " + self.title)
+      message.append("*Title: {0}*".format(self.title))
       if isinstance(csvRes, dict):
          shortUrlDict = self.getShortUrlDict(html)
          for tableTitle, tableDataDf in csvRes.items():

@@ -30,7 +30,7 @@ class PerforceSpider(object):
       endTime = datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S")
       self.checkTime = "{0},{1}".format(startTime, endTime)
       self.userList = args.users.split(",")
-      self.showTitle = 'Title: {0}\nBranch: {1}\nCheckin Time(PST): {2} --- {3}'.\
+      self.showTitle = '*Title: {0}*\nBranch: {1}\nCheckin Time(PST): {2} --- {3}'.\
          format(self.title, " & ".join(self.branchList), startTime, endTime)
 
    def loginSystem(self):
