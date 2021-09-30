@@ -50,7 +50,7 @@ class BugzillaAssigneeSpider(object):
    @logExecutionTime
    def getReport(self):
       message = []
-      message.append("Title: " + self.title)
+      message.append("*Title: {0}*".format(self.title))
       message.append("Time: " + self.currentTime.strftime("%Y-%m-%d %H:%M:%S"))
       message.append("```")
       result = self.getRecords()
