@@ -122,7 +122,7 @@ export function transformInputValuesToObj(values) {
       if (payload.selected_option != null) {
          inputValue = payload.selected_option.value
       } else if (payload.selected_options != null) {
-         inputValue = payload.selected_options.map(option => option.value)
+         inputValue = payload.selected_options
       } else if (payload.selected_conversations != null) {
          inputValue = payload.selected_conversations
       } else if (payload.selected_users != null) {

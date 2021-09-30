@@ -68,6 +68,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
       }
    },
    mentionUsers: [String],
+   mentionGroups: [Object],
    reportSpecConfig: {
       bugzillaLink: {
          type: String,

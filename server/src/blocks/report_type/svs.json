@@ -1,21 +1,21 @@
 {
    "blocks": [
-      {
-         "type": "input",
-         "block_id": "reportSpecConfig.bugzillaLink",
-         "element": {
-            "type": "plain_text_input",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "SVS link"
-            },
-            "action_id": "action_report_link"
-         },
-         "label": {
-            "type": "plain_text",
-            "text": "Report Link",
-            "emoji": true
-         }
-      }
+		{
+			"type": "input",
+			"element": {
+				"type": "plain_text_input",
+				"multiline": true,
+				"placeholder": {
+					"type": "plain_text",
+					"text": "E.g.\nvcenter-svs-vit-vmodl-suite\nvcenter-svs-vsan-unittest\nvcenter-svs-vsanhealth-hostlevelapi-fvt"
+				},
+				"action_id": "plain_text_input-action"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":four:Input svs test cases",
+				"emoji": true
+			}
+		}
    ]
 }

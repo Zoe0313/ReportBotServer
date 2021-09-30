@@ -1,7 +1,8 @@
 import logger from '../../common/logger.js'
 import { formatDate, merge } from '../../common/utils.js'
 import {
-   loadBlocks, getUserTz, transformInputValuesToObj, tryAndHandleError
+   loadBlocks, getUserTz, transformInputValuesToObj,
+   tryAndHandleError
 } from '../../common/slack-helper.js'
 import { initReportBlocks, updateFlattenMembers } from './init-blocks-data-helper.js'
 import {
@@ -120,14 +121,23 @@ export function registerCreateReportServiceHandler(app) {
             merge(inputObj, {
                creator: user,
                status: REPORT_STATUS.CREATED,
+               reportSpecConfig: {
+                  perforceCheckIn: {
+                     branches: inputObj.reportSpecConfig.perforceCheckIn?.branches
+                        ?.map(option => option.value),
+                     teams: inputObj.reportSpecConfig.perforceCheckIn?.teams
+                        ?.map(option => option.value)
+                  }
+               },
                repeatConfig: {
                   tz,
+                  dayOfWeek: inputObj.repeatConfig.dayOfWeek?.map(option => option.value),
                   date: formatDate(inputObj.repeatConfig.date)
                }
             })
          )
          logger.debug(report)
-         logger.debug(JSON.stringify(report.reportSpecConfig.perforceCheckIn.membersFilters))
+         logger.debug(inputObj.mentionGroups)
 
          const saved = await report.save()
 
@@ -296,7 +306,7 @@ export function registerCreateReportServiceHandler(app) {
          const sortedTeamNamesWithLimit = matchSorter(allTeamNames, keyword).slice(0, 20)
          logger.debug(`sort team names cost ${performance.now() - t0}`)
          logger.info(`0 - 20 teams stored are ${sortedTeamNamesWithLimit}`)
-         const options = sortedTeamNamesWithLimit.map(teamName => ({
+         const teamNameOptions = sortedTeamNamesWithLimit.map(teamName => ({
             text: {
                type: 'plain_text',
                text: teamName
@@ -304,7 +314,7 @@ export function registerCreateReportServiceHandler(app) {
             value: allTeams.find(team => team.name === teamName)?.code
          })).filter(option => option.value != null)
          await ack({
-            options: options
+            options: teamNameOptions
          })
          logger.debug(`ack team names cost ${performance.now() - t0}`)
       } else {
@@ -350,5 +360,42 @@ export function registerCreateReportServiceHandler(app) {
       tryAndHandleError(event, async () => {
          await updateModal(event, { removeMembersFilter: { index: parseInt(event.payload.value) } })
       }, 'Fail to remove members filter.')
+   })
+
+   // Listen to advanced option button and update modal
+   app.action({
+      block_id: 'advancedOptions',
+      action_id: 'action_advanced_options'
+   }, async (event) => {
+      tryAndHandleError(event, async () => {
+         await updateModal(event, { advancedOption: event.payload.value })
+      }, 'Fail to open advanced options.')
+   })
+
+   let slackUserGroups = []
+   // Listen to select slack user group option and show group list
+   app.options('action_mention_groups', async ({ ack, options, payload, client }) => {
+      const t0 = performance.now()
+      const keyword = options.value
+      logger.info(`keyword: ${keyword}, get all user groups in slack`)
+      if (slackUserGroups == null || slackUserGroups.length === 0) {
+         slackUserGroups = (await client.usergroups.list()).usergroups
+      }
+      const sortedUserGroupsWithLimit = matchSorter(
+         slackUserGroups.map(group => group.name), keyword).slice(0, 20)
+      logger.debug(`sort slack user group names cost ${performance.now() - t0}`)
+      logger.info(`0 - 20 slack user groups stored are ${sortedUserGroupsWithLimit}`)
+      const userGroupOptions = sortedUserGroupsWithLimit.map(groupName => ({
+         text: {
+            type: 'plain_text',
+            text: groupName
+         },
+         value: slackUserGroups.find(group => group.name === groupName)?.id
+      })).filter(option => option.value != null)
+      await ack({
+         options: userGroupOptions
+      })
+      logger.debug(`ack slack user group cost ${performance.now() - t0}`)
+      slackUserGroups = (await client.usergroups.list()).usergroups
    })
 }
