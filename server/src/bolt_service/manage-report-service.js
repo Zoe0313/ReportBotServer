@@ -91,7 +91,8 @@ export function registerManageReportServiceHandler(app) {
       } else {
          const [conversations, mentionUsers] = await Promise.all([
             getConversationsName(report.conversations),
-            getConversationsName(report.mentionUsers)
+            getConversationsName(report.mentionUsers?.concat(
+               report.mentionGroups?.map(group => group.value) || []) || [])
          ])
          logger.info(conversations)
          logger.info(mentionUsers)
@@ -377,8 +378,19 @@ export function registerManageReportServiceHandler(app) {
          logger.info(inputObj)
 
          const report = merge(oldReport, merge(inputObj, {
+            mentionUsers: inputObj.mentionUsers || [],
+            mentionGroups: inputObj.mentionGroups || [],
+            reportSpecConfig: {
+               perforceCheckIn: {
+                  branches: inputObj.reportSpecConfig.perforceCheckIn?.branches
+                     ?.map(option => option.value),
+                  teams: inputObj.reportSpecConfig.perforceCheckIn?.teams
+                     ?.map(option => option.value)
+               }
+            },
             repeatConfig: {
                tz,
+               dayOfWeek: inputObj.repeatConfig.dayOfWeek?.map(option => option.value),
                date: formatDate(inputObj.repeatConfig.date)
             }
          }))

@@ -4,6 +4,25 @@
          "type": "divider"
       },
       {
+			"type": "section",
+         "block_id":"advancedOptions",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Click the button to open advanced options*"
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "open",
+					"emoji": true
+				},
+				"value": "open",
+            "style": "primary",
+				"action_id": "action_advanced_options"
+			}
+		},
+      {
          "type": "input",
          "block_id": "mentionUsers",
          "optional": true,
@@ -21,6 +40,25 @@
             "text": "Select users you want to mention in the selected channels",
             "emoji": true
          }
-      }
+      },
+		{
+			"type": "input",
+			"block_id": "mentionGroups",
+         "optional": true,
+			"label": {
+				"type": "plain_text",
+				"text": "Team groups to be mentioned"
+			},
+			"element": {
+				"type": "multi_external_select",
+				"action_id": "action_mention_groups",
+				"min_query_length": 0,
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Type and search team group name. E.g. vsan-slackbot-admins",
+					"emoji": true
+				}
+			}
+		}
    ]
 }

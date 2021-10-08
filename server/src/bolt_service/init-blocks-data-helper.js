@@ -123,7 +123,7 @@ function initRecurrenceSettingValue(report, blocks, options, tz) {
    }
 }
 
-export async function initReportBlocks(report, blocks, options, tz) {
+export async function initReportBlocks(report, view, blocks, options, tz) {
    const isInit = options?.isInit
    const isNew = options?.isNew
    const reportTypeBlock = findBlockById(blocks, 'reportType')
@@ -141,9 +141,6 @@ export async function initReportBlocks(report, blocks, options, tz) {
       if (report.conversations?.length > 0) {
          findBlockById(blocks, 'conversations').element.initial_conversations =
             report.conversations
-      }
-      if (report.mentionUsers?.length > 0) {
-         findBlockById(blocks, 'mentionUsers').element.initial_users = report.mentionUsers
       }
       initRecurrenceSettingValue(report, blocks, options, tz)
    }
@@ -252,6 +249,46 @@ export async function initReportBlocks(report, blocks, options, tz) {
       //    break
       default:
          throw new Error(`report type ${report.reportType} is not supported`)
+   }
+
+   const advancedBlocks = loadBlocks('modal/report-advanced').filter(block => {
+      return block.block_id != null && block.block_id !== 'advancedOptions'
+   })
+   const advancedOptionBlock = findBlockById(blocks, 'advancedOptions')
+   const oldAdvancedOptionBlock = findBlockById(view?.blocks || [], 'advancedOptions')
+   const isAdvancedOptionInitOpen =
+      report.mentionUsers?.length > 0 || report.mentionGroups?.length > 0
+
+   const displayAdvancedOptions = () => {
+      if (report.mentionUsers?.length > 0) {
+         findBlockById(blocks, 'mentionUsers').element.initial_users = report.mentionUsers
+      }
+      if (report.mentionGroups?.length > 0) {
+         findBlockById(blocks, 'mentionGroups').element.initial_options = report.mentionGroups
+      }
+      advancedOptionBlock.accessory.text.text = 'delete'
+      advancedOptionBlock.accessory.value = 'delete'
+      advancedOptionBlock.accessory.style = 'danger'
+   }
+   const hideAdvancedOptions = () => {
+      advancedBlocks.map(block => block.block_id).forEach(blockId => {
+         const blockIndex = blocks.findIndex(block => block.block_id === blockId)
+         blocks.splice(blockIndex, 1)
+      })
+      advancedOptionBlock.accessory.text.text = 'open'
+      advancedOptionBlock.accessory.value = 'open'
+      advancedOptionBlock.accessory.style = 'primary'
+   }
+   if ((isInit && isAdvancedOptionInitOpen) ||
+      options?.advancedOption === 'open') {
+      displayAdvancedOptions()
+   } else if ((isInit && !isAdvancedOptionInitOpen) ||
+      options?.advancedOption === 'delete') {
+      hideAdvancedOptions()
+   } else if (oldAdvancedOptionBlock?.accessory?.value === 'delete') {
+      displayAdvancedOptions()
+   } else if (oldAdvancedOptionBlock?.accessory?.value === 'open') {
+      hideAdvancedOptions()
    }
 }
 

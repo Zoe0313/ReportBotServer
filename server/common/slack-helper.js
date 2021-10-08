@@ -84,10 +84,14 @@ export function getConversationsName(conversationIds) {
       // if conversation is a channel
       if (channel.startsWith('C')) {
          return `<#${channel}>`
-      } else if (channel.startsWith('U') || channel.startsWith('W')) { // if conversation is a user
+      } else if (channel.startsWith('U') || channel.startsWith('W')) {
+         // if conversation is a user
          // some users can start with 'w`, please refer to
          // https://api.slack.com/changelog/2016-08-11-user-id-format-changes
          return `<@${channel}>`
+      } else if (channel.startsWith('S')) {
+         // if conversation is a user group
+         return `<!subteam^${channel}>`
       }
       return `<#${channel}>`
    }).join(', ')
@@ -122,7 +126,7 @@ export function transformInputValuesToObj(values) {
       if (payload.selected_option != null) {
          inputValue = payload.selected_option.value
       } else if (payload.selected_options != null) {
-         inputValue = payload.selected_options.map(option => option.value)
+         inputValue = payload.selected_options
       } else if (payload.selected_conversations != null) {
          inputValue = payload.selected_conversations
       } else if (payload.selected_users != null) {
