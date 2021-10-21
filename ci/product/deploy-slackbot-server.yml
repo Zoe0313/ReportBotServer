@@ -19,13 +19,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vsan-slackbot-server-beta
+  labels:
+    app.name: slack-rest-api-server
 spec:
   selector:
     matchLabels:
+      app.name: slack-rest-api-server
       app: slackbot-server 
   template:
     metadata:
       labels:
+        app.name: slack-rest-api-server
         app: slackbot-server
         role: slackbot-server
         environment: product
@@ -39,8 +43,10 @@ spec:
           value: slackbot
         - name: MONGO_PORT
           value: "27017"
+        - name: PORT
+          value: "443"
         ports:
-        - containerPort: 3000
+        - containerPort: 443
         resources:
           requests:
             memory: "200Mi"
