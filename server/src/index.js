@@ -97,6 +97,13 @@ registerRequestApiTokenServiceHandler(app)
 // register handlers for restful HTTP APIs
 registerApiRouters(receiver, app)
 
+// global error handlers for restful HTTP APIs
+receiver.router.use(function (err, req, res, next) {
+   logger.error(`Error happened in HTTP server.`)
+   logger.error(err.stack)
+   res.status(500).json({ result: false, message: err.message })
+})
+
 app.start()
 receiver.start(process.env.PORT || 3000)
 logger.info('⚡️ Bolt app is running!')

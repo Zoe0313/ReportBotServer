@@ -4,6 +4,7 @@ import { registerScheduler, unregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
 import { merge } from '../../common/utils.js'
+import assert from 'assert'
 
 export function registerApiRouters(receiver, app) {
    receiver.router.use(async (req, res, next) => {
@@ -28,7 +29,7 @@ export function registerApiRouters(receiver, app) {
       res.json({ result: true })
    })
 
-   receiver.router.get('/api/v1/server/report_configurations', async (req, res) => {
+   receiver.router.get('/api/v1/report_configurations', async (req, res) => {
       const userId = res.locals.userId
       const filter = { creator: userId }
       const reports = await ReportConfiguration.find(filter)
@@ -37,7 +38,7 @@ export function registerApiRouters(receiver, app) {
       res.json(reports)
    })
 
-   receiver.router.get('/api/v1/server/report_configurations/:id', async (req, res) => {
+   receiver.router.get('/api/v1/report_configurations/:id', async (req, res) => {
       if (req.params.id == null) {
          res.status(400)
          res.json({ result: false, message: 'Invalid id' })
@@ -49,7 +50,7 @@ export function registerApiRouters(receiver, app) {
       res.json(report)
    })
 
-   receiver.router.post('/api/v1/server/report_configurations', async (req, res) => {
+   receiver.router.post('/api/v1/report_configurations', async (req, res) => {
       try {
          logger.info(req.body)
          const userId = res.locals.userId
@@ -70,7 +71,7 @@ export function registerApiRouters(receiver, app) {
       }
    })
 
-   receiver.router.put('/api/v1/server/report_configurations/:id', async (req, res) => {
+   receiver.router.put('/api/v1/report_configurations/:id', async (req, res) => {
       try {
          logger.info(req.params.id)
          const userId = res.locals.userId
@@ -99,7 +100,7 @@ export function registerApiRouters(receiver, app) {
       }
    })
 
-   receiver.router.delete('/api/v1/server/report_configurations/:id', async (req, res) => {
+   receiver.router.delete('/api/v1/report_configurations/:id', async (req, res) => {
       logger.info(req.params.id)
       const userId = res.locals.userId
       const result = await ReportConfiguration.findOneAndRemove({
@@ -113,9 +114,20 @@ export function registerApiRouters(receiver, app) {
       }
    })
 
-   receiver.router.post('/api/v1/server/messages', async (req, res) => {
-      const result = await app.client.chat.postMessage(req.body)
-      logger.info(`post message result for ${res.locals.userId} is: ${JSON.stringify(result)}`)
-      res.json(result)
+   receiver.router.post('/api/v1/channel/:channelId/messages', async (req, res, next) => {
+      try {
+         assert(req.body.text != null, 'The message is not given, can not post the empty message.')
+         assert(req.params.channelId != null, 'Channel ID is not given when posting message.')
+         logger.info(req.params.channelId)
+         const request = {
+            channel: req.params.channelId,
+            text: req.body.text
+         }
+         const result = await app.client.chat.postMessage(request)
+         logger.info(`post message result for ${res.locals.userId} is: ${JSON.stringify(result)}`)
+         res.json(result)
+      } catch (error) {
+         next(error)
+      }
    })
 }
