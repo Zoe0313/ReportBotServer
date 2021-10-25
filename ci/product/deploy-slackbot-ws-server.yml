@@ -12,12 +12,11 @@ spec:
     metadata:
       labels:
         app: slackbot-websocket-server
-        role: slackbot-websocket-server
         environment: product
     spec:
       containers:
-      - name: slackbot-server
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-server:1.6
+      - name: slackbot-websocket-server
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/slackbot-websocket-server:1.0
         imagePullPolicy: Always
         env:
         - name: MONGO_DB

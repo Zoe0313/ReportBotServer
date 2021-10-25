@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: slack-rest-api.svc.ara.decc.vmware.com
+    external-dns.alpha.kubernetes.io/hostname: slack-rest-api.svc-stage.ara.decc.vmware.com
   name: slackbot-api-server
   labels:
     app: slackbot-api-server
@@ -33,11 +33,11 @@ spec:
     spec:
       containers:
       - name: slackbot-api-server
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/slackbot-api-server:1.0
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-api-server-stage:1.1
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
-          value: slackbot
+          value: slack-bot
         - name: MONGO_PORT
           value: "27017"
         - name: PORT

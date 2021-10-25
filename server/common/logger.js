@@ -16,7 +16,7 @@ const myFormat = format.printf((info) => {
 const options = {
    file: {
       level: 'debug',
-      filename: process.env.LOGGER_PATH + (process.env.NODE_ENV === 'rest-api' ? 'rest-api' : 'ws-server') + `-${today}.log`,
+      filename: process.env.LOGGER_PATH + process.env.LOGGER_NAME + `-${today}.log`,
       handleExceptions: true
    },
    console: {

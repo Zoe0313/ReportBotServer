@@ -6,9 +6,10 @@
    "type": "module",
    "scripts": {
       "prepare": "cd .. && npx husky install server/.husky",
-      "start": "nodemon --watch src --watch scheduler --watch common src/index.js",
-      "start:api": "NODE_ENV=rest-api nodemon --watch src/api_service --watch common src/api_service/index.js",
-      "start:prod": "node src/index.js",
+      "start": "LOGGER_NAME=ws-server nodemon --watch src --watch scheduler --watch common src/index.js",
+      "start:api": "LOGGER_NAME=rest-api nodemon --watch src/api_service --watch common src/api_service/index.js",
+      "start:prod": "LOGGER_NAME=ws-server node src/index.js",
+      "start:api:prod": "LOGGER_NAME=rest-api node src/api_service/index.js",
       "lint": "eslint src scheduler common",
       "lint:fix": "eslint src scheduler common --fix",
       "test": "echo \"Error: no test specified\" && exit 1"
