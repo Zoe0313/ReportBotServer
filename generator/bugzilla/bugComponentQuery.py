@@ -25,8 +25,8 @@ def getHtmlContent(url, session, timeout=30):
 
 def login():
    payload = {
-      "Bugzilla_login": "chjing",
-      "Bugzilla_password": base64.b64decode('MTEwMTg1OVBhdWwl')
+      "Bugzilla_login": "ysixuan",
+      "Bugzilla_password": base64.b64decode('MHkkdGVyMTAzMFkkeC4=')
    }
    
    session = requests.session()

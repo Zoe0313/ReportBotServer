@@ -127,10 +127,11 @@ function registerApiRouters(router, client) {
    })
 
    router.post('/api/v1/channel/:channelId/messages', async (ctx, next) => {
-      ctx.assert(ctx.request.body.text != null, 400,
+      ctx.assert(ctx.request.body.text != null && ctx.request.body.text !== '', 400,
          'The message is not given, can not post the empty message.', { result: false })
-      ctx.assert(ctx.params.channelId != null, 400, 'Channel ID is not given when posting message.',
-         { result: false })
+      ctx.assert(ctx.params.channelId != null && ctx.params.channelId !== '',
+         400, 'Channel ID is not given when posting message.', { result: false })
+      console.log(process.env.LOGGER_PATH)
       logger.debug(`the message "${ctx.request.body.text}" will be sent to channel ${ctx.params.channelId}`)
       const request = {
          channel: ctx.params.channelId,
@@ -180,4 +181,4 @@ const clientTls = {
    cert: fs.readFileSync('src/cert.pem')
 }
 const serverCallback = app.callback()
-https.createServer(clientTls, serverCallback).listen(process.env.PORT || 443)
+https.createServer(clientTls, serverCallback).listen(process.env.API_PORT || 443)

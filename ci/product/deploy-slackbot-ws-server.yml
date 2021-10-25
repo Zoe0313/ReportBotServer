@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slackbot-websocket-server
+  labels:
+    app: slackbot-websocket-server
+spec:
+  selector:
+    matchLabels:
+      app: slackbot-websocket-server 
+  template:
+    metadata:
+      labels:
+        app: slackbot-websocket-server
+        role: slackbot-websocket-server
+        environment: product
+    spec:
+      containers:
+      - name: slackbot-server
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-server:1.6
+        imagePullPolicy: Always
+        env:
+        - name: MONGO_DB
+          value: slackbot
+        - name: MONGO_PORT
+          value: "27017"
+        resources:
+          requests:
+            memory: "200Mi"
+            cpu: "100m"
+          limits:
+            memory: "500Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: slackbot-nfs
+          mountPath: /slackbot/persist
+        - name: apps-volume
+          mountPath: /build/apps
+        - name: toolchain-volume
+          mountPath: /build/toolchain
+      volumes:
+        - name: slackbot-nfs
+          nfs:
+            server: pa-archive.eng.vmware.com
+            path: /slackbot-aas
+        - name: apps-volume
+          nfs:
+            server: build-apps.eng.vmware.com
+            path: /apps
+        - name: toolchain-volume
+          nfs:
+            server: build-toolchain.eng.vmware.com
+            path: /toolchain

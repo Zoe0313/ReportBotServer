@@ -7,7 +7,7 @@
    "scripts": {
       "prepare": "cd .. && npx husky install server/.husky",
       "start": "nodemon --watch src --watch scheduler --watch common src/index.js",
-      "start:api": "nodemon --watch src/api_service --watch common src/api_service/index.js",
+      "start:api": "NODE_ENV=rest-api nodemon --watch src/api_service --watch common src/api_service/index.js",
       "start:prod": "node src/index.js",
       "lint": "eslint src scheduler common",
       "lint:fix": "eslint src scheduler common --fix",

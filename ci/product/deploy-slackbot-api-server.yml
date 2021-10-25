@@ -3,39 +3,39 @@ kind: Service
 metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: slackbot-server.ara.decc.vmware.com
-  name: slackbot-server
+  name: slackbot-api-server
   labels:
-    app.name: slackbot-server
+    app.name: slackbot-api-server
 spec:
   type: LoadBalancer
   selector:
-    role: slackbot-server
+    role: slackbot-api-server
   ports:
   - protocol: TCP
-    port: 80
-    targetPort: 3000
+    port: 443
+    targetPort: 443
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vsan-slackbot-server-beta
+  name: slackbot-api-server
   labels:
-    app.name: slack-rest-api-server
+    app.name: slackbot-api-server
 spec:
   selector:
     matchLabels:
-      app.name: slack-rest-api-server
-      app: slackbot-server 
+      app.name: slackbot-api-server
+      app: slackbot-api-server
   template:
     metadata:
       labels:
-        app.name: slack-rest-api-server
-        app: slackbot-server
-        role: slackbot-server
+        app.name: slackbot-api-server
+        app: slackbot-api-server
+        role: slackbot-api-server
         environment: product
     spec:
       containers:
-      - name: slackbot-server
+      - name: slackbot-api-server
         image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-server:1.6
         imagePullPolicy: Always
         env:
@@ -57,20 +57,8 @@ spec:
         volumeMounts:
         - name: slackbot-nfs
           mountPath: /slackbot/persist
-        - name: apps-volume
-          mountPath: /build/apps
-        - name: toolchain-volume
-          mountPath: /build/toolchain
       volumes:
         - name: slackbot-nfs
           nfs:
             server: pa-archive.eng.vmware.com
             path: /slackbot-aas
-        - name: apps-volume
-          nfs:
-            server: build-apps.eng.vmware.com
-            path: /apps
-        - name: toolchain-volume
-          nfs:
-            server: build-toolchain.eng.vmware.com
-            path: /toolchain
