@@ -1,0 +1,70 @@
+openapi: 3.0.0
+info:
+  description: This is the document of vSANSlackbot restful API.
+  version: 1.0.0-oas3
+  title: vSANSlackbot Rest API
+  contact:
+    email: vsan-slackbot-team@vmware.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+components:
+  schemas:
+    Text:
+      type: string
+      example: This is the example message to be post via vSANSlackbot APP
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT  
+tags:
+  - name: public
+    description: Public vSANSlackbot rest Api for VMware users
+paths:
+  /api/v1/channel/{channelID}/messages:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - public
+      summary: post message to a given channel via vSANSlackbot APP
+      operationId: postMessage
+      description: >
+        This API can be used to post message via vSANSlackbot APP, even if you
+        are not the administrator of the APP.
+
+        Please request a bearer token on vSANSlackbot APP for posting Slack
+        message.
+
+        If you want to post message to a private channel via vSANSlackbot,
+        please make sure the APP has been invited to the target private channel.
+
+        Pass the bearer token in header.
+      parameters:
+        - in: path
+          name: channelID
+          required: true
+          description: The channel ID to be sent
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Text'
+            example:
+              text: This is the example message to be post via vSANSlackbot APP
+              
+        description: The text message need to be sent
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+servers:
+  - url: https://slack-rest-api.svc.ara.decc.vmware.com

@@ -11,9 +11,9 @@ import { connectMongoDatabase } from '../../common/db-utils.js'
 import { WebClient } from '@slack/web-api'
 import fs from 'fs'
 import https from 'https'
-// import mount from 'koa-mount'
-// import serve from 'koa-static'
-// import path from 'path'
+import mount from 'koa-mount'
+import serve from 'koa-static'
+import path from 'path'
 
 function registerApiRouters(router, client) {
    router.use(async (ctx, next) => {
@@ -172,13 +172,15 @@ app
    .use(router.routes())
    .use(router.allowedMethods())
 
-// // Serve static files
-// const swaggerPath = path.join(path.resolve(), './doc/swagger/scheduler')
-// console.log(swaggerPath)
-// app.use(mount('/api/v1/scheduler', serve(swaggerPath)))
 const clientTls = {
    key: fs.readFileSync('src/key.pem'),
    cert: fs.readFileSync('src/cert.pem')
 }
 const serverCallback = app.callback()
+
+// Serve static files
+const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
+console.log(swaggerPath)
+app.use(mount('/api/v1/', serve(swaggerPath)))
+
 https.createServer(clientTls, serverCallback).listen(process.env.API_PORT || 443)
