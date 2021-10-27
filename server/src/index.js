@@ -1,6 +1,5 @@
 import dotenv from 'dotenv'
 import bolt from '@slack/bolt'
-import express from 'express'
 import {
    registerCommonServiceHandler,
    registerCreateReportServiceHandler,
@@ -8,7 +7,6 @@ import {
    registerReportHistoryServiceHandler,
    registerRequestApiTokenServiceHandler
 } from './bolt_service/index.js'
-import { registerApiRouters } from './api_service/index.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
    registerScheduler, registerPerforceInfoScheduler,
@@ -36,13 +34,6 @@ connectMongoDatabase(async () => {
    }
 })
 
-// init express receiver for HTTP request
-const receiver = new bolt.ExpressReceiver({
-   signingSecret: process.env.SLACK_SIGNING_SECRET
-})
-
-receiver.router.use(express.json())
-
 // new bolt app with slack bolt token
 // get token from https://api.slack.com/apps and write them in .env file
 const app = new bolt.App({
@@ -50,8 +41,8 @@ const app = new bolt.App({
    token: process.env.SLACK_BOT_TOKEN,
    appToken: process.env.SLACK_APP_TOKEN,
    signingSecret: process.env.SLACK_SIGNING_SECRET
-   // receiver
 })
+
 initSlackClient(app.client)
 
 // handler performance
@@ -94,9 +85,5 @@ registerManageReportServiceHandler(app)
 registerReportHistoryServiceHandler(app)
 registerRequestApiTokenServiceHandler(app)
 
-// register handlers for restful HTTP APIs
-registerApiRouters(receiver, app)
-
 app.start()
-receiver.start(process.env.PORT || 3000)
 logger.info('⚡️ Bolt app is running!')

@@ -4,118 +4,183 @@ import { registerScheduler, unregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
 import { merge } from '../../common/utils.js'
+import Koa from 'koa'
+import Router from 'koa-router'
+import koaBody from 'koa-body'
+import { connectMongoDatabase } from '../../common/db-utils.js'
+import { WebClient } from '@slack/web-api'
+import fs from 'fs'
+import https from 'https'
+import mount from 'koa-mount'
+import serve from 'koa-static'
+import path from 'path'
 
-export function registerApiRouters(receiver, app) {
-   receiver.router.use(async (req, res, next) => {
-      const token = req.get('Authorization')?.substring('Bearer '.length)
-      const apiToken = await SlackbotApiToken.findOne({ token })
-      if (apiToken == null || apiToken.userId == null) {
-         res.status(401)
-         res.json({ message: 'Authorization failure' })
+function registerApiRouters(router, client) {
+   router.use(async (ctx, next) => {
+      if (ctx.url.endsWith('/server/health')) {
+         await next()
          return
       }
-      res.locals.userId = apiToken.userId
+      const token = ctx.request.headers.authorization?.substring('Bearer '.length)
+      const apiToken = await SlackbotApiToken.findOne({ token })
+      if (apiToken == null || apiToken.userId == null) {
+         ctx.response.status = 401
+         ctx.response.body = { message: 'Authorization failure' }
+         return
+      }
+      ctx.state.userId = apiToken.userId
       await next()
    })
 
-   receiver.router.get('/api/v1/server/health', (req, res) => {
-      if (app.receiver.client.badConnection) {
-         res.status(500)
-         res.json({ result: false, message: 'Internal Server Error' })
-         return
-      }
-      res.status(200)
-      res.json({ result: true })
+   router.get('/api/v1/server/health', (ctx, next) => {
+      ctx.response.status = 200
+      ctx.response.body = { result: true }
    })
 
-   receiver.router.get('/api/v1/server/report_configurations', async (req, res) => {
-      const userId = res.locals.userId
+   router.get('/api/v1/report_configurations', async (ctx, next) => {
+      const userId = ctx.state.userId
       const filter = { creator: userId }
       const reports = await ReportConfiguration.find(filter)
-         .skip(req.query.offset).limit(req.query.limit)
+         .skip(ctx.query.offset).limit(ctx.query.limit)
       logger.info(reports)
-      res.json(reports)
+      ctx.response.status = 200
+      ctx.response.body = reports
    })
 
-   receiver.router.get('/api/v1/server/report_configurations/:id', async (req, res) => {
-      if (req.params.id == null) {
-         res.status(400)
-         res.json({ result: false, message: 'Invalid id' })
+   router.get('/api/v1/report_configurations/:id', async (ctx, next) => {
+      if (ctx.params.id == null) {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: 'Invalid id' }
          return
       }
-      const userId = res.locals.userId
-      const report = await ReportConfiguration.findOne({ _id: req.params.id, creator: userId })
+      const userId = ctx.state.userId
+      const report = await ReportConfiguration.findOne({ _id: ctx.params.id, creator: userId })
       logger.info(report)
-      res.json(report)
+      ctx.response.status = 200
+      ctx.response.body = report
    })
 
-   receiver.router.post('/api/v1/server/report_configurations', async (req, res) => {
+   router.post('/api/v1/report_configurations', async (ctx, next) => {
       try {
-         logger.info(req.body)
-         const userId = res.locals.userId
-         const report = await new ReportConfiguration(req.body)
+         logger.info(ctx.request.body)
+         const userId = ctx.state.userId
+         const report = await new ReportConfiguration(ctx.request.body)
          report.creator = userId
          await report.save()
          registerScheduler(report)
-         res.json(report)
+         ctx.response.body = report
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
-            res.status(400)
-            res.json(e.errors)
+            ctx.response.status = 400
+            ctx.response.body = e.errors
          } else {
-            res.status(500)
-            res.json({ result: false, message: 'Internal Server Error' })
+            ctx.response.status = 500
+            ctx.response.body = { result: false, message: 'Internal Server Error' }
          }
          logger.error(e)
       }
    })
 
-   receiver.router.put('/api/v1/server/report_configurations/:id', async (req, res) => {
+   router.put('/api/v1/report_configurations/:id', async (ctx, next) => {
       try {
-         logger.info(req.params.id)
-         const userId = res.locals.userId
+         logger.info(ctx.params.id)
+         const userId = ctx.state.userId
          const oldReport = await ReportConfiguration.findOne({
-            _id: req.params.id, creator: userId
+            _id: ctx.params.id, creator: userId
          })
          if (oldReport == null) {
-            res.status(404)
-            res.json({ result: false, message: 'report configuration not found' })
+            ctx.response.status = 404
+            ctx.response.body = { result: false, message: 'report configuration not found' }
             return
          }
-         const report = merge(oldReport, req.body)
+         const report = merge(oldReport, ctx.request.body)
          logger.info(`original report: ${oldReport}\nnew report: ${report}`)
          await report.save()
          registerScheduler(report)
-         res.json(report)
+         ctx.response.body = report
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
-            res.status(400)
-            res.json(e.errors)
+            ctx.response.status = 400
+            ctx.response.body = e.errors
          } else {
-            res.status(500)
-            res.json({ result: false, message: 'Internal Server Error' })
+            ctx.response.status = 500
+            ctx.response.body = { result: false, message: 'Internal Server Error' }
          }
          logger.error(e)
       }
    })
 
-   receiver.router.delete('/api/v1/server/report_configurations/:id', async (req, res) => {
-      logger.info(req.params.id)
-      const userId = res.locals.userId
+   router.delete('/api/v1/report_configurations/:id', async (ctx, next) => {
+      logger.info(ctx.params.id)
+      const userId = ctx.state.userId
       const result = await ReportConfiguration.findOneAndRemove({
-         _id: req.params.id, creator: userId
+         _id: ctx.params.id, creator: userId
       })
       if (result) {
-         unregisterScheduler(req.params.id)
-         res.json({ result: true })
+         unregisterScheduler(ctx.params.id)
+         ctx.response.status = 200
+         ctx.response.body = { result: true }
       } else {
-         res.json({ result: false, message: 'Delete report configuration failed' })
+         ctx.response.status = 200
+         ctx.response.body = { result: false, message: 'Delete report configuration failed' }
       }
    })
 
-   receiver.router.post('/api/v1/server/messages', async (req, res) => {
-      const result = await app.client.chat.postMessage(req.body)
-      logger.info(`post message result for ${res.locals.userId} is: ${JSON.stringify(result)}`)
-      res.json(result)
+   router.post('/api/v1/channel/:channelId/messages', async (ctx, next) => {
+      ctx.assert(ctx.request.body.text != null && ctx.request.body.text !== '', 400,
+         'The message is not given, can not post the empty message.', { result: false })
+      ctx.assert(ctx.params.channelId != null && ctx.params.channelId !== '',
+         400, 'Channel ID is not given when posting message.', { result: false })
+      console.log(process.env.LOGGER_PATH)
+      logger.debug(`the message "${ctx.request.body.text}" will be sent to channel ${ctx.params.channelId}`)
+      const request = {
+         channel: ctx.params.channelId,
+         text: ctx.request.body.text
+      }
+      const result = await client.chat.postMessage(request)
+      logger.debug(`post message result for ${ctx.state.userId} is: ${JSON.stringify(result)}`)
+      ctx.response.body = result
    })
 }
+
+// connect to mongodb
+connectMongoDatabase()
+
+const client = new WebClient(process.env.SLACK_BOT_TOKEN)
+const app = new Koa()
+const router = new Router()
+
+app.use(koaBody())
+
+registerApiRouters(router, client)
+
+app.use(async (ctx, next) => {
+   try {
+      await next()
+   } catch (err) {
+      ctx.status = err.status || 500
+      ctx.body = err
+      ctx.app.emit('error', err, ctx)
+   }
+})
+
+app.on('error', err => {
+   logger.error('api server error', err)
+})
+
+app
+   .use(router.routes())
+   .use(router.allowedMethods())
+
+const clientTls = {
+   key: fs.readFileSync('src/key.pem'),
+   cert: fs.readFileSync('src/cert.pem')
+}
+const serverCallback = app.callback()
+
+// Serve static files
+const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
+console.log(swaggerPath)
+app.use(mount('/api/v1/', serve(swaggerPath)))
+
+https.createServer(clientTls, serverCallback).listen(process.env.API_PORT || 443)

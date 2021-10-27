@@ -1,6 +1,8 @@
 import winston from 'winston'
+import dotenv from 'dotenv'
 const format = winston.format
 
+dotenv.config()
 const today = new Date().toISOString().split('T')[0]
 
 const myFormat = format.printf((info) => {
@@ -14,7 +16,7 @@ const myFormat = format.printf((info) => {
 const options = {
    file: {
       level: 'debug',
-      filename: `../persist/log/slackbot-server-${today}.log`,
+      filename: process.env.LOGGER_PATH + process.env.LOGGER_NAME + `-${today}.log`,
       handleExceptions: true
    },
    console: {
@@ -41,5 +43,5 @@ const logger = winston.createLogger({
 })
 
 logger.info(today)
-
+logger.info(options.file.filename)
 export default logger

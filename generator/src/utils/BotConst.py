@@ -23,8 +23,8 @@ BUGZILLA_BASE = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/"
 BUGZILLA_BY_ASSIGNEE = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/query?lastChangeDays=15&assignee="
 
 # bugzilla login account
-BUGZILLA_ACCOUNT = "chjing"
-BUGZILLA_PASSWORD = base64.b64decode('MTEwMTg1OVBhdWwl').decode('utf-8')
+BUGZILLA_ACCOUNT = ""
+BUGZILLA_PASSWORD = base64.b64decode("").decode('utf-8')
 
 # perforce login account
 SERVICE_ACCOUNT = "svc.vsan-er"
