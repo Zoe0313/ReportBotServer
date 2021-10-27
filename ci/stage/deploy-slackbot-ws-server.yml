@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: slackbot-websocket-server
+  name: slackbot-websocket-server-stage
   labels:
-    app: slackbot-websocket-server
+    app: slackbot-websocket-server-stage
 spec:
   selector:
     matchLabels:
-      app: slackbot-websocket-server 
+      app: slackbot-websocket-server-stage 
   template:
     metadata:
       labels:
-        app: slackbot-websocket-server
+        app: slackbot-websocket-server-stage
         environment: product
     spec:
       containers:
-      - name: slackbot-websocket-server
+      - name: slackbot-websocket-server-stage
         image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-websocket-server-stage:1.1
         imagePullPolicy: Always
         env:

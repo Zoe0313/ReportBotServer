@@ -2,14 +2,14 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: slack-rest-api.svc-stage.ara.decc.vmware.com
-  name: slackbot-api-server
+    external-dns.alpha.kubernetes.io/hostname: slackbot-stage.ara.decc.vmware.com
+  name: slackbot-api-server-stage
   labels:
-    app: slackbot-api-server
+    app: slackbot-api-server-stage
 spec:
   type: LoadBalancer
   selector:
-    app: slackbot-api-server
+    app: slackbot-api-server-stage
   ports:
   - protocol: TCP
     port: 443
@@ -18,22 +18,22 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: slackbot-api-server
+  name: slackbot-api-server-stage
   labels:
-    app: slackbot-api-server
+    app: slackbot-api-server-stage
 spec:
   selector:
     matchLabels:
-      app: slackbot-api-server
+      app: slackbot-api-server-stage
   template:
     metadata:
       labels:
-        app: slackbot-api-server
+        app: slackbot-api-server-stage
         environment: product
     spec:
       containers:
-      - name: slackbot-api-server
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-api-server-stage:1.1
+      - name: slackbot-api-server-stage
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-api-server-stage-stage:1.3
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
