@@ -67,4 +67,4 @@ paths:
         '500':
           description: Internal Server Error
 servers:
-  - url: https://slack-rest-api.svc.ara.decc.vmware.com
+  - url: https://slackbot.ara.decc.vmware.com
