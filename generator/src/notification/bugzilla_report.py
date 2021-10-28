@@ -4,7 +4,7 @@
 
 '''
 Module docstring.  
-bugzilla_assignee_report.py
+bugzilla_report.py
 '''
 import os
 import re
@@ -16,6 +16,7 @@ import requests
 from urllib import parse
 from lxml import etree
 import pandas as pd
+import math
 from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD
 from generator.src.utils.Utils import removeOldFiles, logExecutionTime, noIntervalPolling
 from generator.src.utils.MiniQueryFunctions import long2short
@@ -52,13 +53,30 @@ class BugzillaSpider(object):
       self.indexQueryStr = ''
       self.columnQueryStr = ''
       self.countQueryStr = ''
+      self.lettersWidth = {'a': 2, 'b': 2, 'c': 2, 'd': 2, 'e': 2, 'f': 1.5, 'g': 2, 'h': 2, 'i': 0.5, 'j': 1, 'k': 2,
+                           'l': 0.5, 'm': 3, 'n': 2, 'o': 2, 'p': 2, 'q': 2, 'r': 1.5, 's': 2, 't': 1.5, 'u': 2,
+                           'v': 2, 'w': 3, 'x': 2, 'y': 2, 'z': 2, 'A': 2.5, 'B': 2, 'C': 2, 'D': 2.5, 'E': 2, 'F': 2,
+                           'G': 3, 'H': 3, 'I': 0.5, 'J': 2, 'K': 3, 'L': 2, 'M': 3, 'N': 2, 'O': 3, 'P': 2, 'Q': 3,
+                           'R': 2, 'S': 2, 'T': 2, 'U': 2, 'V': 3, 'W': 4, 'X': 3, 'Y': 2, 'Z': 2, '0': 2, '1': 2,
+                           '2': 2, '3': 2, '4': 2, '5': 2, '6': 2, '7': 2, '8': 2, '9': 2, '!': 1, '"': 1, '#': 2.5,
+                           '$': 2.5, '%': 3, '&': 3, "'": 0.5, '(': 1, ')': 1, '*': 1.5, '+': 2, ',': 1, '-': 1,
+                           '.': 0.5, '/': 1.5, ':': 0.5, ';': 1, '<': 2, '=': 2.5, '>': 2, '?': 1.5, '@': 3, '[': 1,
+                           '\\': 2, ']': 1, '^': 2, '_': 2, '`': 1, '{': 1, '|': 0.5, '}': 1, '~': 2.5}
 
    def __del__(self):
       removeOldFiles(downloadDir, 1, "bugzilla")
 
    def loginSystem(self):
-      self.session.post(self.loginUrl, data={"Bugzilla_login": BUGZILLA_ACCOUNT,
-                                             "Bugzilla_password": BUGZILLA_PASSWORD})
+      result = self.session.post(self.loginUrl, data={"Bugzilla_login": BUGZILLA_ACCOUNT,
+                                                      "Bugzilla_password": BUGZILLA_PASSWORD})
+      content = result.content.decode()
+      html = etree.HTML(content)
+      textList = html.xpath('//*[@id="bugzilla-body"]/div/div//text()')
+      divTxts = [row.strip() for row in textList if row.strip()]
+      if len(divTxts) > 0:
+         if "Common Tasks" != divTxts[0]:
+            logger.error(divTxts)
+            raise Exception(divTxts[0])
 
    def regularizeTable(self, df):
       columnList = df.columns.values.tolist()[1:]
@@ -66,13 +84,25 @@ class BugzillaSpider(object):
       df[columnList] = df[columnList].astype('int')  # ensure value's type is int
       df.loc['Total'] = [df[col].sum() for col in columnList]  # Horizontal Total
       df['Total'] = [rowSeries.sum() for _, rowSeries in df.iterrows()]  # Vertical Total
+      # swap rows and columns if columns size more than double rows size
+      indexName = df.index.name
+      verticalAxis, horizontalAxis = indexName.strip(), ''
+      isTranspose = False
+      if '/' in indexName:
+         verticalAxis = indexName.split('/')[0].strip()
+         horizontalAxis = indexName.split('/')[1].replace('"', '').strip()
+         isTranspose = df.shape[1] > df.shape[0] * 2
+         if isTranspose:
+            df = df.T
+            verticalAxis, horizontalAxis = horizontalAxis, verticalAxis
+         df.index.name = '{0}/{1}'.format(verticalAxis, horizontalAxis)
       df = df[df['Total'] > 0]  # drop count=0 lines
       if len(columnList) == 1:
          df = df.sort_values(by="Total", axis=0, ascending=False)
          df = df.drop(columns=['Total'])
       else:
          df = df.sort_values(by="Total", axis=0, ascending=True)
-      return df
+      return df, isTranspose, axis2param.get(verticalAxis, ''), axis2param.get(horizontalAxis, '')
 
    def getSplitTable(self, csvFile):
       df = pd.read_csv(csvFile, header=None)
@@ -80,7 +110,7 @@ class BugzillaSpider(object):
       # get split table's title and index range
       pattern = re.compile(r'(.*): "(.*)""(.*)" / "(.*)"', re.M | re.I)
       splitIndexRange, outputTitleList = [], []
-      multiAxis, verticalAxis, horizontalAxis = '', '', ''
+      multiAxis = ''
       start = -1
       for index, title in splitLineDf[0].items():
          matchObj = pattern.match(title)
@@ -94,38 +124,29 @@ class BugzillaSpider(object):
       splitIndexRange.pop(0)
       # regular table with title and index range
       columnList = splitLineDf.loc[0].values.tolist()[1:]
-      dfDict = {}
+      dfDict, isTranspose, ver, hor = {}, False, '', ''
       for indexRange, title in zip(splitIndexRange, outputTitleList):
          start, end = indexRange[0], indexRange[1]
          tableTitle, firstColumnName = title[0], title[1]
          dfData = df.loc[start + 1:end]
          partDf = pd.DataFrame(dfData.values, columns=[firstColumnName] + columnList)
-         dfDict[tableTitle] = self.regularizeTable(partDf)
-      return dfDict, multiAxis, verticalAxis, horizontalAxis
+         dfDict[tableTitle], isTranspose, ver, hor = self.regularizeTable(partDf)
+      return dfDict, isTranspose, axis2param.get(multiAxis, ''), ver, hor
 
    def readCsvFile(self, csvFile):
       df = pd.read_csv(csvFile)
       firstHeaderName = df.columns.values[0]
       if '/' in firstHeaderName and ':' in firstHeaderName:  # multiple table & vertical axis & horizontal axis
-         dfDict, multiAxis, verticalAxis, horizontalAxis = self.getSplitTable(csvFile)
-         mult, ver, hor = axis2param.get(multiAxis, ''), axis2param.get(verticalAxis, ''), \
-                          axis2param.get(horizontalAxis, '')
+         dfDict, isTranspose, mult, ver, hor = self.getSplitTable(csvFile)
          self.indexQueryStr = '%s={0}&%s={1}' % (mult, ver)
          self.columnQueryStr = '%s={0}&%s={1}' % (mult, hor)
-         self.countQueryStr = '%s={0}&%s={1}&%s={2}' % (mult, ver, hor)
+         self.countQueryStr = '%s={0}&%s={1}&%s={2}' % (mult, ver, hor) if not isTranspose \
+            else '%s={0}&%s={2}&%s={1}' % (mult, hor, ver)
       else:
-         df = self.regularizeTable(df)
-         indexName = df.index.name
-         if '/' in indexName:  # vertical axis & horizontal axis
-            verticalAxis = indexName.split('/')[0].strip()
-            horizontalAxis = indexName.split('/')[1].replace('"', '').strip()
-            df.index.name = '{0}/{1}'.format(verticalAxis, horizontalAxis)
-         else:  # vertical axis | horizontal axis
-            verticalAxis, horizontalAxis = indexName.strip(), ''
-         ver, hor = axis2param.get(verticalAxis, ''), axis2param.get(horizontalAxis, '')
+         df, isTranspose, ver, hor = self.regularizeTable(df)
          self.indexQueryStr = '%s={0}' % ver
          self.columnQueryStr = '%s={0}' % hor
-         self.countQueryStr = '%s={0}&%s={1}' % (ver, hor)
+         self.countQueryStr = '%s={0}&%s={1}' % (ver, hor) if not isTranspose else '%s={1}&%s={0}' % (hor, ver)
          dfDict = {'single': df}
       return dfDict
 
@@ -195,15 +216,16 @@ class BugzillaSpider(object):
    def outputSimpleTable(self, dfData, shortUrlDict):
       indexNameList = dfData.index.values.tolist() if dfData.index.values.tolist() else []
       columnName = dfData.columns.values.tolist()[0]
+      indexName = dfData.index.name
+      indexName = indexName.split('/')[0].strip() if '/' in indexName else indexName
       message = []
-      message.append('Count         {0}'.format(dfData.index.name))
+      message.append('Count         {0}'.format(indexName))
       message.append('---------------------------')
       for indexName in indexNameList:
-         resultLine = ""
          count = dfData.loc[indexName][columnName]
          shortUrlKey = self.getKeyName(indexName, columnName)
          shortUrl = '' if 0 == count else shortUrlDict.get(shortUrlKey, '')
-         resultLine += '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
+         resultLine = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
          resultLine += '                '
          if int(count) < 100:
             resultLine += '  '
@@ -217,35 +239,38 @@ class BugzillaSpider(object):
       multiValue = '' if "single" == title else title.split(':')[1].strip()
       message = [] if "single" == title else [title]
       columnNameList = dfData.columns.values.tolist() if dfData.columns.values.tolist() else []
+      firstHeaderName = dfData.index.name
       if 1 == len(columnNameList):
          return self.outputSimpleTable(dfData, shortUrlDict)
 
+      columnLens = {columnName: math.floor(sum([self.lettersWidth.get(c, 1) for c in columnName]))
+                    for columnName in columnNameList}
       indexNameList = dfData.index.values.tolist() if dfData.index.values.tolist() else []
-      message.append("```")
-      firstHeaderName = dfData.index.name
-      nameLen = max([len(name) for name in [firstHeaderName] + indexNameList])
-      lineFormatter = "{:<%ds}   " % nameLen
-      for columnName in columnNameList:
-         lineFormatter += "{:>%ds}  " % len(columnName)
-      tableHeaderList = [firstHeaderName] + columnNameList
-      message.append(lineFormatter.format(*tableHeaderList))
+      message.append("{0} | {1}".format(" ".join(columnNameList), firstHeaderName.split("/")[0]))
       for indexName in indexNameList:
-         tableRowList = [indexName]
-         lineFormatter = "{:<%ds}   " % nameLen
+         tableRowList = []
+         formatList = []
          for columnName in columnNameList:
             count = dfData.loc[indexName][columnName]
             shortUrlKey = self.getKeyName(indexName, columnName, multiValue)
             shortUrl = '' if 0 == count else shortUrlDict.get(shortUrlKey, '')
             countWithLink = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
             tableRowList.append(countWithLink)
-            lineFormatter += "{:>%ds}  " % (len('<%s|>' % shortUrl + columnName) if shortUrl else len(columnName))
+            columnLength = columnLens[columnName]
+            formatList.append("{:<%ds}" % (len('<%s|>' % shortUrl) + columnLength - len(str(count)) + 1
+                                           if shortUrl else columnLength))
+         tableRowList.append(indexName)
+         lineFormatter = " ".join(formatList) + "  {}"
          message.append(lineFormatter.format(*tableRowList))
-      message.append("```")
       return message
 
    @logExecutionTime
    def getReport(self):
-      self.loginSystem()
+      try:
+         self.loginSystem()
+      except Exception as e:
+         return f":warning: Because of `{e}`, it can't generate bugzilla report currently."
+
       res = self.session.get(self.buglistUrl)
       content = res.content.decode()
       html = etree.HTML(content)
