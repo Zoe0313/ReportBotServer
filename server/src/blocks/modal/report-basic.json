@@ -46,6 +46,14 @@
                {
                   "text": {
                      "type": "plain_text",
+                     "text": "Bugzilla report by assignee",
+                     "emoji": true
+                  },
+                  "value": "bugzilla_by_assignee"                
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
                      "text": "Plain text",
                      "emoji": true
                   },

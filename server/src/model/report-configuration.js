@@ -16,7 +16,14 @@ const REPORT_STATUS = {
 }
 
 const STATUS_ENUM = Object.values(REPORT_STATUS)
-const REPORT_TYPE_ENUM = ['bugzilla', 'perforce_checkin', 'svs', 'fastsvs', 'text', 'customized']
+const REPORT_TYPE_ENUM = [
+   'bugzilla',
+   'perforce_checkin',
+   'svs',
+   'text',
+   'customized',
+   'bugzilla_by_assignee'
+]
 const REPEAT_TYPE_ENUM = ['not_repeat', 'hourly', 'daily', 'weekly', 'monthly', 'cron_expression']
 
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-4]):([0-5][0-9])(:[0-5][0-9])?$/
@@ -128,7 +135,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
                }
                return v.length > 0 && v.length <= 2000
             },
-            message: 'The length of text message should greater than 0 and less than 2000.'
+            message: 'The length of text message should be greater than 0 and less than 2000.'
          }
       },
       perforceCheckIn: {
@@ -174,6 +181,21 @@ const ReportConfigurationSchema = new mongoose.Schema({
                   }
                }
             }
+         }
+      },
+      bugzillaAssignee: {
+         type: [String],
+         required: function(v) {
+            return this.reportType === 'bugzilla_by_assignee'
+         },
+         validate: {
+            validator: async function(v) {
+               if (v == null) {
+                  return true
+               }
+               return v.length >= 0 && v.length <= 50
+            },
+            message: 'The number of bugzilla assignee should be greater than 0 and less than 50.'
          }
       }
    },

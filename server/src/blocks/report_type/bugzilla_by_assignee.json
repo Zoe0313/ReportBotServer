@@ -1,0 +1,32 @@
+{
+	"blocks": [
+		{
+			"type": "input",
+			"block_id": "reportSpecConfig.bugzillaAssignee",
+			"label": {
+				"type": "plain_text",
+				"text": ":four: Select bugzilla assignee(s) from the list"
+			},
+         "hint": {
+				"type": "plain_text",
+				"text": "Select the assignee(s) you want to check in bugzilla PRs."
+			},
+			"element": {
+				"type": "multi_conversations_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Click and search bugzilla assignee(s)",
+					"emoji": true
+				},
+				"filter": {
+					"include": [
+						"im"
+					],
+					"exclude_external_shared_channels": true,
+					"exclude_bot_users": true
+				},
+				"action_id": "action_pick_bugzilla_assignee"
+			}
+		}
+	]
+}
