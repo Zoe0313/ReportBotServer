@@ -235,6 +235,12 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
             }
          }
          break
+      case 'bugzilla_by_assignee':
+         if (isInit && reportSpecConfig?.bugzillaAssignee?.length > 0) {
+            findBlockById(blocks, 'reportSpecConfig.bugzillaAssignee')
+               .element.initial_conversations = reportSpecConfig.bugzillaAssignee
+         }
+         break
       // case 'svs':
       //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
       //       .element.initial_value = reportSpecConfig.bugzillaLink

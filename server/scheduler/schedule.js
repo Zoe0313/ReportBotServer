@@ -7,7 +7,7 @@ import {
 import { updateP4Branches } from '../src/model/perforce-info.js'
 import { updateTeamGroup } from '../src/model/team-group.js'
 import { parseDateWithTz, execCommand } from '../common/utils.js'
-import { getConversationsName } from '../common/slack-helper.js'
+import { getConversationsName, getUsersName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
@@ -112,13 +112,16 @@ const contentEvaluate = async (report) => {
    const timeout = 10 * 60 * 1000
    let scriptPath = ''
    let stdout = ''
+   let command = ''
    switch (report.reportType) {
       case 'bugzilla':
          // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'
          scriptPath = generatorPath + 'src/notification/bugzilla_report.py'
-         stdout = await execCommand(`PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
+         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
             `--title '${report.title}' ` +
-            `--url '${report.reportSpecConfig.bugzillaLink}'`, timeout)
+            `--url '${report.reportSpecConfig.bugzillaLink}'`
+         logger.debug(`execute the bugzilla report generator: ${command}`)
+         stdout = await execCommand(command, timeout)
          break
       case 'text':
          stdout = report.reportSpecConfig.text
@@ -151,15 +154,23 @@ const contentEvaluate = async (report) => {
                break
          }
          logger.info(JSON.stringify(startTime))
-
-         stdout = await execCommand(`
-            PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
+         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
             --title '${report.title}' \
             --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
             --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
             --startTime ${startTime.getTime() / 1000} \
-            --endTime ${endTime.getTime() / 1000}
-            `, timeout)
+            --endTime ${endTime.getTime() / 1000}`
+         logger.debug(`execute the perforce checkin report generator: ${command}`)
+         stdout = await execCommand(command, timeout)
+         break
+      case 'bugzilla_by_assignee':
+         scriptPath = generatorPath + 'src/notification/bugzilla_assignee_report.py'
+         const assignees = await getUsersName(report.reportSpecConfig.bugzillaAssignee)
+         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
+         `--title '${report.title}' ` +
+         `--users '${assignees.join(',')}'`
+         logger.debug(`execute the bugzilla by assignee report generator: ${command}`)
+         stdout = await execCommand(command, timeout)
          break
       // case 'svs':
       // case 'fastsvs':

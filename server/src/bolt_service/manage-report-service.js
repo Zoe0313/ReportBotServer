@@ -395,8 +395,8 @@ export function registerManageReportServiceHandler(app) {
             }
          }))
          logger.info(report)
-
          await report.save()
+         await ack()
          if (report.reportType === 'perforce_checkin') {
             updateFlattenMembers(report)
          }

@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
       - name: slackbot-api-server-stage
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-api-server-stage-stage:1.3
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-api-server-stage:1.3
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
