@@ -246,7 +246,7 @@ class BugzillaSpider(object):
       columnLens = {columnName: math.floor(sum([self.lettersWidth.get(c, 1) for c in columnName]))
                     for columnName in columnNameList}
       indexNameList = dfData.index.values.tolist() if dfData.index.values.tolist() else []
-      message.append("{0} | {1}".format(" ".join(columnNameList), firstHeaderName.split("/")[0]))
+      message.append("{0}  |  {1}".format("  ".join(columnNameList), firstHeaderName.split("/")[0]))
       for indexName in indexNameList:
          tableRowList = []
          formatList = []
@@ -260,7 +260,7 @@ class BugzillaSpider(object):
             formatList.append("{:<%ds}" % (len('<%s|>' % shortUrl) + columnLength - len(str(count)) + 1
                                            if shortUrl else columnLength))
          tableRowList.append(indexName)
-         lineFormatter = " ".join(formatList) + "  {}"
+         lineFormatter = "  ".join(formatList) + "    {}"
          message.append(lineFormatter.format(*tableRowList))
       return message
 
