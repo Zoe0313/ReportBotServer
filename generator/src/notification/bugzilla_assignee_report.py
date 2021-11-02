@@ -8,24 +8,25 @@ bugzilla_assignee_report.py
 '''
 import base64
 import requests
-import datetime
+import re
 from collections import defaultdict, namedtuple
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
 from generator.src.utils.Logger import logger
 Record = namedtuple('Record', ['bugId', 'assignee', 'reporter', 'severity', 'priority',
                                'status', 'fixBy', 'eta', 'summary'])
-Nan = 'Nan'
+Nan = '---'
+tabStr = " "*4
 
 class BugzillaAssigneeSpider(object):
    def __init__(self, args):
       self.title = args.title
       self.userList = args.users.split(",")
-      self.currentTime = datetime.datetime.now()
-      headerList = ['Assignee', 'Pri', 'Status', 'ETA', 'FixBy', 'Summary']
+      headerList = ['Pri', 'Status', 'ETA', 'FixBy', 'Summary']
       self.columnDict = {header: len(header) for header in headerList}
       self.assigneeQueryUrl = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/assignee/{0}"
       self.bugIdQueryUrl = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/{0}"
+      self.showBugUrl = "https://bugzilla.eng.vmware.com/show_bug.cgi?id={0}"
       btAccountInfo = base64.b64encode("{0}:{1}".format(SERVICE_ACCOUNT, SERVICE_PASSWORD).encode())
       self.session = requests.session()
       self.session.headers.update({'Authorization': 'Basic {0}'.format(str(btAccountInfo, 'utf-8')),
@@ -49,46 +50,41 @@ class BugzillaAssigneeSpider(object):
 
    @logExecutionTime
    def getReport(self):
+      result = self.getRecords()
       message = []
       message.append("*Title: {0}*".format(self.title))
-      message.append("Time: " + self.currentTime.strftime("%Y-%m-%d %H:%M:%S"))
-      message.append("```")
-      result = self.getRecords()
       if result:
-         contentFormatter = "".join(["{:<%ds}  " % col for col in self.columnDict.values()][1:])
-         headerFormatter = "{:>%ds}  --  " % self.columnDict['Assignee'] + contentFormatter
-         bodyFormatter = " " * (self.columnDict['Assignee'] + 6) + contentFormatter
-         message.append(headerFormatter.format(*(col for col in self.columnDict.keys())))
-         userName = ""
+         lineFormatter = tabStr*2 + "{0}: {1} {2} _FixBy:_ {3} _ETA:_ {4}\n" + " "*26 + "_Summary_: {5}"
          for user in self.userList:
             recordList = result.get(user, [])
             recordList.sort(key=lambda r: r.bugId, reverse=True)
-            for record in recordList:
-               if userName == user:
-                  message.append(bodyFormatter.format(record.priority, record.status, record.eta, record.fixBy,
-                                                      record.summary))
-               else:
-                  message.append(headerFormatter.format(record.assignee, record.priority, record.status, record.eta,
-                                                        record.fixBy, record.summary))
-                  userName = user
+            if len(recordList) > 0:
+               message.append("○ *{0}* (Count: *{1}*)".format(user, len(recordList)))
+               for record in recordList:
+                  idWithLink = "<%s|%s>" % (self.showBugUrl.format(record.bugId), record.bugId)
+                  line = lineFormatter.format(idWithLink, record.priority, record.status, record.fixBy, record.eta,
+                                              record.summary)
+                  message.append(line)
+            else:
+               message.append("*{0} (No Bug)* :coffee:".format(user))
       else:
-         message.append("No bugs assigned to selected members.")
-      message.append("```")
+         message.append("No bugs assigned to selected members. :coffee:")
+
       report = "\n".join(message)
       report = report.replace("'", "").replace('"', "")
       return report
 
    def getRecords(self, assigneeMaxLength=20, summaryMaxLength=80):
+      pattern = re.compile(r'fix_by_product:(.*), fix_by_version:(.*), fix_by_phase:(.*)', re.M | re.I)
       self.columnDict['Summary'] = summaryMaxLength
       result = defaultdict(list)
       for user in self.userList:
          # please avoid assignee name longer than 80 chars.
          assignee = user if len(user) < assigneeMaxLength else user[:assigneeMaxLength - 3] + '...'
-         self.columnDict['Assignee'] = max(len(user), self.columnDict['Assignee'])
          bugList = self.getBugInfoByAssignee(user)
          if isinstance(bugList, list):
             for bugDict in bugList:
-               bugId = bugDict['id']
+               bugId = str(bugDict['id'])
                severity = bugDict['severity']
                priority = bugDict['priority']
                status = bugDict['status']
@@ -101,8 +97,10 @@ class BugzillaAssigneeSpider(object):
                   detailDict = bugDetail[0]
                   reporter = detailDict['reporter']
                   eta = detailDict['cf_eta'].replace('00:00:00 GMT', '') if detailDict['cf_eta'] else Nan
-                  fixBy = ",".join([s.replace('fix_by_', '') for s in detailDict['fix_by']]) \
-                     if detailDict['fix_by'] else Nan
+                  fixBy = Nan
+                  if detailDict['fix_by']:
+                     matchObj = pattern.match(detailDict['fix_by'][0])
+                     fixBy = ",".join([matchObj.group(1), matchObj.group(2), matchObj.group(3)])
                else:
                   logger.error('{} bugDetail: {}'.format(user, bugDetail))
                result[user].append(Record(bugId, assignee, reporter, severity, priority, status, fixBy, eta, summary))
