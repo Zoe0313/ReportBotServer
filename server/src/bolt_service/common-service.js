@@ -2,10 +2,10 @@ import { loadBlocks, updateUserTzCache } from '../../common/slack-helper.js'
 import logger from '../../common/logger.js'
 export function registerCommonServiceHandler(app) {
    // Reply in channel
-   app.event('app_mention', async ({ event, say }) => {
-      await say(`Hi, <@${event.user}>. ` +
-         `I'm a little shy in public, but I'll follow up you by direct message.`)
-   })
+   // app.event('app_mention', async ({ event, say }) => {
+   //    await say(`Hi, <@${event.user}>. ` +
+   //       `I'm a little shy in public, but I'll follow up you by direct message.`)
+   // })
 
    // Home page
    app.event('app_home_opened', async ({ client, event, logger }) => {
