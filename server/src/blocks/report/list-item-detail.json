@@ -24,14 +24,6 @@
 					{
 						"text": {
 							"type": "plain_text",
-							"text": "Send Notification to Me Now",
-							"emoji": true
-						},
-						"value": "invoke_to_me_now"
-					},
-					{
-						"text": {
-							"type": "plain_text",
 							"text": "Cancel Next Notification",
 							"emoji": true
 						},
@@ -159,6 +151,35 @@
                      "text": "Close"
                   }
                }
+            },
+            {
+               "type": "button",
+               "text": {
+                  "type": "plain_text",
+                  "text": "Send Notification to Me Now",
+                  "emoji": true
+               },
+               "value": "invoke_to_me_now",
+               "action_id": "action_invoke_to_me_now",
+               "confirm": {
+                  "title": {
+                     "type": "plain_text",
+                     "text": "Send the notification to me immediately"
+                  },
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Are you sure send this notification to you for test? It will not be sent to the channels."
+                  },
+                  "confirm": {
+                     "type": "plain_text",
+                     "text": "Confirm"
+                  },
+                  "deny": {
+                     "type": "plain_text",
+                     "text": "Close"
+                  }
+               }
+
             }
          ]
       },

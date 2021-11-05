@@ -133,6 +133,8 @@ export function registerManageReportServiceHandler(app) {
          listItemDetail[3].elements[1].value = report._id
          // enable or disable button, only display one button
          listItemDetail[3].elements.splice(report.status === REPORT_STATUS.ENABLED ? 2 : 3, 1)
+         // send the notification to me button
+         listItemDetail[3].elements[2].value = report._id
       }
 
       // list items
@@ -434,7 +436,6 @@ export function registerManageReportServiceHandler(app) {
 
    const actionText = {
       invoke_now: 'send the notification to selected channels now',
-      invoke_to_me_now: 'send the notification to me now',
       cancel_next: 'cancel next invocation of notification'
    }
 
@@ -477,6 +478,24 @@ export function registerManageReportServiceHandler(app) {
             }
          })
       }, 'Failed to open confirmation modal.')
+   })
+
+   app.action('action_invoke_to_me_now', async ({ ack, body, payload, client }) => {
+      const ts = body.message.ts
+      const status = payload.value
+      tryAndHandleError({ ack, body, client }, async () => {
+         const state = await getState(ts)
+         const id = state.selectedId
+         logger.info(`Invoke the notification to me now, id: ${id}, status: ${status}`)
+         if (!id) {
+            throw new Error('report id is null')
+         }
+         const report = await ReportConfiguration.findById(id)
+         if (report.status === 'ENABLED') {
+            invokeNow(id, body.user.id)
+            await ack()
+         }
+      }, `Failed to send notification to me now.`)
    })
 
    // confirm cancel next report sending
