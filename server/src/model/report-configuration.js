@@ -106,20 +106,21 @@ const ReportConfigurationSchema = new mongoose.Schema({
                      logger.warn(e)
                      throw new Error(`Parse the original link of ${v} failed. ` +
                         `Please try again or use original link directly. ` +
-                        `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table`)
+                        `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table for tabular table ` +
+                        `or https://bugzilla.eng.vmware.com/query.cgi? for bug list.`)
                   }
                }
                const url = parseUrl(link)
                if (url.resource === 'bugzilla.eng.vmware.com') {
-                  if (url.protocol === 'https' && url.pathname === '/report.cgi' &&
-                     url.search.includes('format=table')) {
-                     return true
+                  if (url.protocol === 'https') {
+                     if ((url.pathname === '/report.cgi' && url.search.includes('format=table')) ||
+                        (url.pathname === '/buglist.cgi')) {
+                        return true
+                     }
                   }
                }
                throw new Error(`Unsupported bugzilla url.\n` +
-                  `Currently we only support bugzilla tabular report. ` +
-                  `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table ` +
-                  `for creating the bugzilla tabular report and generate the link.'`)
+                  `Refer to the hint as below for creating a bugzilla report.'`)
             }
          }
       },
