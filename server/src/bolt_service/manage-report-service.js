@@ -134,7 +134,7 @@ export function registerManageReportServiceHandler(app) {
          // enable or disable button, only display one button
          listItemDetail[3].elements.splice(report.status === REPORT_STATUS.ENABLED ? 2 : 3, 1)
          // send the notification to me button
-         listItemDetail[3].elements[2].value = report._id
+         listItemDetail[3].elements[3].value = report._id
       }
 
       // list items
