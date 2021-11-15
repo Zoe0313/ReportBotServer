@@ -14,6 +14,17 @@ import urllib3
 import certifi
 from generator.src.utils.Logger import logger
 
+
+def short2long(url):
+   session = requests.session()
+   try:
+      r = session.get(url, allow_redirects=False)
+      longUrl = r.headers.get('location')
+   except Exception as e:
+      logger.error("get long url error: ", e)
+      return url
+   return longUrl
+
 def long2short(url):
    http = urllib3.PoolManager(ca_certs=certifi.where())
    encodedBody = json.dumps({"longUrl": url, "userLabel": "string"}).encode('utf-8')

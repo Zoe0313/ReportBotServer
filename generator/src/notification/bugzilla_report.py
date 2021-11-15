@@ -19,7 +19,7 @@ import pandas as pd
 import math
 from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD
 from generator.src.utils.Utils import removeOldFiles, logExecutionTime, noIntervalPolling
-from generator.src.utils.MiniQueryFunctions import long2short
+from generator.src.utils.MiniQueryFunctions import long2short, short2long
 from generator.src.utils.Logger import logger
 
 downloadDir = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp")
@@ -264,16 +264,27 @@ class BugzillaSpider(object):
          message.append(lineFormatter.format(*tableRowList))
       return message
 
-   @logExecutionTime
-   def getReport(self):
+   def getBuglistReport(self, html):
+      message = []
       try:
-         self.loginSystem()
+         bugCountInfos = html.xpath('//*[@id="buglistHeader"]/div/div[2]/h3[1]/text()')
+         bugCountInfoStr = bugCountInfos[0].strip().lower()
+         if "one bug found" == bugCountInfoStr:
+            message.append('%s : <%s|%s>' % (self.title, self.buglistUrl, 1))
+         else:
+            findRes = re.findall("(.*?) bugs found", bugCountInfoStr)
+            bugCount = 0 if "no" == findRes[0] else int(findRes[0])
+            message.append('%s : <%s|%s>' % (self.title, self.buglistUrl, bugCount))
       except Exception as e:
-         return f":warning: Because of `{e}`, it can't generate bugzilla report currently."
+         logger.error(f"{self.buglistUrl} query buglist error: {e}")
+         message.append(":warning: temporary bugzilla server down.")
+      return message
 
-      res = self.session.get(self.buglistUrl)
-      content = res.content.decode()
-      html = etree.HTML(content)
+   def getTabularReport(self, html):
+      buttonName = html.xpath('//*[@id="reportContainer"]/p/a[2]/text()')
+      if not (len(buttonName) > 0 and buttonName[0] == "Export CSV"):
+         logger.error(f"{self.buglistUrl} can't find Export CSV button")
+         return [":warning: temporary bugzilla server down."]
 
       csvRes = self.getCsvContent(html)
       message = []
@@ -285,13 +296,36 @@ class BugzillaSpider(object):
             message.extend(self.generateTable(tableTitle, tableDataDf, shortUrlDict))
       else:
          message.append(csvRes)
+      return message
+
+   @logExecutionTime
+   def getReport(self):
+      try:
+         self.loginSystem()
+      except Exception as e:
+         logger.debug(f"Error happened in generating bugzilla report: Because of {e}, it can't login bugzilla system.")
+         return f":warning: Because of `{e}`, it can't login bugzilla system."
+
+      longUrl = short2long(self.buglistUrl) if "via.vmw.com" in self.buglistUrl else self.buglistUrl
+      res = self.session.get(self.buglistUrl)
+      content = res.content.decode()
+      html = etree.HTML(content)
+
+      if "/buglist.cgi" in longUrl:  # query buglist
+         message = self.getBuglistReport(html)
+      elif "/report.cgi" in longUrl:  # tabular
+         message = self.getTabularReport(html)
+      else:
+         logger.debug(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {longUrl}")
+         message = [":warning: Unsupported bugzilla url."]
       report = "\n".join(message)
       return report
 
+
 import argparse
 def parseArgs():
-   parser = argparse.ArgumentParser(description='Generate bugzilla assignee report')
-   parser.add_argument('--title', type=str, required=True, help='Title of bugzilla assignee report')
+   parser = argparse.ArgumentParser(description='Generate bugzilla report')
+   parser.add_argument('--title', type=str, required=True, help='Title of bugzilla report')
    parser.add_argument('--url', type=str, required=True, help='short link of bugzilla')
    return parser.parse_args()
 
