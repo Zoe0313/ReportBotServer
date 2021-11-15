@@ -61,5 +61,4 @@ tags
 **/config/
 **/tmp/
 
-/ci/docker/
 /generator/src/main.py
