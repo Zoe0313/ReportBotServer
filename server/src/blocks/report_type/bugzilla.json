@@ -21,7 +21,7 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": "Refer to <https://bugzilla.eng.vmware.com/query.cgi?format=report-table|creating bugzilla tabular report>"
+            "text": "Hint: refer to <https://bugzilla.eng.vmware.com/query.cgi?format=report-table|creating bugzilla tabular report> or <https://bugzilla.eng.vmware.com/query.cgi?|bugzilla list>."
          }
       }
    ]
