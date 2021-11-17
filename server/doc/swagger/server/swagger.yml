@@ -66,5 +66,55 @@ paths:
           description: Unauthorized
         '500':
           description: Internal Server Error
+  /api/v1/user/{userName}/messages:
+    post:
+      security:
+      - Authorization: []
+      tags:
+      - public
+      summary: post message to a given user name via vSANSlackbot APP
+      operationId: postMessage
+      description: >
+        This API can be used to post message to a given user name via 
+        vSANSlackbot APP, even if you are not the administrator of the APP.
+
+        Please request a bearer token on vSANSlackbot APP for posting Slack 
+        message.
+ 
+        Pass the bearer token in header.
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+        - in: path
+          name: userName
+          required: true
+          type: string
+          description: The user name to be sent
+          example: >
+            Sixuan Yang's email address is ysixuan@vmware.com, 
+            pick `ysixuan` as the user name. 
+            
+            Here is a way to get email address from Slack. Click slack user's 
+            head icon and `View full profile`, then it show `Email address` on 
+            Profile broad.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Text'
+            example:
+              text: This is the example message to be post via vSANSlackbot APP
+        description: The text message need to be sent
+      responses:
+        200:
+          description: OK
+        400:
+          description: Bad Request
+        401:
+          description: Unauthorized
+        500:
+          description: Internal Server Error
 servers:
   - url: https://slackbot.vela.decc.vmware.com
