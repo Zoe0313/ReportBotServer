@@ -4,6 +4,7 @@ import cloneDeep from 'lodash/cloneDeep.js'
 import set from 'lodash/set.js'
 import assert from 'assert'
 import { PerforceInfo } from '../src/model/perforce-info.js'
+import { updateUserInfo } from '../src/model/user-info.js'
 
 let slackClient = null
 const userTzCache = {}
@@ -98,6 +99,7 @@ export function getConversationsName(conversationIds) {
 }
 
 export async function getUsersName(users) {
+   assert(slackClient != null, 'slackClient is not initialized in slack helper.')
    return await Promise.all(users.map(user => {
       return slackClient.users.info({ user }).then(res => {
          return res.user.name
@@ -105,6 +107,71 @@ export async function getUsersName(users) {
    }))
 }
 
+// get and store all slack user info list in VMware - do not user this function for now
+export async function getUserList(cursor) {
+   assert(slackClient != null, 'slackClient is not initialized in slack helper.')
+   try {
+      logger.info('Start to get user list from slack client...')
+      const response = await slackClient.users.list({
+         cursor,
+         deleted: false,
+         team_id: 'T024JFTN4',
+         limit: 1000
+      })
+      assert(response?.ok === true, 'Failed to get slack user list.')
+      logger.info('got user list' + response.ok)
+      let nextUserList = []
+      const nextCursor = response.response_metadata.next_cursor
+      logger.info(response.members.length)
+      logger.info(`nextCursor: ${nextCursor}`)
+      if (nextCursor != null && nextCursor !== '') {
+         // pause 10s for the rate limits of Slack web Api
+         await new Promise(resolve => setTimeout(resolve, 10000))
+         nextUserList = await getUserList(nextCursor)
+      }
+      return response.members.map(member => {
+         return {
+            slackId: member.id,
+            userName: member.name || '',
+            fullName: member.real_name || member.profile?.real_name || ''
+         }
+      }).concat(nextUserList)
+   } catch (e) {
+      logger.error(`Can not get slack user info due to ${JSON.stringify(e)}`)
+      return []
+   }
+}
+
+// get the user information by VMware ID and update the User-Info db,
+// including the Slack ID, user VMware ID and full name.
+export async function lookUpUserByName(userName) {
+   assert(slackClient != null, 'slackClient is not initialized in slack helper.')
+   try {
+      if (userName == null || userName === '') {
+         logger.debug(`This user VMware ID is not given.`)
+         return {}
+      }
+      logger.info(`Start to get user ${userName} profile through the user VMware ID`)
+      const response = await slackClient.users.lookupByEmail({ email: `${userName}@vmware.com` })
+      logger.info(JSON.stringify(response))
+      const userInfo = {
+         slackId: response.user.id,
+         userName: response.user.name,
+         fullName: response.user.real_name || ''
+      }
+      // check if the user exists in the UserInfo collection and update
+      updateUserInfo([userInfo])
+      logger.info(`Insert the user ${userName} info into the db successfully.`)
+      return userInfo
+   } catch (e) {
+      if (e.data?.ok !== true && e.data?.error === 'users_not_found') {
+         logger.debug(`Invalid user VMware ID ${userName}. Please check the ID is correct.`)
+      } else {
+         logger.error(`Can not get slack user info by name due to ${JSON.stringify(e)}`)
+      }
+      return {}
+   }
+}
 export function loadBlocks(name) {
    if (name.endsWith('null') || name.endsWith('undefined')) {
       return []
