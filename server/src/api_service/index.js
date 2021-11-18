@@ -5,6 +5,7 @@ import { registerScheduler, unregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
 import { merge } from '../../common/utils.js'
+import { initSlackClient, lookUpUserByName } from '../../common/slack-helper.js'
 import Koa from 'koa'
 import Router from 'koa-router'
 import koaBody from 'koa-body'
@@ -149,14 +150,18 @@ function registerApiRouters(router, client) {
       ctx.assert(ctx.params.userName != null && ctx.params.userName !== '',
          400, 'User name is not given when posting message.', { result: false })
       logger.debug(`the message "${ctx.request.body.text}" will be sent to user ${ctx.params.userName}`)
-      const userInfo = await UserInfo.findOne({ userName: ctx.params.userName })
+      let userInfo = await UserInfo.findOne({ userName: ctx.params.userName })
       if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
-         ctx.response.status = 400
-         ctx.response.body = { result: false, message: `${ctx.params.userName} not found` }
-         return
+         logger.debug(`the user ${ctx.params.userName} not found in db. Search info by Slack API.`)
+         userInfo = await lookUpUserByName(ctx.params.userName)
+         if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
+            ctx.response.status = 400
+            ctx.response.body = { result: false, message: `${ctx.params.userName} not found` }
+            return
+         }
       }
       const request = {
-         userId: userInfo.slackId,
+         channel: userInfo.slackId,
          text: ctx.request.body.text
       }
       const result = await client.chat.postMessage(request)
@@ -171,6 +176,8 @@ connectMongoDatabase()
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
 const app = new Koa()
 const router = new Router()
+
+initSlackClient(client)
 
 app.use(koaBody())
 
