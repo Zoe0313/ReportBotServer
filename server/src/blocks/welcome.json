@@ -67,7 +67,14 @@
          "type": "section",
          "text": {
             "type": "mrkdwn",
-            "text": ":slack: Contact us #vsan-slackbot"
+            "text": ":slack: Contact us #vsan-slackbot / @vsan-slackbot-admins"
+         }
+      },
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": ":email: Contact us via vsan-slackbot-team@vmware.com"
          }
       },
       {
