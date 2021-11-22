@@ -1,6 +1,15 @@
 openapi: 3.0.0
 info:
-  description: This is the document of vSANSlackbot restful API.
+  description: >
+    This is the document of vSANSlackbot restful API.
+
+    Generating a API token is necessary before you start to use this APIs.
+
+    Search vSANSlackbot Slack app, and click the button "Request API Token",
+    you can get a unique token(without expiration unless you regenerate the token).
+
+    This token is used as the bearer authorization in header.
+    E.g. -H 'Authorization: Bearer 64a7def7e31d4e988f30387044dc2f52'
   version: 1.0.0-oas3
   title: vSANSlackbot Rest API
   contact:
