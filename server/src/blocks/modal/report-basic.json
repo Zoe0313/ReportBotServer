@@ -77,7 +77,7 @@
                "emoji": true
             },
             "filter": {
-               "include": ["im", "private", "public"],
+               "include": ["im", "private", "public", "mpim"],
                "exclude_external_shared_channels": true,
                "exclude_bot_users": true
             },

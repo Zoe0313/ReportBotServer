@@ -67,8 +67,8 @@ const ReportConfigurationSchema = new mongoose.Schema({
                const notInChannelList = results.filter(result => !result.inChannel)
                   .map(result => result.channel)
                if (notInChannelList.length > 0) {
-                  throw new Error('I am not in some selected private channel(s), ' +
-                     'please invite me into the channel(s).')
+                  throw new Error('I am not in some selected private channel(s)' +
+                     ' or direct message(s), please invite me into the channel(s).')
                }
             }
          }
