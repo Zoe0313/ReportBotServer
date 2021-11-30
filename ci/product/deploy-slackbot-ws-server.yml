@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: slackbot-websocket-server
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/slackbot-websocket-server:1.5.1
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/slackbot-websocket-server:1.5.2
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
