@@ -4,12 +4,12 @@
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "*:four: Perforce branch checkin report specific configuration*"
+				"text": "*:four: Code review check report specific configuration*"
 			}
 		},
 		{
 			"type": "input",
-			"block_id": "reportSpecConfig.perforceCheckIn.branches",
+			"block_id": "reportSpecConfig.perforceReviewCheck.branches",
 			"label": {
 				"type": "plain_text",
 				"text": "Search projects and branches from the list"
@@ -30,7 +30,7 @@
 		},
 		{
 			"type": "input",
-			"block_id": "reportSpecConfig.perforceCheckIn.teams",
+			"block_id": "reportSpecConfig.perforceReviewCheck.teams",
          "optional": true,
 			"label": {
 				"type": "plain_text",

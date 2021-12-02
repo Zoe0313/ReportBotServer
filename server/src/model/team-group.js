@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import logger from '../../common/logger.js'
 import {
-   PerforceCheckInMembersFilterSchema, flattenPerforceCheckinMembers
+   PerforceCheckInMembersFilterSchema, flattenMembers
 } from './report-configuration.js'
 
 const TeamGroupSchema = new mongoose.Schema({
@@ -58,7 +58,7 @@ const updateTeamGroup = async () => {
 
    const teams = await TeamGroup.find()
    await Promise.all(teams.map(async team => {
-      const members = await flattenPerforceCheckinMembers(team.membersFilters)
+      const members = await flattenMembers(team.membersFilters)
       team.members = members
       await team.save()
       logger.info(`saved team ${team.name} members ${JSON.stringify(team.members)}`)

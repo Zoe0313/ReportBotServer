@@ -7,7 +7,7 @@ import {
 } from '../../common/utils.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import {
-   ReportConfiguration, flattenPerforceCheckinMembers
+   ReportConfiguration, flattenMembers
 } from '../model/report-configuration.js'
 import { TeamGroup } from '../model/team-group.js'
 
@@ -145,6 +145,13 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
       initRecurrenceSettingValue(report, blocks, options, tz)
    }
    const reportSpecConfig = report.reportSpecConfig
+
+   let perforceSpecConfig
+   if (report.reportType === 'perforce_checkin') {
+      perforceSpecConfig = 'perforceCheckIn'
+   } else if (report.reportType === 'perforce_review_check') {
+      perforceSpecConfig = 'perforceReviewCheck'
+   }
    switch (reportType) {
       case 'bugzilla':
          if (isInit && reportSpecConfig?.bugzillaLink?.length > 0) {
@@ -158,10 +165,17 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
                .element.initial_value = reportSpecConfig.text
          }
          break
+      case 'bugzilla_by_assignee':
+         if (isInit && reportSpecConfig?.bugzillaAssignee?.length > 0) {
+            findBlockById(blocks, 'reportSpecConfig.bugzillaAssignee')
+               .element.initial_conversations = reportSpecConfig.bugzillaAssignee
+         }
+         break
       case 'perforce_checkin':
-         if (isInit && reportSpecConfig?.perforceCheckIn?.branches?.length > 0) {
-            findBlockById(blocks, 'reportSpecConfig.perforceCheckIn.branches')
-               .element.initial_options = reportSpecConfig.perforceCheckIn.branches
+      case 'perforce_review_check':
+         if (isInit && reportSpecConfig[perforceSpecConfig]?.branches?.length > 0) {
+            findBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.branches`)
+               .element.initial_options = reportSpecConfig[perforceSpecConfig].branches
                   .map(branch => ({
                      text: {
                         type: 'plain_text',
@@ -172,10 +186,10 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
          }
          if (isInit) {
             const teams = await TeamGroup.find({
-               code: { $in: reportSpecConfig.perforceCheckIn.teams }
+               code: { $in: reportSpecConfig[perforceSpecConfig].teams }
             })
             if (teams.length > 0) {
-               findBlockById(blocks, 'reportSpecConfig.perforceCheckIn.teams')
+               findBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.teams`)
                   .element.initial_options = teams
                      .map(team => ({
                         text: {
@@ -185,11 +199,11 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
                         value: team.code
                      }))
             } else if (!isNew) {
-               findBlockById(blocks, 'reportSpecConfig.perforceCheckIn.teams')
+               findBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.teams`)
                   .element.initial_options = undefined
             }
          }
-         const membersFilters = reportSpecConfig?.perforceCheckIn?.membersFilters || []
+         const membersFilters = reportSpecConfig[perforceSpecConfig]?.membersFilters || []
          if (options?.addMembersFilter) {
             membersFilters.push({
                condition: 'include',
@@ -203,8 +217,8 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
                const membersFilterBlocks = cloneDeep(membersFilterTemplate)
                // add index for every member filter remove block
                membersFilterBlocks[0].block_id = `block_remove_member_filter_${index}`
-               membersFilterBlocks[1].block_id = `reportSpecConfig.perforceCheckIn.membersFilters[${index}]`
-               membersFilterBlocks[2].block_id = `reportSpecConfig.perforceCheckIn.membersFilters[${index}].members`
+               membersFilterBlocks[1].block_id = `reportSpecConfig.${perforceSpecConfig}.membersFilters[${index}]`
+               membersFilterBlocks[2].block_id = `reportSpecConfig.${perforceSpecConfig}.membersFilters[${index}].members`
                // update index of member filter remove block
                membersFilterBlocks[0].accessory.value = `${index}`
                membersFilterBlocks[2].hint.text = MEMBERS_CONDITION_HINT[membersFilter.condition] +
@@ -229,27 +243,13 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
             })
             const membersFilterBlocks = membersFilterBlocksList.flat()
             const index = blocks.findIndex(
-               block => block.block_id === 'block_perforce_add_member_filter')
+               block => block.block_id === 'block_add_member_filter')
             if (index >= 0) {
                blocks.splice(index, 0, ...membersFilterBlocks)
             }
          }
          break
-      case 'bugzilla_by_assignee':
-         if (isInit && reportSpecConfig?.bugzillaAssignee?.length > 0) {
-            findBlockById(blocks, 'reportSpecConfig.bugzillaAssignee')
-               .element.initial_conversations = reportSpecConfig.bugzillaAssignee
-         }
-         break
       // case 'svs':
-      //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-      //       .element.initial_value = reportSpecConfig.bugzillaLink
-      //    break
-      // case 'fastsvs':
-      //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
-      //       .element.initial_value = reportSpecConfig.bugzillaLink
-      //    break
-      // case 'customized':
       //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
       //       .element.initial_value = reportSpecConfig.bugzillaLink
       //    break
@@ -322,18 +322,34 @@ export function displayTimeSetting(report, tz) {
    }
 }
 
-export function updateFlattenMembers(report) {
-   return flattenPerforceCheckinMembers(report.reportSpecConfig.perforceCheckIn.membersFilters)
-      .then(async flattenMembers => {
-         const teams = await TeamGroup.find({
-            code: { $in: report.reportSpecConfig.perforceCheckIn.teams }
-         })
-         const selectedTeamsMembers = teams.map(team => team.members).flat()
-         const currentReport = await ReportConfiguration.findById(report._id)
-         const allMembers = [...new Set(selectedTeamsMembers.concat(flattenMembers))]
-         currentReport.reportSpecConfig.perforceCheckIn.flattenMembers = allMembers
+export async function updateFlattenMembers(report) {
+   let reportSpecConfig
+   if (report.reportType === 'perforce_checkin') {
+      reportSpecConfig = report.reportSpecConfig.perforceCheckIn
+   } else if (report.reportType === 'perforce_review_check') {
+      reportSpecConfig = report.reportSpecConfig.perforceReviewCheck
+   } else {
+      return
+   }
+   logger.debug(JSON.stringify(reportSpecConfig.membersFilters))
+   const teams = await TeamGroup.find({
+      code: { $in: reportSpecConfig.teams }
+   })
+   const selectedTeamsMembers = teams.map(team => team.members).flat()
+   const currentReport = await ReportConfiguration.findById(report._id)
+   return flattenMembers(reportSpecConfig.membersFilters, selectedTeamsMembers)
+      .then(async allMembers => {
+         switch (report.reportType) {
+            case 'perforce_checkin':
+               currentReport.reportSpecConfig.perforceCheckIn.flattenMembers = allMembers
+               break
+            case 'perforce_review_check':
+               currentReport.reportSpecConfig.perforceReviewCheck.flattenMembers = allMembers
+               break
+            default:
+               throw new Error(`report type ${report.reportType} is not supported`)
+         }
          await currentReport.save()
-         logger.info(`flatten members in report ${report._id} are: ${JSON.stringify(allMembers)}`)
-         logger.debug(JSON.stringify(await ReportConfiguration.findById(report._id)))
+         logger.debug(`new report config: ${JSON.stringify(await ReportConfiguration.findById(report._id))}`)
       })
 }
