@@ -1,0 +1,129 @@
+{
+   "blocks": [
+      {
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Members filter "
+			},
+			"accessory": {
+				"type": "button",
+            "style": "danger",
+				"text": {
+					"type": "plain_text",
+					"text": "Remove",
+					"emoji": true
+				},
+				"value": "0",
+				"action_id": "action_remove_member_filter"
+			}
+		},
+      {
+         "type": "actions",
+         "elements": [
+            {
+               "type": "static_select",
+               "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select condition",
+                  "emoji": true
+               },
+               "initial_option": {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Include",
+                     "emoji": true
+                  },
+                  "value": "include"
+               },
+               "options": [
+                  {
+                     "text": {
+                        "type": "plain_text",
+                        "text": "Include",
+                        "emoji": true
+                     },
+                     "value": "include"
+                  },
+                  {
+                     "text": {
+                        "type": "plain_text",
+                        "text": "Exclude",
+                        "emoji": true
+                     },
+                     "value": "exclude"
+                  }
+               ],
+               "action_id": "condition"
+            },
+            {
+               "type": "static_select",
+               "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select report type",
+                  "emoji": true
+               },
+               "initial_option": {
+                  "text": {
+                     "type": "plain_text",
+                     "text": "Only selected users",
+                     "emoji": true
+                  },
+                  "value": "selected"
+               },
+               "options": [
+                  {
+                     "text": {
+                        "type": "plain_text",
+                        "text": "Only selected users",
+                        "emoji": true
+                     },
+                     "value": "selected"
+                  },
+                  {
+                     "text": {
+                        "type": "plain_text",
+                        "text": "Direct reporters of users",
+                        "emoji": true
+                     },
+                     "value": "direct_reporters"
+                  },
+                  {
+                     "text": {
+                        "type": "plain_text",
+                        "text": "All reporters of users",
+                        "emoji": true
+                     },
+                     "value": "all_reporters"
+                  }
+               ],
+               "action_id": "type"
+            }
+         ]
+      },
+      {
+         "type": "input",
+         "element": {
+            "type": "multi_users_select",
+            "placeholder": {
+               "type": "plain_text",
+               "text": "Select members",
+               "emoji": true
+            },
+            "action_id": "action_review_filter_members"
+         },
+         "label": {
+            "type": "plain_text",
+            "text": " ",
+            "emoji": true
+         },
+         "hint": {
+            "type": "plain_text",
+            "text": " "
+         }
+      },
+      {
+         "type": "divider"
+      }
+   ]
+}

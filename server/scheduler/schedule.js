@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import schedule from 'node-schedule'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
 import {
-   REPORT_STATUS, flattenPerforceCheckinMembers, ReportConfiguration
+   REPORT_STATUS, flattenMembers, ReportConfiguration
 } from '../src/model/report-configuration.js'
 import { updateP4Branches } from '../src/model/perforce-info.js'
 import { updateTeamGroup } from '../src/model/team-group.js'
@@ -108,13 +108,41 @@ const schedulerCommonHandler = async (report) => {
 }
 
 const contentEvaluate = async (report) => {
+   const calculatePeriod = () => {
+      let startTime = new Date()
+      const endTime = new Date()
+      switch (report.repeatConfig.repeatType) {
+         case 'hourly':
+            startTime.setHours(endTime.getHours() - 1)
+            break
+         case 'daily':
+            startTime.setDate(endTime.getDate() - 1)
+            break
+         case 'weekly':
+            startTime.setDate(endTime.getDate() - 7)
+            break
+         case 'monthly':
+            startTime.setMonth(endTime.getMonth() - 1)
+            break
+         case 'cron_expression':
+            const interval = cronParser.parseExpression(report.repeatConfig.cronExpression)
+            startTime = interval.prev()
+            console.log(startTime)
+            break
+         default:
+            // not_repeat type is default
+            startTime.setDate(endTime.getDate() - 1)
+            break
+      }
+      return { startTime, endTime }
+   }
    // exec the different report generator
    const timeout = 10 * 60 * 1000
    let scriptPath = ''
    let stdout = ''
    let command = ''
    switch (report.reportType) {
-      case 'bugzilla':
+      case 'bugzilla': {
          // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'
          scriptPath = generatorPath + 'src/notification/bugzilla_report.py'
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
@@ -123,36 +151,14 @@ const contentEvaluate = async (report) => {
          logger.debug(`execute the bugzilla report generator: ${command}`)
          stdout = await execCommand(command, timeout)
          break
-      case 'text':
+      }
+      case 'text': {
          stdout = report.reportSpecConfig.text
          break
-      case 'perforce_checkin':
+      }
+      case 'perforce_checkin': {
          scriptPath = generatorPath + 'src/notification/perforce_checkin_report.py'
-         let startTime = new Date()
-         const endTime = new Date()
-         switch (report.repeatConfig.repeatType) {
-            case 'hourly':
-               startTime.setHours(endTime.getHours() - 1)
-               break
-            case 'daily':
-               startTime.setDate(endTime.getDate() - 1)
-               break
-            case 'weekly':
-               startTime.setDate(endTime.getDate() - 7)
-               break
-            case 'monthly':
-               startTime.setMonth(endTime.getMonth() - 1)
-               break
-            case 'cron_expression':
-               const interval = cronParser.parseExpression(report.repeatConfig.cronExpression)
-               startTime = interval.prev()
-               console.log(startTime)
-               break
-            default:
-               // not_repeat type is default
-               startTime.setDate(endTime.getDate() - 1)
-               break
-         }
+         const { startTime, endTime } = calculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
             --title '${report.title}' \
@@ -163,7 +169,22 @@ const contentEvaluate = async (report) => {
          logger.debug(`execute the perforce checkin report generator: ${command}`)
          stdout = await execCommand(command, timeout)
          break
-      case 'bugzilla_by_assignee':
+      }
+      case 'perforce_review_check': {
+         scriptPath = generatorPath + 'src/notification/perforce_checkin_report.py'
+         const { startTime, endTime } = calculatePeriod()
+         logger.info(JSON.stringify(startTime))
+         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
+            --title '${report.title}' \
+            --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
+            --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
+            --startTime ${startTime.getTime() / 1000} \
+            --endTime ${endTime.getTime() / 1000}`
+         logger.debug(`execute the perforce checkin report generator: ${command}`)
+         stdout = await execCommand(command, timeout)
+         break
+      }
+      case 'bugzilla_by_assignee': {
          scriptPath = generatorPath + 'src/notification/bugzilla_assignee_report.py'
          const assignees = await getUsersName(report.reportSpecConfig.bugzillaAssignee)
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
@@ -172,6 +193,7 @@ const contentEvaluate = async (report) => {
          logger.debug(`execute the bugzilla by assignee report generator: ${command}`)
          stdout = await execCommand(command, timeout)
          break
+      }
       // case 'svs':
       // case 'fastsvs':
       // case 'customized':
@@ -342,7 +364,7 @@ const registerPerforceMembersScheduler = function () {
             membersFilters: report.reportSpecConfig?.perforceCheckIn?.membersFilters || []
          }))
       await Promise.all(allMembersFilters.map(report => {
-         return flattenPerforceCheckinMembers(report.membersFilters).then(members => {
+         return flattenMembers(report.membersFilters).then(members => {
             if (report.reportSpecConfig?.perforceCheckIn != null) {
                report.reportSpecConfig.perforceCheckIn.flattenMembers = members
                report.save()

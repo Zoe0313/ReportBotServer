@@ -54,6 +54,14 @@
                {
                   "text": {
                      "type": "plain_text",
+                     "text": "Perforce review check report",
+                     "emoji": true
+                  },
+                  "value": "perforce_review_check"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
                      "text": "Plain text",
                      "emoji": true
                   },

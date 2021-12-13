@@ -129,6 +129,12 @@ export function registerCreateReportServiceHandler(app) {
                         ?.map(option => option.value),
                      teams: inputObj.reportSpecConfig.perforceCheckIn?.teams
                         ?.map(option => option.value)
+                  },
+                  perforceReviewCheck: {
+                     branches: inputObj.reportSpecConfig.perforceReviewCheck?.branches
+                        ?.map(option => option.value),
+                     teams: inputObj.reportSpecConfig.perforceReviewCheck?.teams
+                        ?.map(option => option.value)
                   }
                },
                repeatConfig: {
@@ -144,7 +150,8 @@ export function registerCreateReportServiceHandler(app) {
          const saved = await report.save()
 
          // if perforce_checkin type, flatten member list and save to report configuration
-         if (report.reportType === 'perforce_checkin') {
+         if (report.reportType === 'perforce_checkin' ||
+            report.reportType === 'perforce_review_check') {
             updateFlattenMembers(report)
          }
          registerScheduler(report)
@@ -260,7 +267,7 @@ export function registerCreateReportServiceHandler(app) {
    })
 
    // Responding to the external_select options request for perforce branches
-   app.options('action_perforce_select_branches', async ({ ack, options }) => {
+   app.options('action_select_branches', async ({ ack, options }) => {
       const t0 = performance.now()
       const keyword = options.value
       logger.info(`keyword: ${keyword}, get all perforce braneches in db`)
@@ -326,8 +333,8 @@ export function registerCreateReportServiceHandler(app) {
 
    // Listern to add member filter
    app.action({
-      block_id: 'block_perforce_add_member_filter',
-      action_id: 'action_perforce_add_member_filter'
+      block_id: 'block_add_member_filter',
+      action_id: 'action_add_member_filter'
    }, async (event) => {
       tryAndHandleError(event, async () => {
          await updateModal(event, { addMembersFilter: true })
@@ -336,7 +343,7 @@ export function registerCreateReportServiceHandler(app) {
 
    // Listen to member filter condition
    app.action({
-      block_id: /^reportSpecConfig\.perforceCheckIn\.membersFilters[[0-9]*]/,
+      block_id: /^reportSpecConfig\.(.*)\.membersFilters[[0-9]*]/,
       action_id: 'condition'
    }, async (event) => {
       tryAndHandleError(event, async () => {
@@ -346,7 +353,7 @@ export function registerCreateReportServiceHandler(app) {
 
    // Listen to member filter type
    app.action({
-      block_id: /^reportSpecConfig\.perforceCheckIn\.membersFilters[[0-9]*]/,
+      block_id: /^reportSpecConfig\.(.*)\.membersFilters[[0-9]*]/,
       action_id: 'type'
    }, async (event) => {
       tryAndHandleError(event, async () => {

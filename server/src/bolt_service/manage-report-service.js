@@ -388,6 +388,12 @@ export function registerManageReportServiceHandler(app) {
                      ?.map(option => option.value),
                   teams: inputObj.reportSpecConfig.perforceCheckIn?.teams
                      ?.map(option => option.value)
+               },
+               perforceReviewCheck: {
+                  branches: inputObj.reportSpecConfig.perforceReviewCheck?.branches
+                     ?.map(option => option.value),
+                  teams: inputObj.reportSpecConfig.perforceReviewCheck?.teams
+                     ?.map(option => option.value)
                }
             },
             repeatConfig: {
@@ -399,7 +405,8 @@ export function registerManageReportServiceHandler(app) {
          logger.info(report)
          await report.save()
          await ack()
-         if (report.reportType === 'perforce_checkin') {
+         if (report.reportType === 'perforce_checkin' ||
+            report.reportType === 'perforce_review_check') {
             updateFlattenMembers(report)
          }
          registerScheduler(report)

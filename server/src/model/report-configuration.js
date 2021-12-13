@@ -22,7 +22,8 @@ const REPORT_TYPE_ENUM = [
    'svs',
    'text',
    'customized',
-   'bugzilla_by_assignee'
+   'bugzilla_by_assignee',
+   'perforce_review_check'
 ]
 const REPEAT_TYPE_ENUM = ['not_repeat', 'hourly', 'daily', 'weekly', 'monthly', 'cron_expression']
 
@@ -141,13 +142,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
       },
       perforceCheckIn: {
          membersFilters: {
-            type: [PerforceCheckInMembersFilterSchema],
-            validate: {
-               validator: function(v) {
-                  return this.repeatConfig.repeatType !== 'perforce_checkin' || v?.length > 0
-               },
-               message: `Should select at least one member filters when use perforce checkin report type.`
-            }
+            type: [PerforceCheckInMembersFilterSchema]
          },
          flattenMembers: { // flatten members will be computed by members filters
             type: [String]
@@ -159,6 +154,45 @@ const ReportConfigurationSchema = new mongoose.Schema({
             type: [String],
             required: function(v) {
                return this.reportType === 'perforce_checkin'
+            },
+            validate: {
+               validator: async function(v) {
+                  if (v == null) {
+                     return true
+                  }
+                  let allBranches = []
+                  try {
+                     allBranches = (await PerforceInfo.find())
+                        .map(perforceInfo => {
+                           return perforceInfo.branches
+                              .map(branch => `${perforceInfo.project}/${branch}`)
+                        }).flat()
+                  } catch (e) {
+                     logger.error(e)
+                     throw new Error(`Internal server error, please contact developers.`)
+                  }
+                  const notExistBranches = v.filter(branch => !allBranches.includes(branch))
+                  if (notExistBranches.length > 0) {
+                     throw new Error(`${notExistBranches.join(',')} are not belonged to selected project.`)
+                  }
+               }
+            }
+         }
+      },
+      perforceReviewCheck: {
+         membersFilters: {
+            type: [PerforceCheckInMembersFilterSchema]
+         },
+         flattenMembers: { // flatten members will be computed by members filters
+            type: [String]
+         },
+         teams: {
+            type: [String]
+         },
+         branches: {
+            type: [String],
+            required: function(v) {
+               return this.reportType === 'perforce_review_check'
             },
             validate: {
                validator: async function(v) {
@@ -325,12 +359,16 @@ const getDirectReporters = async (members) => {
 }
 
 // flatten p4 checkin members based on members filters
-const flattenPerforceCheckinMembers = async (membersFilters) => {
+const flattenMembers = async (membersFilters, selectedTeamsMembers) => {
    if (membersFilters == null || membersFilters.length === 0) {
       return []
    }
    logger.debug(`flatten members from members filters ${JSON.stringify(membersFilters)}`)
-   const members = (await Promise.all(membersFilters.map(membersFilter => {
+   // sort filters to make all include filters be in front of exclude filters
+   const members = (await Promise.all(membersFilters.sort((filter1, filter2) => {
+      if (filter1.condition === 'include') return -1
+      else return 1
+   }).map(membersFilter => {
       if (membersFilter.type === 'selected') {
          // get users name from users slack id
          return getUsersName(membersFilter.members).then(selectedMembers => {
@@ -372,14 +410,16 @@ const flattenPerforceCheckinMembers = async (membersFilters) => {
          throw new Error('invalid member filter type')
       }
    }))).reduce((acc, curVal) => {
+      // calculate all included members at first
       if (curVal.condition === 'include') {
          return [...new Set(acc.concat(curVal.members))]
       } else if (curVal.condition === 'exclude') {
+         // then delete all excluded members
          return acc.filter(member => !curVal.members.includes(member))
       } else {
          throw new Error('invalid member filter condition')
       }
-   }, [])
+   }, [...new Set(selectedTeamsMembers)])
    logger.debug(`get all flatten members ${JSON.stringify(members)}`)
    return members
 }
@@ -388,38 +428,5 @@ export {
    ReportConfiguration,
    PerforceCheckInMembersFilterSchema,
    REPORT_STATUS,
-   flattenPerforceCheckinMembers
+   flattenMembers
 }
-
-// {
-//    "text": {
-//       "type": "plain_text",
-//       "text": "Perforce",
-//       "emoji": true
-//    },
-//    "value": "perforce"
-// },
-// {
-//    "text": {
-//       "type": "plain_text",
-//       "text": "SVS",
-//       "emoji": true
-//    },
-//    "value": "svs"
-// },
-// {
-//    "text": {
-//       "type": "plain_text",
-//       "text": "FastSVS",
-//       "emoji": true
-//    },
-//    "value": "fastsvs"
-// },
-// {
-//    "text": {
-//       "type": "plain_text",
-//       "text": "Customized report",
-//       "emoji": true
-//    },
-//    "value": "customized"
-// }
