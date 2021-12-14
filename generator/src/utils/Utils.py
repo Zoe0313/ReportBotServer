@@ -18,10 +18,12 @@ def runCmd(cmd, nTimeOut=300):
    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
    try:
       stdout, stderr = process.communicate(timeout=nTimeOut)
+      returncode = process.returncode
    except subprocess.TimeoutExpired:
       process.kill()
       stdout, stderr = process.communicate()
-   return stdout, stderr
+      returncode = process.returncode
+   return stdout, stderr, returncode
 
 def logExecutionTime(func):
    @functools.wraps(func)

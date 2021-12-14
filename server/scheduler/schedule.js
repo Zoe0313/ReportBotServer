@@ -171,16 +171,16 @@ const contentEvaluate = async (report) => {
          break
       }
       case 'perforce_review_check': {
-         scriptPath = generatorPath + 'src/notification/perforce_checkin_report.py'
+         scriptPath = generatorPath + 'src/notification/perforce_review_check_report.py'
          const { startTime, endTime } = calculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
             --title '${report.title}' \
-            --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
-            --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
+            --branches '${report.reportSpecConfig.perforceReviewCheck.branches.join(',')}' \
+            --users '${report.reportSpecConfig.perforceReviewCheck.flattenMembers.join(',')}' \
             --startTime ${startTime.getTime() / 1000} \
             --endTime ${endTime.getTime() / 1000}`
-         logger.debug(`execute the perforce checkin report generator: ${command}`)
+         logger.debug(`execute the perforce review check report generator: ${command}`)
          stdout = await execCommand(command, timeout)
          break
       }

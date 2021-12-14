@@ -38,10 +38,10 @@ class PerforceSpider(object):
       os.environ['P4USER'] = SERVICE_ACCOUNT
       cmdStr = "echo '{0}' | {1} login".format(SERVICE_PASSWORD, self.p4Path)
       isLogin = False
-      for count in range(3):
-         stdout, stderr = runCmd(cmdStr)
-         if stderr:
-            logger.error(f"{count} times Perforce login error: {stderr}")
+      for i in range(1, 4):
+         stdout, stderr, returncode = runCmd(cmdStr)
+         if returncode != 0:
+            logger.debug("p4 login stderr: {0}, returncode: {1}, execute times: {2}".format(stderr, returncode, i))
             time.sleep(0.5)
          else:
             isLogin = True
@@ -102,9 +102,9 @@ class PerforceSpider(object):
       logger.info(cmd)
 
       result = defaultdict(list)
-      stdout, stderr = runCmd(cmd)
-      if stderr:
-         logger.error(f"Query submits error: {stderr}")
+      stdout, stderr, returncode = runCmd(cmd)
+      if returncode != 0:
+         logger.debug("p4 changes stderr: {0}, returncode: {1}".format(stderr, returncode))
          return result
 
       stdout = stdout.decode('utf-8')
@@ -123,9 +123,9 @@ class PerforceSpider(object):
 
    def getDetail(self, queryCln):
       cmd = '{0} describe -s {1}'.format(self.p4Path, queryCln)
-      stdout, stderr = runCmd(cmd)
-      if stderr:
-         logger.error(f"Query detail error: {stderr}")
+      stdout, stderr, returncode = runCmd(cmd)
+      if returncode != 0:
+         logger.debug("p4 describe error: {0}, returncode: {1}".format(stderr, returncode))
          return None
 
       stdout = stdout.decode('utf-8')
