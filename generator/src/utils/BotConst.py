@@ -39,3 +39,16 @@ CONTENT_TYPE_JSON = "application/json"
 # team via is responsible for the url shorten tool
 VIA_API = "https://via-api.vmware.com/via-console/app-api/v1/vialink"
 
+# used in perforce review check report
+# perforce describe url
+PERFORCE_DESCRIBE_URL = "https://p4web.eng.vmware.com/{0}?ac=10"
+# review board request url
+REVIEWBOARD_REQUEST_URL = "https://reviewboard.eng.vmware.com/r/{0}/"
+# restful API: post message to a given channel id
+POST_MESSAGE_API_BY_CHANNEL = "https://slackbot.vela.decc.vmware.com/api/v1/channel/{0}/messages"
+# restful API: post message to a given user name
+POST_MESSAGE_API_BY_USER = "https://slackbot.vela.decc.vmware.com/api/v1/user/{0}/messages"
+# bearer token on vSANSlackbot APP for posting message
+POST_MESSAGE_BEAR_TOKEN = "Bearer d89f55072b9d4fbda1e38a66c83adaad"
+# vsan-slackbot-monitor channel id
+VSAN_SLACKBOT_MONITOR_CHANNELID = "C026LRRM7T4"

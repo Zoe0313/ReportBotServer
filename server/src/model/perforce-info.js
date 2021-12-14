@@ -22,7 +22,7 @@ const p4Login = async () => {
 }
 
 const updateP4Branches = async () => {
-   const initProjects = ['bora', 'vsan-mgmt-ui']
+   const initProjects = ['bora', 'scons', 'vsan-mgmt-ui']
    // init projects empty data in db
    await Promise.all(initProjects.map(project => {
       return PerforceInfo.findOne({ project }).then(res => {

@@ -21,6 +21,7 @@ RUN pip install --upgrade google-auth
 RUN pip install python-dateutil
 RUN pip install lxml
 RUN pip install pandas
+RUN pip install rbtools
 
 # set perforce environment
 ENV P4PORT perforce.eng.vmware.com:1666
