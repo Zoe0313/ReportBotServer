@@ -188,6 +188,9 @@ class PerforceDiffParser(object):
          if re.match(r'^==== (.*) ====$', line):
             if fileContent and filePath:
                isAddFile = filePath in self.addFiles
+               # Between file path and first line code, there is one empty line.
+               # We should jump this line and mark first line code is lineNo=1.
+               fileContent = fileContent[1:] if not fileContent[0].strip() else fileContent
                diffInfo[filePath] = self.getChangeFileDiff(fileContent, isAddFile)
                fileContent = []
             filePath = self.getChangeFilePath(line)
@@ -195,6 +198,9 @@ class PerforceDiffParser(object):
             fileContent.append(line)
       if fileContent and filePath:
          isAddFile = filePath in self.addFiles
+         # Between file path and first line code, there is one empty line.
+         # We should jump this line and mark first line code is lineNo=1.
+         fileContent = fileContent[1:] if not fileContent[0].strip() else fileContent
          diffInfo[filePath] = self.getChangeFileDiff(fileContent, isAddFile)
       return diffInfo
 

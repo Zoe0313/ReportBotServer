@@ -28,7 +28,15 @@ class CompareNotEqual(Exception):
    def __init__(self, errorInfo):
       super().__init__(self)
       logger.info(errorInfo)
-      self.errorInfo = errorInfo.split("-")[0].strip()
+      self.errorInfo = "compare unequal"
+      if errorInfo.startswith("compare file list unequal"):
+         self.errorInfo = "compare file list unequal"
+      elif "add code unequal" in errorInfo:
+         file = errorInfo.split("add code unequal")[0]
+         self.errorInfo = "{0} add code unequal".format(file)
+      elif "delete code unequal" in errorInfo:
+         file = errorInfo.split("delete code unequal")[0]
+         self.errorInfo = "{0} delete code unequal".format(file)
 
    def __str__(self):
       return self.errorInfo
@@ -57,12 +65,12 @@ class PerforceReviewCheckSpider(object):
    def compareTwoDiffs(self, lastChangeDiff, lastReviewDiff):
       # check diff file count
       if len(lastChangeDiff) != len(lastReviewDiff):
-         raise CompareNotEqual(f"compare file list unequal - review({len(lastReviewDiff)}) change({len(lastChangeDiff)})")
+         raise CompareNotEqual(f"compare file list unequal review({len(lastReviewDiff)}) change({len(lastChangeDiff)})")
       # check diff file list
       changeDiffFileList = [file for file in lastChangeDiff.keys()]
       for file in lastReviewDiff.keys():
          if file not in changeDiffFileList:
-            raise CompareNotEqual(f"compare file list unequal - {file}")
+            raise CompareNotEqual(f"compare file list unequal {file}")
       for file, reviewCodes in lastReviewDiff.items():
          changeCodes = lastChangeDiff[file]
          # sort diff line no
@@ -76,7 +84,7 @@ class PerforceReviewCheckSpider(object):
             reviewCode = "#{0} {1}".format(lineNo, reviewAdd[lineNo])
             changeCode = "#{0} {1}".format(lineNo, changeAdd[lineNo])
             if reviewCode != changeCode:
-               raise CompareNotEqual(f"{file} - add code unequal - review({reviewCode}) change({changeCode})")
+               raise CompareNotEqual(f"{file} add code unequal - review({reviewCode}) change({changeCode})")
          # compare delete diff codes
          reviewDelete = {r[1]: r[2] for r in reviewCodes if '-' == r[0]}
          changeDelete = {r[1]: r[2] for r in changeCodes if '-' == r[0]}
@@ -85,7 +93,7 @@ class PerforceReviewCheckSpider(object):
             reviewCode = "#{0} {1}".format(lineNo, reviewDelete[lineNo])
             changeCode = "#{0} {1}".format(lineNo, reviewDelete[lineNo])
             if reviewCode != changeCode:
-               raise CompareNotEqual(f"{file} - delete code unequal - review({reviewCode}) change({changeCode})")
+               raise CompareNotEqual(f"{file} delete code unequal - review({reviewCode}) change({changeCode})")
 
    def getRecords(self):
       noReviews, unEquals = defaultdict(list), defaultdict(list)
@@ -172,10 +180,15 @@ class PerforceReviewCheckSpider(object):
          unEqualList = unEquals.get(user, [])
          if len(noReviewList) > 0 or len(unEqualList) > 0:
             msg = self.getReportByChangeOwner(user, noReviewList, unEqualList)
-            self.sendReportByUser(userName=user, message=msg)
+            # self.sendReportByUser(userName=user, message=msg)
             ret += msg + "\n"
       if not ret:
-         return "I haven't found any differences between last review and actual submission."
+         message = []
+         message.append("*Title: {0}*".format(self.title))
+         message.append("Branch: {0}".format(" & ".join(self.branchList)))
+         message.append(self.checkinTime)
+         message.append("I haven't found any differences between last review and actual submission.")
+         return "\n".join(message)
       return ret
 
 import argparse
