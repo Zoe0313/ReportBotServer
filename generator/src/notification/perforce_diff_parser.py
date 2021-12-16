@@ -166,7 +166,8 @@ class PerforceDiffParser(object):
       except Exception as e:
          raise Exception("describe hasn't any differences: {0}".format(e))
 
-      diffContent = describes[index+1:]
+      # jump `Differences ...` and one empty line to get the real difference content
+      diffContent = describes[index+2:]
       differences = self.parseLastChangeDiff(diffContent)
       return differences
 
@@ -188,9 +189,6 @@ class PerforceDiffParser(object):
          if re.match(r'^==== (.*) ====$', line):
             if fileContent and filePath:
                isAddFile = filePath in self.addFiles
-               # Between file path and first line code, there is one empty line.
-               # We should jump this line and mark first line code is lineNo=1.
-               fileContent = fileContent[1:] if not fileContent[0].strip() else fileContent
                diffInfo[filePath] = self.getChangeFileDiff(fileContent, isAddFile)
                fileContent = []
             filePath = self.getChangeFilePath(line)
@@ -198,9 +196,6 @@ class PerforceDiffParser(object):
             fileContent.append(line)
       if fileContent and filePath:
          isAddFile = filePath in self.addFiles
-         # Between file path and first line code, there is one empty line.
-         # We should jump this line and mark first line code is lineNo=1.
-         fileContent = fileContent[1:] if not fileContent[0].strip() else fileContent
          diffInfo[filePath] = self.getChangeFileDiff(fileContent, isAddFile)
       return diffInfo
 
@@ -240,6 +235,11 @@ class PerforceDiffParser(object):
       Diff type: `a` - add   `d` - delete   `c` - both `add` and `delete`
       '''
       deleteLineNo, addLineNo = 0, 0
+      if isAddFile:
+         # Between file path and first line code, there is one empty line.
+         # We should jump this line and mark first line code is lineNo=1.
+         diffContent = diffContent[1:] if not diffContent[0].strip() else diffContent
+         addLineNo = 1
       codes = []
       fileDiff = []
       while diffContent:
