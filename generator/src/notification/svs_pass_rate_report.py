@@ -29,10 +29,9 @@ class SVSPassRateSpider(object):
    def getReport(self):
       message = []
       message.append("*Title: {0}*".format(self.title))
-      message.append("Time: " + self.currentTime.strftime("%Y-%m-%d %H:%M:%S"))
-      message.append("```")
 
-      lineFormatter = "{:<5}{:<5}{:<5}{}"
+      columnWidth = 7
+      lineFormatter = "{:<%d}{:<%d}{:<%d}{}" % (columnWidth+2, columnWidth+2, columnWidth+1)
       message.append(lineFormatter.format(20, 50, 100, "test name"))
       for testCase in self.testCaseList:
          tableRowlist = []
@@ -43,20 +42,19 @@ class SVSPassRateSpider(object):
                passRateStr = "{:2.0f}%".format(passRate)
                if passRate > 50:
                   tableRowlist.append(passRateStr)
-                  lineFormatter += "{:<5}"
+                  lineFormatter += "{:<%d}" % columnWidth
                else:
                   queryUrl = self.userQueryUrl.format(testCase, rateLine)
                   countWithLink = "<%s|%s>" % (queryUrl, passRateStr)
                   tableRowlist.append(countWithLink)
-                  lineFormatter += "{:<%d}" % (len("<%s|>" % queryUrl) + 5)
+                  lineFormatter += "{:<%d}" % (len("<%s|>" % queryUrl) + columnWidth)
             else:
                tableRowlist.append('Nan')
-               lineFormatter += "{:<5}"
+               lineFormatter += "{:<%d}" % columnWidth
          tableRowlist.append(testCase)
          lineFormatter += "{}"
          message.append(lineFormatter.format(*tableRowlist))
 
-      message.append("```")
       report = "\n".join(message)
       report = report.replace("'", "").replace('"', "")
       return report
