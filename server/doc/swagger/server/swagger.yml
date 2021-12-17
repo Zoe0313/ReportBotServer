@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   description: >
-    This is the document of vSANSlackbot restful API.
+    This is the document of vNotifier/vSANSlackbot restful API.
 
     Generating a API token is necessary before you start to use this APIs.
 
@@ -11,7 +11,7 @@ info:
     This token is used as the bearer authorization in header.
     E.g. -H 'Authorization: Bearer 64a7def7e31d4e988f30387044dc2f52'
   version: 1.0.0-oas3
-  title: vSANSlackbot Rest API
+  title: vNotifier/vSANSlackbot Rest API
   contact:
     email: vsan-slackbot-team@vmware.com
   license:
@@ -21,7 +21,7 @@ components:
   schemas:
     Text:
       type: string
-      example: This is the example message to be post via vSANSlackbot APP
+      example: This is the example message to be post via vNotifier APP
   securitySchemes:
     bearerAuth:            # arbitrary name for the security scheme
       type: http
@@ -29,7 +29,7 @@ components:
       bearerFormat: JWT  
 tags:
   - name: public
-    description: Public vSANSlackbot rest Api for VMware users
+    description: Public vNotifier rest Api for VMware users
 paths:
   /api/v1/channel/{channelID}/messages:
     post:
@@ -37,13 +37,13 @@ paths:
         - bearerAuth: []
       tags:
         - public
-      summary: post message to a given channel via vSANSlackbot APP
+      summary: post message to a given channel via vNotifier APP
       operationId: postMessage
       description: >
-        This API can be used to post message via vSANSlackbot APP, even if you
+        This API can be used to post message via vNotifier APP, even if you
         are not the administrator of the APP.
 
-        Please request a bearer token on vSANSlackbot APP for posting Slack
+        Please request a bearer token on our vSANSlackbot APP for posting Slack
         message.
 
         If you want to post message to a private channel via vSANSlackbot,
@@ -63,7 +63,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Text'
             example:
-              text: This is the example message to be post via vSANSlackbot APP
+              text: This is the example message to be post via vNotifier APP
               
         description: The text message need to be sent
       responses:
@@ -81,11 +81,11 @@ paths:
       - Authorization: []
       tags:
       - public
-      summary: post message to a given user name via vSANSlackbot APP
+      summary: post message to a given user name via vNotifier APP
       operationId: postMessage
       description: >
         This API can be used to post message to a given user name via 
-        vSANSlackbot APP, even if you are not the administrator of the APP.
+        vNotifier APP, even if you are not the administrator of the APP.
 
         Please request a bearer token on vSANSlackbot APP for posting Slack 
         message.
@@ -114,7 +114,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Text'
             example:
-              text: This is the example message to be post via vSANSlackbot APP
+              text: This is the example message to be post via vNotifier APP
         description: The text message need to be sent
       responses:
         200:
