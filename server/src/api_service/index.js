@@ -173,7 +173,7 @@ function registerApiRouters(router, client) {
 // connect to mongodb
 connectMongoDatabase()
 
-const client = new WebClient(process.env.SLACK_BOT_TOKEN)
+const client = new WebClient(process.env.SLACK_BOT_TOKEN_REST)
 const app = new Koa()
 const router = new Router()
 
