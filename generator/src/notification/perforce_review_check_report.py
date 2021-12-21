@@ -180,7 +180,7 @@ class PerforceReviewCheckSpider(object):
          unEqualList = unEquals.get(user, [])
          if len(noReviewList) > 0 or len(unEqualList) > 0:
             msg = self.getReportByChangeOwner(user, noReviewList, unEqualList)
-            # self.sendReportByUser(userName=user, message=msg)
+            self.sendReportByUser(userName=user, message=msg)
             ret += msg + "\n"
       if not ret:
          message = []
