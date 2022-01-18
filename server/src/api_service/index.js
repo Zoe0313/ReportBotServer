@@ -1,11 +1,12 @@
 import { ReportConfiguration } from '../model/report-configuration.js'
 import { SlackbotApiToken } from '../model/api-token.js'
-import { UserInfo } from '../model/user-info.js'
+import { addApiHistoryInfo } from '../model/api-history.js'
+import { findUserInfoByName } from '../model/user-info.js'
 import { registerScheduler, unregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
 import { merge } from '../../common/utils.js'
-import { initSlackClient, lookUpUserByName } from '../../common/slack-helper.js'
+import { initSlackClient } from '../../common/slack-helper.js'
 import Koa from 'koa'
 import Router from 'koa-router'
 import koaBody from 'koa-body'
@@ -26,8 +27,10 @@ function registerApiRouters(router, client) {
       const token = ctx.request.headers.authorization?.substring('Bearer '.length)
       const apiToken = await SlackbotApiToken.findOne({ token })
       if (apiToken == null || apiToken.userId == null) {
+         const errorMsg = 'Authorization failure'
          ctx.response.status = 401
-         ctx.response.body = { message: 'Authorization failure' }
+         ctx.response.body = { result: false, message: errorMsg }
+         addApiHistoryInfo('', { channel: '', text: '' }, ctx.response)
          return
       }
       ctx.state.userId = apiToken.userId
@@ -129,44 +132,82 @@ function registerApiRouters(router, client) {
    })
 
    router.post('/api/v1/channel/:channelId/messages', async (ctx, next) => {
-      ctx.assert(ctx.request.body.text != null && ctx.request.body.text !== '', 400,
-         'The message is not given, can not post the empty message.', { result: false })
-      ctx.assert(ctx.params.channelId != null && ctx.params.channelId !== '',
-         400, 'Channel ID is not given when posting message.', { result: false })
+      let errorMsg = ''
+      let request = { channel: '', text: '' }
+      if (ctx.request.body.text == null || ctx.request.body.text === '') {
+         errorMsg = 'The message is not given, can not post the empty message.'
+      } else if (ctx.params.channelId == null || ctx.params.channelId === '') {
+         errorMsg = 'Channel ID is not given when posting message.'
+         request = { channel: '', text: ctx.request.body.text }
+      }
+      if (errorMsg !== '') {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: errorMsg }
+         addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+         return
+      }
       console.log(process.env.LOGGER_PATH)
       logger.debug(`the message "${ctx.request.body.text}" will be sent to channel ${ctx.params.channelId}`)
-      const request = {
+      request = {
          channel: ctx.params.channelId,
          text: ctx.request.body.text
       }
-      const result = await client.chat.postMessage(request)
-      logger.debug(`post message result for ${ctx.state.userId} is: ${JSON.stringify(result)}`)
-      ctx.response.body = result
+      try {
+         const result = await client.chat.postMessage(request)
+         logger.debug(`post message result for ${ctx.state.userId} is: ${JSON.stringify(result)}`)
+         ctx.response.status = 200
+         ctx.response.body = result
+      } catch (error) {
+         const errorMsg = `post message occur error: ${error}`
+         logger.error(errorMsg)
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+      addApiHistoryInfo(ctx.state.userId, request, ctx.response)
    })
 
    router.post('/api/v1/user/:userName/messages', async (ctx, next) => {
-      ctx.assert(ctx.request.body.text != null && ctx.request.body.text !== '', 400,
-         'The message is not given, can not post the empty message.', { result: false })
-      ctx.assert(ctx.params.userName != null && ctx.params.userName !== '',
-         400, 'User name is not given when posting message.', { result: false })
-      logger.debug(`the message "${ctx.request.body.text}" will be sent to user ${ctx.params.userName}`)
-      let userInfo = await UserInfo.findOne({ userName: ctx.params.userName })
-      if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
-         logger.debug(`the user ${ctx.params.userName} not found in db. Search info by Slack API.`)
-         userInfo = await lookUpUserByName(ctx.params.userName)
-         if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
-            ctx.response.status = 400
-            ctx.response.body = { result: false, message: `${ctx.params.userName} not found` }
-            return
-         }
+      let errorMsg = ''
+      let request = { channel: '', text: '' }
+      if (ctx.request.body.text == null || ctx.request.body.text === '') {
+         errorMsg = 'The message is not given, can not post the empty message.'
+      } else if (ctx.params.userName == null || ctx.params.userName === '') {
+         errorMsg = 'User name is not given when posting message.'
+         request = { channel: '', text: ctx.request.body.text }
       }
-      const request = {
+      if (errorMsg !== '') {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: errorMsg }
+         addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+         return
+      }
+      const userInfo = await findUserInfoByName(ctx.params.userName)
+      if (userInfo == null) {
+         errorMsg = `${ctx.params.userName} not found`
+         request = { channel: '', text: ctx.request.body.text }
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: errorMsg }
+         addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+         return
+      }
+      logger.debug(`the message "${ctx.request.body.text}" will be sent to user ${ctx.params.userName}`)
+      logger.debug(`user name "${ctx.params.userName}" 's slack id: ${userInfo.slackId}`)
+      request = {
          channel: userInfo.slackId,
          text: ctx.request.body.text
       }
-      const result = await client.chat.postMessage(request)
-      logger.debug(`post message result for ${ctx.state.userId} is: ${JSON.stringify(result)}`)
-      ctx.response.body = result
+      try {
+         const result = await client.chat.postMessage(request)
+         logger.debug(`post message result for ${ctx.state.userId} is: ${JSON.stringify(result)}`)
+         ctx.response.status = 200
+         ctx.response.body = result
+      } catch (error) {
+         const errorMsg = `post message occur error: ${error}`
+         logger.error(errorMsg)
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+      addApiHistoryInfo(ctx.state.userId, request, ctx.response)
    })
 }
 
