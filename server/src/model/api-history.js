@@ -14,12 +14,13 @@ const SlackbotApiHistorySchema = new mongoose.Schema({
    sendTime: { type: Date, required: true, immutable: true },
    content: { type: String, immutable: true },
    status: { type: String, enum: Object.values(API_HISTORY_STATUS), required: true },
-   errorMsg: { type: String, immutable: true }
+   errorMsg: { type: String, immutable: true },
+   ipAddress: { type: String, immutable: true }
 }, { timestamps: true })
 
 const SlackbotApiHistory = mongoose.model('api_history', SlackbotApiHistorySchema)
 
-const addApiHistoryInfo = async (userId, request, response) => {
+const addApiHistoryInfo = async (state, request, response) => {
    let _errorMsg = ''
    let _status = API_HISTORY_STATUS.PENDING
    if (response.status === 200) {
@@ -29,11 +30,12 @@ const addApiHistoryInfo = async (userId, request, response) => {
       _errorMsg = `send message by rest-api error due to: ${response.body.message}`
    }
    const apiHistory = new SlackbotApiHistory({
-      creator: userId,
+      creator: state.userId,
       conversation: request.channel,
       sendTime: new Date(),
       content: request.text,
       errorMsg: _errorMsg,
+      ipAddress: state.ipAddr,
       status: _status
    })
    apiHistory.save().then(res => {

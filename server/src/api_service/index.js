@@ -24,16 +24,19 @@ function registerApiRouters(router, client) {
          await next()
          return
       }
+
+      const ipAddr = ctx.request.ip
       const token = ctx.request.headers.authorization?.substring('Bearer '.length)
       const apiToken = await SlackbotApiToken.findOne({ token })
       if (apiToken == null || apiToken.userId == null) {
          const errorMsg = 'Authorization failure'
          ctx.response.status = 401
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo('', { channel: '', text: '' }, ctx.response)
+         addApiHistoryInfo({ userId: '', ipAddr: ipAddr }, { channel: '', text: '' }, ctx.response)
          return
       }
       ctx.state.userId = apiToken.userId
+      ctx.state.ipAddr = ipAddr
       await next()
    })
 
@@ -143,7 +146,7 @@ function registerApiRouters(router, client) {
       if (errorMsg !== '') {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+         addApiHistoryInfo(ctx.state, request, ctx.response)
          return
       }
       console.log(process.env.LOGGER_PATH)
@@ -163,7 +166,7 @@ function registerApiRouters(router, client) {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
       }
-      addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+      addApiHistoryInfo(ctx.state, request, ctx.response)
    })
 
    router.post('/api/v1/user/:userName/messages', async (ctx, next) => {
@@ -178,7 +181,7 @@ function registerApiRouters(router, client) {
       if (errorMsg !== '') {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+         addApiHistoryInfo(ctx.state, request, ctx.response)
          return
       }
       const userInfo = await findUserInfoByName(ctx.params.userName)
@@ -187,7 +190,7 @@ function registerApiRouters(router, client) {
          request = { channel: '', text: ctx.request.body.text }
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+         addApiHistoryInfo(ctx.state, request, ctx.response)
          return
       }
       logger.debug(`the message "${ctx.request.body.text}" will be sent to user ${ctx.params.userName}`)
@@ -207,7 +210,7 @@ function registerApiRouters(router, client) {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
       }
-      addApiHistoryInfo(ctx.state.userId, request, ctx.response)
+      addApiHistoryInfo(ctx.state, request, ctx.response)
    })
 }
 
