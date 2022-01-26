@@ -27,7 +27,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 class CompareNotEqual(Exception):
    def __init__(self, errorInfo):
       super().__init__(self)
-      logger.info(errorInfo)
       self.errorInfo = "compare unequal"
       if errorInfo.startswith("compare file list unequal"):
          self.errorInfo = "compare file list unequal"
@@ -99,12 +98,14 @@ class PerforceReviewCheckSpider(object):
       noReviews, unEquals = defaultdict(list), defaultdict(list)
       unknowns = []
       self.p4Parser.loginPerforce()
-      changeList = self.p4Parser.getChanges(self.dtStartTime, self.dtEndTime, self.branchList)
-      logger.info("change list count: {0}".format(len(changeList)))
-
+      self.p4Parser.setParams(self.dtStartTime, self.dtEndTime, self.branchList)
       with self.rbParser:
-         for change in changeList:
-            if change:
+         for userName in self.userList:
+            changeList = self.p4Parser.getChanges(userName)
+            logger.info("{0} change list count: {1}".format(userName, len(changeList)))
+            for change in changeList:
+               if not change:
+                  continue
                matchObj = re.match(r"Change (.*) on (.*) by (.*) '(.*)'", change)
                cln = matchObj.group(1)
                user = matchObj.group(3).split('@')[0]
@@ -128,7 +129,7 @@ class PerforceReviewCheckSpider(object):
                   logger.info("occur compare not equal: {0}".format(e))
                   unEquals[user].append((cln, reviewRequestId, changeTime, str(e)))
                except Exception as e:
-                  logger.info("unknown exception: {0}".format(e))
+                  logger.info("occur unknown exception during generating p4-review-check-report: {0}".format(e))
                   unknowns.append(str(e))
       return noReviews, unEquals, unknowns
 
@@ -143,7 +144,7 @@ class PerforceReviewCheckSpider(object):
             p4Link = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(info[0]), info[0])
             message.append("      #{0}  {1}".format(p4Link, info[1]))
       if len(unEqualList) > 0:
-         message.append("*The following change(s) submitted are different with the last review revision：*")
+         message.append("*The following change(s) submitted are different with the last review revision:*")
          for info in unEqualList:
             p4Link = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(info[0]), info[0])
             reviewLink = "<{0}|{1}>".format(REVIEWBOARD_REQUEST_URL.format(info[1]), info[1])

@@ -27,6 +27,7 @@ class PerforceDiffParser(object):
       self.linePattern2 = re.compile(r"^(\d+)([acd])(\d+),(\d+)$")
       self.linePattern3 = re.compile(r"^(\d+),(\d+)([acd])(\d+)$")
       self.linePattern4 = re.compile(r"^(\d+),(\d+)([acd])(\d+),(\d+)$")
+      self.changeCommand = '%s changes -s submitted -u {0} %s | /bin/grep -v "CBOT"'
       self.addFiles = []
 
    def loginPerforce(self):
@@ -42,16 +43,21 @@ class PerforceDiffParser(object):
             return
       raise Exception("Perforce internal error")
 
-   def getChanges(self, startTime, endTime, branchList):
+   def setParams(self, startTime, endTime, branchList):
       checkinTimeRange = "{0},{1}".format(startTime.strftime("%Y/%m/%d:%H:%M:%S"),
                                           endTime.strftime("%Y/%m/%d:%H:%M:%S"))
       branchStr = " ".join(["//depot/{0}/...@{1}".format(branch, checkinTimeRange) for branch in branchList])
-      command = '{0} changes -s submitted {1} | /bin/grep -v "CBOT"'.format(self.p4alias, branchStr)
-      stdout, stderr, returncode = runCmd(command)
-      if returncode != 0:
-         logger.debug("p4 changes stderr: {0}, returncode: {1}".format(stderr, returncode))
+      self.changeCommand = self.changeCommand % (self.p4alias, branchStr)
+
+   def getChanges(self, user):
+      command = self.changeCommand.format(user)
+      stdout, stderr, returncode = runCmd(command, nTimeOut=5000)
+      if not stdout and 1 == returncode:
+         return []
+      elif returncode != 0:
+         logger.debug("p4 changes stdout:{0}, stderr:{1}, returncode:{2}".format(stdout, stderr, returncode))
          raise Exception("Perforce internal error")
-      return stdout.decode('utf-8').split('\n')
+      return stdout.decode('utf-8').split('\n')[:-1]
 
    def getDescribes(self, cln):
       '''
@@ -64,9 +70,9 @@ class PerforceDiffParser(object):
       :param cln: string
       '''
       command = '{0} describe -a {1}'.format(self.p4alias, cln)
-      stdout, stderr, returncode = runCmd(command)
+      stdout, stderr, returncode = runCmd(command, nTimeOut=5000)
       if returncode != 0:
-         logger.debug("p4 describe error: {0}, returncode: {1}".format(stderr, returncode))
+         logger.debug("p4 describe stdout:{0}, stderr:{1}, returncode:{2}".format(stdout, stderr, returncode))
          raise Exception("Perforce internal error")
       describes = stdout.decode('utf-8').split('\n')
       matchObj = re.match(r"Change (.*) by (.*) on (.*)", describes[0], re.M | re.I)
@@ -276,45 +282,42 @@ class PerforceDiffParser(object):
 
 
 if __name__ == "__main__":
-   # Test:
-   import os
+   import os, datetime, re
+   # Test dir:
    downloadDir = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/p4-review-check-report")
-   cln = 9386980
-   diffFile = os.path.join(downloadDir, "p4-{0}.txt".format(cln))
-
+   os.makedirs(downloadDir, exist_ok=True)
+   # params
+   utc7 = datetime.timezone(offset=-datetime.timedelta(hours=7))
+   startTime = datetime.datetime.fromtimestamp(1638608696.181, tz=utc7)
+   endTime = datetime.datetime.fromtimestamp(1641287096.181, tz=utc7)
+   branchList = ['bora/main', 'scons/main', 'vsan-mgmt-ui/main']
+   cln = '9426368'  # normal: 9422624, multi: 9417864, inregular: 9438043  file list move/delete: 9426368
+   userName = 'bis'
+   # p4 login
    parser = PerforceDiffParser()
-   # download and write
    parser.loginPerforce()
-   p4alias = '/build/apps/bin/p4 -u {}'.format(SERVICE_ACCOUNT)
-   command = '{0} describe -a {1}'.format(p4alias, cln)
-   stdout, stderr, returncode = runCmd(command)
-   with open(diffFile, 'wb') as f:
-      f.write(stdout)
-
-   # linePattern1 = re.compile(r"^(\d+)([acd])(\d+)$")
-   # linePattern2 = re.compile(r"^(\d+)([acd])(\d+),(\d+)$")
-   # linePattern3 = re.compile(r"^(\d+),(\d+)([acd])(\d+)$")
-   # linePattern4 = re.compile(r"^(\d+),(\d+)([acd])(\d+),(\d+)$")
-   # line1 = '85c86'
-   # line2 = '104c105,106'
-   # line3 = '90,91c92'
-   # line4 = '5769,5770c5801,5803'
-
-   # read and parse
-   # with open(diffFile, 'rb') as f:
-   #    content = f.read()
-   #    describeList = content.decode().split("\n")
+   parser.setParams(startTime, endTime, branchList)
+   # describeList, changeTime = parser.getDescribes(cln)
+   # reviewId = parser.getReviewRequestId(describeList)
+   # print("review request id: {0}".format(reviewId))
    # lastChangeDiff = parser.getDifference(describeList)
-   # for filePath, fileDiff in lastChangeDiff.items():
-   #    print("-"*30)
-   #    print(filePath)
-   #    fileDiff.sort(key=lambda a: a[1], reverse=False)
-   #    reviewAdd = (r for r in fileDiff if '+' == r[0])
-   #    reviewDelete = (r for r in fileDiff if '-' == r[0])
-   #    for diff in reviewDelete:
-   #       print(diff)
-   #    print("*"*20)
-   #    for diff in reviewAdd:
-   #       print(diff)
+
+   # p4 changes -s submitted -u
+   changeList = parser.getChanges(userName)
+   print("{0} change list count {1}".format(userName, len(changeList)))
+   for change in changeList:
+      matchObj = re.match(r"Change (.*) on (.*) by (.*) '(.*)'", change)
+      cln = matchObj.group(1)
+      user = matchObj.group(3).split('@')[0]
+      # p4 describe -a
+      describeList, changeTime = parser.getDescribes(cln)
+      diffFile = os.path.join(downloadDir, "p4-{0}.txt".format(cln))
+      with open(diffFile, 'w') as f:
+         f.write('\n'.join(describeList))
+      print("checkin time: {0}".format(changeTime))
+      reviewId = parser.getReviewRequestId(describeList)
+      print("review request id: {0}".format(reviewId))
+      # lastChangeDiff = parser.getDifference(describeList)
+      # print("change different list: ", lastChangeDiff)
 
 

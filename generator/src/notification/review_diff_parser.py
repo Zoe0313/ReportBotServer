@@ -55,7 +55,7 @@ class ReviewDiffParser(object):
    def downloadPatchInfo(self, reviewRequestId):
       '''Download patch info by review request id'''
       url = self.queryUrl.format(reviewRequestId)
-      allReviewDiffRes = self.clientRB.get_url(url)
+      allReviewDiffRes = self.clientRB.get_url(url, timeout=5000)
       logger.info("review request #{0}".format(reviewRequestId))
       *_, lastReviewDiffResource = allReviewDiffRes.all_items
       patchInfo = lastReviewDiffResource.get_patch()
