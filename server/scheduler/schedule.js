@@ -137,7 +137,7 @@ const contentEvaluate = async (report) => {
       return { startTime, endTime }
    }
    // exec the different report generator
-   const timeout = 10 * 60 * 1000
+   let timeout = 10 * 60 * 1000
    let scriptPath = ''
    let stdout = ''
    let command = ''
@@ -171,6 +171,7 @@ const contentEvaluate = async (report) => {
          break
       }
       case 'perforce_review_check': {
+         timeout = 60 * 60 * 1000
          scriptPath = generatorPath + 'src/notification/perforce_review_check_report.py'
          const { startTime, endTime } = calculatePeriod()
          logger.info(JSON.stringify(startTime))
