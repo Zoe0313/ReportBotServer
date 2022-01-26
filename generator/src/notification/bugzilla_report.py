@@ -154,9 +154,12 @@ class BugzillaSpider(object):
    def downloadCsvFile(self, downloadUrl):
       today = datetime.datetime.today().strftime("%Y%m%d")
       csvFile = os.path.join(downloadDir, "bugzilla{}_{}.csv".format(today, uuid.uuid4()))
-      with open(csvFile, "wb") as f:
-         f.write(self.session.get(downloadUrl).content)  # Export CSV
-      return csvFile
+      content = self.session.get(downloadUrl).content
+      if content:
+         with open(csvFile, "wb") as f:
+            f.write(content)  # Export CSV
+         return csvFile
+      return "empty"
 
    def getCsvContent(self, html):
       output = "No bugs currently."
@@ -166,6 +169,8 @@ class BugzillaSpider(object):
          csvFile = self.downloadCsvFile(downloadUrl)
          if 'error' == csvFile:
             output = 'Export CSV occur unexpected error.'
+         elif 'empty' == csvFile:
+            pass
          elif os.path.exists(csvFile):
             output = self.readCsvFile(csvFile)
       return output
