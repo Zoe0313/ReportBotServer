@@ -18,7 +18,7 @@ from lxml import etree
 import pandas as pd
 import math
 from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD
-from generator.src.utils.Utils import removeOldFiles, logExecutionTime, noIntervalPolling
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
 from generator.src.utils.MiniQueryFunctions import long2short, short2long
 from generator.src.utils.Logger import logger
 
@@ -62,9 +62,6 @@ class BugzillaSpider(object):
                            '$': 2.5, '%': 3, '&': 3, "'": 0.5, '(': 1, ')': 1, '*': 1.5, '+': 2, ',': 1, '-': 1,
                            '.': 0.5, '/': 1.5, ':': 0.5, ';': 1, '<': 2, '=': 2.5, '>': 2, '?': 1.5, '@': 3, '[': 1,
                            '\\': 2, ']': 1, '^': 2, '_': 2, '`': 1, '{': 1, '|': 0.5, '}': 1, '~': 2.5}
-
-   def __del__(self):
-      removeOldFiles(downloadDir, 1, "bugzilla")
 
    def loginSystem(self):
       result = self.session.post(self.loginUrl, data={"Bugzilla_login": BUGZILLA_ACCOUNT,
@@ -155,9 +152,12 @@ class BugzillaSpider(object):
       today = datetime.datetime.today().strftime("%Y%m%d")
       csvFile = os.path.join(downloadDir, "bugzilla{}_{}.csv".format(today, uuid.uuid4()))
       content = self.session.get(downloadUrl).content
-      if content:
+      content = content.strip()
+      logger.info("download csv content size: {0}".format(len(content)))
+      if len(content) > 0:
          with open(csvFile, "wb") as f:
             f.write(content)  # Export CSV
+         logger.info("download csv file: {0}".format(csvFile))
          return csvFile
       return "empty"
 
@@ -336,7 +336,14 @@ def parseArgs():
 
 if __name__ == "__main__":
    args = parseArgs()
-   spider = BugzillaSpider(args)
-   ret = spider.getReport()
-   print(ret)
-   logger.info(ret)
+   try:
+      spider = BugzillaSpider(args)
+      ret = spider.getReport()
+      print(ret)
+      logger.info(ret)
+   except Exception as e:
+      from generator.src.utils.MiniQueryFunctions import postMessageByChannelId
+      from generator.src.utils.BotConst import VSAN_SLACKBOT_MONITOR_CHANNELID
+      nowTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+      errorMsg = "Time: {0}, *{1}* Bugzilla report generator occur issue:\n{2}".format(nowTime, args.title, str(e))
+      postMessageByChannelId(channelId=VSAN_SLACKBOT_MONITOR_CHANNELID, message=errorMsg)

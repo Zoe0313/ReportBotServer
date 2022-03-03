@@ -117,6 +117,13 @@ def isServiceAccount(account):
    return '1' == ret
 
 
-if __name__ == "__main__":
-   ret = outputMemberFile("vgunturu")
-   logger.info(ret)
+def postMessageByChannelId(channelId, message):
+   from generator.src.utils.BotConst import POST_MESSAGE_API_BY_CHANNEL, POST_MESSAGE_BEAR_TOKEN
+   urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+   url = POST_MESSAGE_API_BY_CHANNEL.format(channelId)
+   session = requests.session()
+   session.headers = {"Authorization": POST_MESSAGE_BEAR_TOKEN}
+   result = session.post(url, data={"text": message}, verify=False)
+   logger.info("post message by rest-api, response: {0}".format(result.content.decode()))
+
