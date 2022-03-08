@@ -78,6 +78,13 @@
          }
       },
       {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": ":api: <https://slackbot.vela.decc.vmware.com/api/v1/index.html#/|Slack Bot API>"
+         }
+      },
+      {
          "type": "divider"
       }
    ]
