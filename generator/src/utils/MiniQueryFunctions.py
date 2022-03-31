@@ -30,7 +30,7 @@ def long2short(url):
    encodedBody = json.dumps({"longUrl": url, "userLabel": "string"}).encode('utf-8')
    try:
       res = http.request(method='POST',
-                         url="https://via-api.vmware.com/via-console/app-api/v1/vialink",
+                         url="https://via.vmware.com/via-console/app-api/v1/vialink",
                          headers={'Content-Type': 'application/json',
                                   "X-HeaderKey": "%241%24Yfai%2FUQF%24egNLEHGRocRPuPuzq3tsE%2F"},
                          body=encodedBody)
