@@ -98,7 +98,7 @@ class BugzillaSpider(object):
          df = df.sort_values(by="Total", axis=0, ascending=False)
          df = df.drop(columns=['Total'])
       else:
-         df = df.sort_values(by="Total", axis=0, ascending=True)
+         df = df.sort_values(by="Total", axis=0, ascending=False)  # descending sort
       return df, isTranspose, axis2param.get(verticalAxis, ''), axis2param.get(horizontalAxis, '')
 
    def getSplitTable(self, csvFile):
@@ -258,10 +258,15 @@ class BugzillaSpider(object):
          for columnName in columnNameList:
             count = dfData.loc[indexName][columnName]
             shortUrlKey = self.getKeyName(indexName, columnName, multiValue)
-            shortUrl = '' if 0 == count else shortUrlDict.get(shortUrlKey, '')
-            countWithLink = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
-            tableRowList.append(countWithLink)
             columnLength = columnLens[columnName]
+            if 0 == count:  # replace 0 into -
+               shortUrl = ''
+               countWithLink = '-'
+               columnLength += 1
+            else:
+               shortUrl = shortUrlDict.get(shortUrlKey, '')
+               countWithLink = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
+            tableRowList.append(countWithLink)
             formatList.append("{:<%ds}" % (len('<%s|>' % shortUrl) + columnLength - len(str(count)) + 1
                                            if shortUrl else columnLength))
          tableRowList.append(indexName)
