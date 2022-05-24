@@ -9,21 +9,20 @@ bugzilla_report.py
 import os
 import re
 import uuid
-import hashlib
-import pickle
 import datetime
 import requests
+import traceback
 from urllib import parse
 from lxml import etree
 import pandas as pd
 import math
-from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD
+from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD, BUGZILLA_DETAIL_URL
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
-from generator.src.utils.MiniQueryFunctions import long2short, short2long
+from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, short2long
 from generator.src.utils.Logger import logger
 
-downloadDir = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp")
-os.makedirs(downloadDir, exist_ok=True)
+DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp")
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # transfer Horizontal/Vertical Axis name to query param
 axis2param = {
@@ -43,6 +42,11 @@ axis2param = {
    'Votes': 'votes'
 }
 
+# bug summary str limit length
+SUMMARY_MAX_LENGTH = 57
+# show buglist records max number
+SHOW_BUG_RECORD_MAX_NUM = 23
+
 class BugzillaSpider(object):
    def __init__(self, args):
       self.loginUrl = "https://bugzilla.eng.vmware.com/"
@@ -50,6 +54,7 @@ class BugzillaSpider(object):
       self.title = args.title.strip('"')
       self.buglistUrl = args.url.strip('"')
       self.session = requests.session()
+      self.longUrl = ''
       self.indexQueryStr = ''
       self.columnQueryStr = ''
       self.countQueryStr = ''
@@ -150,7 +155,7 @@ class BugzillaSpider(object):
    @noIntervalPolling
    def downloadCsvFile(self, downloadUrl):
       today = datetime.datetime.today().strftime("%Y%m%d")
-      csvFile = os.path.join(downloadDir, "bugzilla{}_{}.csv".format(today, uuid.uuid4()))
+      csvFile = os.path.join(DOWNLOAD_DIR, "bugzilla{}_{}.csv".format(today, uuid.uuid4()))
       content = self.session.get(downloadUrl).content
       content = content.strip()
       logger.info("download csv content size: {0}".format(len(content)))
@@ -191,31 +196,20 @@ class BugzillaSpider(object):
          paramList.append(columnName)
       return queryStr.format(*paramList).replace("category=-total-&", "")
 
-   def readMemoryShortUrl(self, pklFile):
-      if os.path.exists(pklFile):
-         with open(pklFile, 'rb') as f:
-            return pickle.load(f)
-      return {}
-
-   def writeMemoryShortUrl(self, pklFile, urlDict):
-      with open(pklFile, 'wb') as f:
-         pickle.dump(urlDict, f)
-
    def getShortUrlDict(self, html):
       shortUrlDict = {}
       longUrlList = html.xpath('//*[@id="reportContainer"]//td//a//@href')
       if len(longUrlList) > 0:
          lastLongUrl = longUrlList[-1]
          completeLastLongUrl = self.foreUrl.format(lastLongUrl)
-         key = hashlib.sha256(completeLastLongUrl.encode()).hexdigest()
-         pklFile = os.path.join(downloadDir, f"{key}.pkl")
-         shortUrlDict = self.readMemoryShortUrl(pklFile)
+         urlTails = {}
          for url in longUrlList:
             longUrl = self.foreUrl.format(url)
             urlTail = longUrl.split(completeLastLongUrl)[1][1:] if url != lastLongUrl else 'Total'
             urlTail = parse.unquote(urlTail)
-            shortUrlDict[urlTail] = shortUrlDict.get(urlTail) if shortUrlDict.get(urlTail) else long2short(longUrl)
-         self.writeMemoryShortUrl(pklFile, shortUrlDict)
+            urlTails[urlTail] = longUrl
+         shortUrlDict = getShortUrlsFromCacheFile(fileDir=DOWNLOAD_DIR, fileKey=completeLastLongUrl,
+                                                  urlTailDict=urlTails)
       return shortUrlDict
 
    def outputSimpleTable(self, dfData, shortUrlDict):
@@ -276,19 +270,91 @@ class BugzillaSpider(object):
 
    def getBuglistReport(self, html):
       message = []
-      try:
-         bugCountInfos = html.xpath('//*[@id="buglistHeader"]/div/div[2]/h3[1]/text()')
-         bugCountInfoStr = bugCountInfos[0].strip().lower()
-         if "one bug found" == bugCountInfoStr:
-            message.append('%s : <%s|%s>' % (self.title, self.buglistUrl, 1))
-         else:
-            findRes = re.findall("(.*?) bugs found", bugCountInfoStr)
-            bugCount = 0 if "no" == findRes[0] else int(findRes[0])
-            message.append('%s : <%s|%s>' % (self.title, self.buglistUrl, bugCount))
-      except Exception as e:
-         logger.error(f"{self.buglistUrl} query buglist error: {e}")
-         message.append(":warning: temporary bugzilla server down.")
+      message.append("*Title: {0}*".format(self.title))
+      bugCountInfos = html.xpath('//*[@id="buglistHeader"]/div/div[2]/h3[1]/text()')
+      bugCountInfoStr = bugCountInfos[0].strip().lower()
+      if "one bug found" == bugCountInfoStr:
+         bugCount = 1
+      else:
+         findRes = re.findall("(.*?) bugs found", bugCountInfoStr)
+         bugCount = 0 if "no" == findRes[0] else int(findRes[0])
+      logger.info("bug count: {0}".format(bugCount))
+      if bugCount > 0:
+         bugCountInfo = "One bug found." if 1 == bugCount else "{0} bugs found.".format(bugCount)
+         message.append(bugCountInfo)
+         message.extend(self.getBuglistDetail())
+      else:
+         message.append("No bugs currently.")
       return message
+
+   def getBuglistDetail(self):
+      downloadUrl = self.longUrl + ';ctype=csv'
+      csvFile = self.downloadCsvFile(downloadUrl)
+      if os.path.exists(csvFile):
+         df = pd.read_csv(csvFile)
+         if not df.empty:
+            df.fillna(value="", inplace=True)
+            lineCount = len(df)
+            if lineCount > SHOW_BUG_RECORD_MAX_NUM:
+               df = df.head(SHOW_BUG_RECORD_MAX_NUM)
+            messages = []
+            # get existed column name list
+            headers = df.columns.values
+            paramsLength = {'Bug ID': 7, 'Assignee': -1, 'Priority': 8, 'ETA': 10, 'Summary (first 60 chars)': 60}
+            showParams = [k for k, v in paramsLength.items()]
+            showParams = [param for param in showParams if param in headers]
+            if 'Assignee' in showParams:
+               paramsLength['Assignee'] = max([len(user) for user in df['Assignee'].values] + [len('Assignee')])
+            # sort by columns
+            sortParams = ['Priority', 'ETA']
+            sortParams = [param for param in sortParams if param in headers]
+            if len(sortParams) > 0:
+               ascendingList = [param != 'ETA' for param in sortParams]
+               df = df.sort_values(by=sortParams, ascending=ascendingList)
+            # calculate column chars size
+            formatList = []
+            for param, length in paramsLength.items():
+               if param in showParams:
+                  formatList.append("{:<%ds}" % length)
+            lineFormatter = formatList[0] + "  " + " ".join(formatList[1:-1]) + " {}"
+            # get show column list
+            nameDict = {'Bug ID': 'PR', 'Assignee': 'Assignee', 'Priority': 'Priority', 'ETA': 'ETA',
+                        'Summary (first 60 chars)': 'Summary'}
+            showColumns = [name for param, name in nameDict.items() if param in headers]
+            logger.info('show columns: {0}'.format(showColumns))
+            # make buglist content
+            def getLines():
+               messages = []
+               messages.append("```")
+               messages.append(lineFormatter.format(*showColumns))
+               for _, bug in df.iterrows():
+                  valueList = []
+                  for param in showParams:
+                     value = bug[param]
+                     if "Bug ID" == param:
+                        value = "<%s|%s>" % (BUGZILLA_DETAIL_URL + str(value), str(value))
+                     elif "Summary (first 60 chars)" == param:
+                        value = value if len(value) < SUMMARY_MAX_LENGTH else value[:SUMMARY_MAX_LENGTH] + "..."
+                     valueList.append(value)
+                  messages.append(lineFormatter.format(*valueList))
+               messages.append("```")
+               return messages
+            messages.extend(getLines())
+            # if line number is more than the maximum number, only show the first maximum records and
+            # supply the buglist link here
+            if lineCount > SHOW_BUG_RECORD_MAX_NUM:
+               if "via.vmw.com" in self.buglistUrl:
+                  viewbuglistUrl = self.buglistUrl
+               else:
+                  shortUrlDict = getShortUrlsFromCacheFile(fileDir=DOWNLOAD_DIR, fileKey=self.buglistUrl,
+                                                           urlTailDict={"BugList": self.buglistUrl})
+                  viewbuglistUrl = shortUrlDict["BugList"]
+               messages.append("... ({0} more bugs not shown) For full list, you can check {1}".
+                               format(SHOW_BUG_RECORD_MAX_NUM, viewbuglistUrl))
+            return messages
+         else:
+            logger.info("CSV file {0}'s content is empty.".format(csvFile))
+      raise Exception('View list as CSV occur unexpected error.')
 
    def getTabularReport(self, html):
       buttonName = html.xpath('//*[@id="reportContainer"]/p/a[2]/text()')
@@ -316,17 +382,17 @@ class BugzillaSpider(object):
          logger.debug(f"Error happened in generating bugzilla report: Because of {e}, it can't login bugzilla system.")
          return f":warning: Because of `{e}`, it can't login bugzilla system."
 
-      longUrl = short2long(self.buglistUrl) if "via.vmw.com" in self.buglistUrl else self.buglistUrl
+      self.longUrl = short2long(self.buglistUrl) if "via.vmw.com" in self.buglistUrl else self.buglistUrl
       res = self.session.get(self.buglistUrl)
-      content = res.content.decode()
+      content = res.content.decode(errors='ignore')
       html = etree.HTML(content)
 
-      if "/buglist.cgi" in longUrl:  # query buglist
+      if "/buglist.cgi" in self.longUrl:  # query buglist
          message = self.getBuglistReport(html)
-      elif "/report.cgi" in longUrl:  # tabular
+      elif "/report.cgi" in self.longUrl:  # tabular
          message = self.getTabularReport(html)
       else:
-         logger.debug(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {longUrl}")
+         logger.debug(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
          message = [":warning: Unsupported bugzilla url."]
       report = "\n".join(message)
       return report
@@ -349,6 +415,6 @@ if __name__ == "__main__":
    except Exception as e:
       from generator.src.utils.MiniQueryFunctions import postMessageByChannelId
       from generator.src.utils.BotConst import VSAN_SLACKBOT_MONITOR_CHANNELID
-      nowTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-      errorMsg = "Time: {0}, *{1}* Bugzilla report generator occur issue:\n{2}".format(nowTime, args.title, str(e))
+      error = traceback.format_exc(limit=None, chain=True)
+      errorMsg = "`{0}` Bugzilla report generator occur error:\n```{1}```".format(args.title, error)
       postMessageByChannelId(channelId=VSAN_SLACKBOT_MONITOR_CHANNELID, message=errorMsg)
