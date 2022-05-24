@@ -12,6 +12,9 @@ import json
 import requests
 import urllib3
 import certifi
+import hashlib
+import pickle
+from filelock import FileLock
 from generator.src.utils.Logger import logger
 
 
@@ -39,6 +42,27 @@ def long2short(url):
       logger.error("get short url error: ", e)
       return None
    return r.get('shortUrl')
+
+def readMemoryFile(pklFile):
+   if os.path.exists(pklFile):
+      with FileLock(pklFile + ".lock"):
+         with open(pklFile, 'rb') as f:
+            return pickle.load(f)
+
+def writeMemoryFile(pklFile, data):
+   with FileLock(pklFile + ".lock"):
+      with open(pklFile, 'wb') as f:
+         pickle.dump(data, f)
+
+def getShortUrlsFromCacheFile(fileDir:str, fileKey:str, urlTailDict:dict):
+   key = hashlib.sha256(fileKey.encode()).hexdigest()
+   pklFile = os.path.join(fileDir, "{0}.pkl".format(key))
+   shortUrlDict = readMemoryFile(pklFile)
+   shortUrlDict = shortUrlDict if shortUrlDict else {}
+   for urlTail, longUrl in urlTailDict.items():
+      shortUrlDict[urlTail] = shortUrlDict.get(urlTail) if shortUrlDict.get(urlTail) else long2short(longUrl)
+   writeMemoryFile(pklFile, shortUrlDict)
+   return shortUrlDict
 
 def queryMembersByLdap(managerName):
    '''
