@@ -11,6 +11,7 @@ import os
 import re
 import time
 import datetime
+from urllib import parse
 from collections import defaultdict, namedtuple
 from generator.src.utils.Utils import runCmd, logExecutionTime
 from generator.src.utils.Logger import logger
@@ -22,7 +23,7 @@ SUMMARY_MAX_LENGTH = 80
 class PerforceSpider(object):
    def __init__(self, args):
       self.p4Path = '/build/apps/bin/p4 -u {}'.format(SERVICE_ACCOUNT)
-      self.title = args.title.strip('"')
+      self.title = parse.unquote(args.title).strip('"')
       self.branchList = args.branches.split(",")
       # perforce use UTC7 time. The UTC7 time is 7 hours later than the system time.
       utc7 = datetime.timezone(offset=-datetime.timedelta(hours=7))
@@ -88,7 +89,6 @@ class PerforceSpider(object):
 
       message.append("```")
       report = "\n".join(message)
-      report = report.replace("'", "").replace('"', "")
       return report
 
    def getRecords(self):

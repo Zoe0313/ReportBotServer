@@ -51,7 +51,7 @@ class BugzillaSpider(object):
    def __init__(self, args):
       self.loginUrl = "https://bugzilla.eng.vmware.com/"
       self.foreUrl = "https://bugzilla.eng.vmware.com/{}"
-      self.title = args.title.strip('"')
+      self.title = parse.unquote(args.title).strip('"')
       self.buglistUrl = args.url.strip('"')
       self.session = requests.session()
       self.longUrl = ''

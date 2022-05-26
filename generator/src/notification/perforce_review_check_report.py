@@ -12,6 +12,7 @@ features:
 
 import re
 import datetime
+from urllib import parse
 from collections import defaultdict
 from perforce_diff_parser import PerforceDiffParser, ReviewLinkNotFound
 from review_diff_parser import ReviewDiffParser
@@ -43,7 +44,7 @@ class CompareNotEqual(Exception):
 
 class PerforceReviewCheckSpider(object):
    def __init__(self, args):
-      self.title = args.title
+      self.title = parse.unquote(args.title)
       self.branchList = args.branches.split(",")
       self.branchList = [branch for branch in filter(self.isVSAN, self.branchList)]
       self.userList = args.users.split(",")
