@@ -141,12 +141,13 @@ const contentEvaluate = async (report) => {
    let scriptPath = ''
    let stdout = ''
    let command = ''
+   const reportTitle = report.title.replace(/'/g, "%27")
    switch (report.reportType) {
       case 'bugzilla': {
          // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'
          scriptPath = generatorPath + 'src/notification/bugzilla_report.py'
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
-            `--title '${report.title}' ` +
+            `--title '${reportTitle}' ` +
             `--url '${report.reportSpecConfig.bugzillaLink}'`
          logger.debug(`execute the bugzilla report generator: ${command}`)
          stdout = await execCommand(command, timeout)
@@ -161,7 +162,7 @@ const contentEvaluate = async (report) => {
          const { startTime, endTime } = calculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
-            --title '${report.title}' \
+            --title '${reportTitle}' \
             --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
             --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
             --startTime ${startTime.getTime() / 1000} \
@@ -176,7 +177,7 @@ const contentEvaluate = async (report) => {
          const { startTime, endTime } = calculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
-            --title '${report.title}' \
+            --title '${reportTitle}' \
             --branches '${report.reportSpecConfig.perforceReviewCheck.branches.join(',')}' \
             --users '${report.reportSpecConfig.perforceReviewCheck.flattenMembers.join(',')}' \
             --startTime ${startTime.getTime() / 1000} \
@@ -189,7 +190,7 @@ const contentEvaluate = async (report) => {
          scriptPath = generatorPath + 'src/notification/bugzilla_assignee_report.py'
          const assignees = await getUsersName(report.reportSpecConfig.bugzillaAssignee)
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
-         `--title '${report.title}' ` +
+         `--title '${reportTitle}' ` +
          `--users '${assignees.join(',')}'`
          logger.debug(`execute the bugzilla by assignee report generator: ${command}`)
          stdout = await execCommand(command, timeout)

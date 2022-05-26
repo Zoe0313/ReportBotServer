@@ -9,6 +9,7 @@ bugzilla_assignee_report.py
 import base64
 import requests
 import re
+from urllib import parse
 from collections import defaultdict, namedtuple
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
@@ -20,7 +21,7 @@ tabStr = " "*4
 
 class BugzillaAssigneeSpider(object):
    def __init__(self, args):
-      self.title = args.title
+      self.title = parse.unquote(args.title)
       self.userList = args.users.split(",")
       headerList = ['Pri', 'Status', 'ETA', 'FixBy', 'Summary']
       self.columnDict = {header: len(header) for header in headerList}

@@ -8,12 +8,13 @@ svs_pass_rate_report.py
 '''
 import requests
 import datetime
+from urllib import parse
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
 from generator.src.utils.Logger import logger
 
 class SVSPassRateSpider(object):
    def __init__(self, args):
-      self.title = args.title
+      self.title = parse.unquote(args.title)
       self.testCaseList = args.tests.split(',')
       self.currentTime = datetime.datetime.now()
       self.runTimes = [20, 50, 100]
