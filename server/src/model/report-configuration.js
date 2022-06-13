@@ -349,7 +349,7 @@ const getDirectReporters = async (members) => {
             }
          }
       }
-      return axios.post('https://ldap-data.svc-stage.eng.vmware.com/ldap/_search', body)
+      return axios.post('https://ldap-data.ara.decc.vmware.com/ldap/_search', body)
          .then(res => {
             // avoid someone report to himself in case causing endless loop
             return res.data.hits?.hits?.map(hit => hit._source.username)
