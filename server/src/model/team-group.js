@@ -28,18 +28,19 @@ const TeamGroup = mongoose.model('TeamGroup', TeamGroupSchema)
 const updateTeamGroup = async () => {
    const initTeams = [{
       code: 'vsan',
-      name: 'vsan engineer',
+      name: 'vsan engineers',
       membersFilters: [{
          condition: 'include',
          type: 'all_reporters',
-         // include vgunturu(WAAPGUG8J), vsubhashini(WPVQ9M7QT), bstoicov(WAAGN7CBE) all
-         members: ['WAAPGUG8J', 'WPVQ9M7QT', 'WAAGN7CBE']
+         // include vgunturu(WAAPGUG8J), vsubhashini(WPVQ9M7QT), bstoicov(WAAGN7CBE),
+         // achakravarti(WABLCQTFG) all
+         members: ['WAAPGUG8J', 'WPVQ9M7QT', 'WAAGN7CBE', 'WABLCQTFG']
       },
       {
          condition: 'include',
          type: 'selected',
-         // include amdurm(WAA2WLE72), daip(WABL9CTK8)
-         members: ['WAA2WLE72', 'WABL9CTK8']
+         // include amdurm(WAA2WLE72), daip(WABL9CTK8), randhirs(WAAGK72PN)
+         members: ['WAA2WLE72', 'WABL9CTK8', 'WAAGK72PN']
       }
       ]
    }]

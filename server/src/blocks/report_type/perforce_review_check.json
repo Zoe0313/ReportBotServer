@@ -42,14 +42,14 @@
 				"min_query_length": 0,
 				"placeholder": {
 					"type": "plain_text",
-					"text": "Search team name. E.g. vsan engineer",
+					"text": "Search team name. E.g. vsan engineers",
 					"emoji": true
 				},
             "initial_options": [
                {
                   "text": {
                      "type": "plain_text",
-                     "text": "vsan engineer"
+                     "text": "vsan engineers"
                   },
                   "value": "vsan"
                }
