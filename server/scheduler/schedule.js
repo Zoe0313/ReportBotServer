@@ -141,7 +141,7 @@ const contentEvaluate = async (report) => {
    let scriptPath = ''
    let stdout = ''
    let command = ''
-   const reportTitle = report.title.replace(/'/g, "%27")
+   const reportTitle = report.title.replace(/'/g, '%27')
    switch (report.reportType) {
       case 'bugzilla': {
          // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'

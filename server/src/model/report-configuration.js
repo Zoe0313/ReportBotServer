@@ -361,7 +361,7 @@ const getDirectReporters = async (members) => {
 // flatten p4 checkin members based on members filters
 const flattenMembers = async (membersFilters, selectedTeamsMembers) => {
    if (membersFilters == null || membersFilters.length === 0) {
-      return []
+      return selectedTeamsMembers
    }
    logger.debug(`flatten members from members filters ${JSON.stringify(membersFilters)}`)
    // sort filters to make all include filters be in front of exclude filters
