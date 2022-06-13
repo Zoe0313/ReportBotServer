@@ -32,7 +32,9 @@ class PerforceSpider(object):
       self.checkTime = "{0},{1}".format(startTime, endTime)
       self.userList = args.users.split(",")
       self.showTitle = '*Title: {0}*\nBranch: {1}\nCheckin Time(PST): {2} --- {3}'.\
-         format(self.title, " & ".join(self.branchList), startTime, endTime)
+         format(self.title, " & ".join(self.branchList),
+                datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d %H:%M"),
+                datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d %H:%M"))
 
    def loginSystem(self):
       os.environ['P4CONFIG'] = ""
