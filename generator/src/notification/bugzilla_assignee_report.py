@@ -72,7 +72,6 @@ class BugzillaAssigneeSpider(object):
          message.append("No bugs assigned to selected members. :coffee:")
 
       report = "\n".join(message)
-      report = report.replace("'", "").replace('"', "")
       return report
 
    def getRecords(self, assigneeMaxLength=20, summaryMaxLength=80):

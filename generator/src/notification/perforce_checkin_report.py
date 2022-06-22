@@ -52,7 +52,7 @@ class PerforceSpider(object):
    @logExecutionTime
    def getReport(self):
       if not self.loginSystem():
-         return "Perforce internal error"
+         raise Exception("Because of `{0}`, p4 login failed.".format("Perforce internal error"))
 
       message = []
       message.append(self.showTitle)

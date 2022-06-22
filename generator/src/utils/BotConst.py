@@ -51,4 +51,4 @@ POST_MESSAGE_API_BY_USER = "https://slackbot.vela.decc.vmware.com/api/v1/user/{0
 # bearer token on vSANSlackbot APP for posting message
 POST_MESSAGE_BEAR_TOKEN = "Bearer d89f55072b9d4fbda1e38a66c83adaad"
 # vsan-slackbot-monitor channel id
-VSAN_SLACKBOT_MONITOR_CHANNELID = "C026LRRM7T4"
+VSAN_SLACKBOT_MONITOR_CHANNELID = "C03JWGX5GJW"
