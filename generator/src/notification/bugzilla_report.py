@@ -11,7 +11,6 @@ import re
 import uuid
 import datetime
 import requests
-import traceback
 from urllib import parse
 from lxml import etree
 import pandas as pd
@@ -78,7 +77,7 @@ class BugzillaSpider(object):
       if len(divTxts) > 0:
          if "Common Tasks" != divTxts[0]:
             logger.error(divTxts)
-            raise Exception(divTxts[0])
+            raise Exception("Because of `{0}`, it can't login bugzilla system.".format(divTxts[0]))
 
    def regularizeTable(self, df):
       columnList = df.columns.values.tolist()[1:]
@@ -376,11 +375,7 @@ class BugzillaSpider(object):
 
    @logExecutionTime
    def getReport(self):
-      try:
-         self.loginSystem()
-      except Exception as e:
-         logger.debug(f"Error happened in generating bugzilla report: Because of {e}, it can't login bugzilla system.")
-         return f":warning: Because of `{e}`, it can't login bugzilla system."
+      self.loginSystem()
 
       self.longUrl = short2long(self.buglistUrl) if "via.vmw.com" in self.buglistUrl else self.buglistUrl
       res = self.session.get(self.buglistUrl)
@@ -407,14 +402,7 @@ def parseArgs():
 
 if __name__ == "__main__":
    args = parseArgs()
-   try:
-      spider = BugzillaSpider(args)
-      ret = spider.getReport()
-      print(ret)
-      logger.info(ret)
-   except Exception as e:
-      from generator.src.utils.MiniQueryFunctions import postMessageByChannelId
-      from generator.src.utils.BotConst import VSAN_SLACKBOT_MONITOR_CHANNELID
-      error = traceback.format_exc(limit=None, chain=True)
-      errorMsg = "`{0}` Bugzilla report generator occur error:\n```{1}```".format(args.title, error)
-      postMessageByChannelId(channelId=VSAN_SLACKBOT_MONITOR_CHANNELID, message=errorMsg)
+   spider = BugzillaSpider(args)
+   ret = spider.getReport()
+   print(ret)
+   logger.info(ret)

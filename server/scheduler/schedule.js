@@ -98,6 +98,14 @@ const notificationExecutor = async (report, contentEvaluate) => {
          } catch (e1) {
             logger.error(`save failed report history failed again since error: ${JSON.stringify(e1)}`)
          }
+         // service e2e verify - send error message to monitoring channel
+         let errorMessage = `*Title: ${reportHistory.title}*\n`
+         errorMessage += `Sent Time: ${reportHistory.sentTime}\n`
+         errorMessage += `Error: ${reportHistory.content}`
+         client.chat.postMessage({
+            channel: process.env.ISSUE_CHANNEL_ID,
+            text: errorMessage
+         })
       }
    }
 }
