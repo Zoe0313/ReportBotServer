@@ -9,7 +9,7 @@ svs_pass_rate_report.py
 import requests
 import datetime
 from urllib import parse
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport
 from generator.src.utils.Logger import logger
 
 class SVSPassRateSpider(object):
@@ -55,10 +55,7 @@ class SVSPassRateSpider(object):
          tableRowlist.append(testCase)
          lineFormatter += "{}"
          message.append(lineFormatter.format(*tableRowlist))
-
-      report = "\n".join(message)
-      report = report.replace("'", "").replace('"', "")
-      return report
+      return splitOverlengthReport(message)
 
 import argparse
 def parseArgs():

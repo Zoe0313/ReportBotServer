@@ -12,12 +12,11 @@ import re
 from urllib import parse
 from collections import defaultdict, namedtuple
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport
 from generator.src.utils.Logger import logger
 Record = namedtuple('Record', ['bugId', 'assignee', 'reporter', 'severity', 'priority',
                                'status', 'fixBy', 'eta', 'summary'])
 Nan = '---'
-tabStr = " "*4
 
 class BugzillaAssigneeSpider(object):
    def __init__(self, args):
@@ -55,24 +54,22 @@ class BugzillaAssigneeSpider(object):
       message = []
       message.append("*Title: {0}*".format(self.title))
       if result:
-         lineFormatter = tabStr*2 + "{0}: {1} {2} _FixBy:_ {3} _ETA:_ {4}\n" + " "*26 + "_Summary_: {5}"
+         lineFormatter = "{0}: {1} {2} _FixBy:_ {3} _ETA:_ {4}\n" + " "*26 + "_Summary_: {5}"
          for user in self.userList:
             recordList = result.get(user, [])
             recordList.sort(key=lambda r: r.bugId, reverse=True)
             if len(recordList) > 0:
-               message.append("○ *{0}* (Count: *{1}*)".format(user, len(recordList)))
+               message.append("*{0}* (Count: *{1}*)".format(user, len(recordList)))
                for record in recordList:
                   idWithLink = "<%s|%s>" % (self.showBugUrl.format(record.bugId), record.bugId)
                   line = lineFormatter.format(idWithLink, record.priority, record.status, record.fixBy, record.eta,
                                               record.summary)
                   message.append(line)
             else:
-               message.append("*{0} (No Bug)* :coffee:".format(user))
+               message.append("*{0}* (No bug.) :coffee:".format(user))
       else:
          message.append("No bugs assigned to selected members. :coffee:")
-
-      report = "\n".join(message)
-      return report
+      return splitOverlengthReport(message)
 
    def getRecords(self, assigneeMaxLength=20, summaryMaxLength=80):
       pattern = re.compile(r'fix_by_product:(.*), fix_by_version:(.*), fix_by_phase:(.*)', re.M | re.I)

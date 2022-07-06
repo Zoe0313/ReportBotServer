@@ -24,6 +24,14 @@ const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
 
+const asyncForEach = async function (array, callback) {
+   let results = []
+   for (let index = 0; index < array.length; index++) {
+      results = await callback(array[index])
+   }
+   return results
+}
+
 const notificationExecutor = async (report, contentEvaluate) => {
    let reportHistory = null
    try {
@@ -44,23 +52,24 @@ const notificationExecutor = async (report, contentEvaluate) => {
       await reportHistory.save()
 
       // 10 mins timeout
-      const stdout = await contentEvaluate(report)
-      logger.info(`stdout of notification ${report.title}: ${stdout}`)
+      const messages = await contentEvaluate(report)
+      logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messages)}`)
 
       // post reports to slack channels
       const results = await Promise.all(
          report.conversations.map(conversation => {
-            return client.chat.postMessage({
-               channel: conversation,
-               text: stdout
-            }).catch((e) => {
-               logger.error(`failed to post message to conversation ${conversation}` +
-                  `since error: ${JSON.stringify(e)}`)
-               return null
+            return asyncForEach(messages, async message => {
+               return await client.chat.postMessage({
+                  channel: conversation,
+                  text: message
+               }).catch((e) => {
+                  logger.error(`failed to post message to conversation ${conversation}` +
+                     `since error: ${JSON.stringify(e)}`)
+                  return null
+               })
             })
          })
       )
-
       // update status and content of report history
       reportHistory.sentTime = new Date()
 
@@ -76,7 +85,7 @@ const notificationExecutor = async (report, contentEvaluate) => {
          throw new Error('Sent notification to all conversations failed.')
       }
       reportHistory.tsMap = tsMap
-      reportHistory.content = stdout
+      reportHistory.content = JSON.stringify(messages[0])
       reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
       await reportHistory.save()
    } catch (e) {
@@ -210,14 +219,33 @@ const contentEvaluate = async (report) => {
       default:
          throw new Error(`report type ${report.reportType} not supported.`)
    }
+   let mentionUserNames = ''
    const mentionUsers = report.mentionUsers?.concat(
       report.mentionGroups?.map(group => group.value) || []) || []
    logger.debug(`mentionusers: ${mentionUsers}`)
    if (mentionUsers != null && mentionUsers.length > 0) {
-      const mentionUserNames = '\n' + (await getConversationsName(mentionUsers))
-      stdout += mentionUserNames
+      mentionUserNames = '\n' + (await getConversationsName(mentionUsers))
    }
-   return stdout
+   // If the report type is text, we return the report content by array directly.
+   if ('text' === report.reportType) {
+      stdout += mentionUserNames
+      return [stdout]
+   }
+   try {
+      const output = JSON.parse(stdout)
+      // Here output's format is {“message”: [“……“, “……“]}
+      if (typeof output === 'object' && Array.isArray(output.messages)) {
+         const messages = output.messages?.map(message => unescape(message)) || []
+         if (messages.length > 0) {
+            messages[messages.length - 1] += mentionUserNames
+         }
+         return messages
+      }
+   } catch (e) {
+      logger.error(`failed to JSON.parse(stdout):`)
+      logger.error(e)
+   }
+   return [stdout]
 }
 
 const unregisterScheduler = function (id) {
@@ -344,10 +372,13 @@ const invokeNow = async function (id, sendToUserId) {
    if (job != null) {
       if (sendToUserId) {
          const report = await ReportConfiguration.findById(id)
-         const stdout = await contentEvaluate(report)
-         client.chat.postMessage({
-            channel: sendToUserId,
-            text: stdout
+         const messages = await contentEvaluate(report)
+         logger.debug(`send notification to me now: ${JSON.stringify(messages)}`)
+         asyncForEach(messages, async message => {
+            await client.chat.postMessage({
+               channel: sendToUserId,
+               text: message
+            })
          })
       } else {
          job.invoke()

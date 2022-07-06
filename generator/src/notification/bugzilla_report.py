@@ -16,7 +16,7 @@ from lxml import etree
 import pandas as pd
 import math
 from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD, BUGZILLA_DETAIL_URL
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport
 from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, short2long
 from generator.src.utils.Logger import logger
 
@@ -134,6 +134,7 @@ class BugzillaSpider(object):
          dfDict[tableTitle], isTranspose, ver, hor = self.regularizeTable(partDf)
       return dfDict, isTranspose, axis2param.get(multiAxis, ''), ver, hor
 
+   @noIntervalPolling
    def readCsvFile(self, csvFile):
       df = pd.read_csv(csvFile)
       firstHeaderName = df.columns.values[0]
@@ -177,6 +178,8 @@ class BugzillaSpider(object):
             pass
          elif os.path.exists(csvFile):
             output = self.readCsvFile(csvFile)
+            if 'error' == output:
+               output = 'Export CSV occur unexpected error.'
       return output
 
    def getKeyName(self, indexName, columnName, multiValue=''):
@@ -268,9 +271,14 @@ class BugzillaSpider(object):
       return message
 
    def getBuglistReport(self, html):
+      bugCountInfos = html.xpath('//*[@id="buglistHeader"]/div/div[2]/h3[1]/text()')
+      if not (len(bugCountInfos) > 0 and "bug" in bugCountInfos[0].lower()):
+         logger.error(f"{self.buglistUrl} can't find bug count")
+         raise Exception(f"I can't find bug count on <{self.buglistUrl}|bugzilla page>. "
+                         f"Maybe temporary bugzilla server down.")
+
       message = []
       message.append("*Title: {0}*".format(self.title))
-      bugCountInfos = html.xpath('//*[@id="buglistHeader"]/div/div[2]/h3[1]/text()')
       bugCountInfoStr = bugCountInfos[0].strip().lower()
       if "one bug found" == bugCountInfoStr:
          bugCount = 1
@@ -359,7 +367,8 @@ class BugzillaSpider(object):
       buttonName = html.xpath('//*[@id="reportContainer"]/p/a[2]/text()')
       if not (len(buttonName) > 0 and buttonName[0] == "Export CSV"):
          logger.error(f"{self.buglistUrl} can't find Export CSV button")
-         return [":warning: temporary bugzilla server down."]
+         raise Exception(f"I can't find Export CSV button on <{self.buglistUrl}|bugzilla page>. "
+                         f"Maybe temporary bugzilla server down.")
 
       csvRes = self.getCsvContent(html)
       message = []
@@ -387,10 +396,9 @@ class BugzillaSpider(object):
       elif "/report.cgi" in self.longUrl:  # tabular
          message = self.getTabularReport(html)
       else:
-         logger.debug(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
-         message = [":warning: Unsupported bugzilla url."]
-      report = "\n".join(message)
-      return report
+         logger.error(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
+         raise Exception(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
+      return splitOverlengthReport(message)
 
 
 import argparse
