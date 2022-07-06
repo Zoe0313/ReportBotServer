@@ -11,12 +11,12 @@ import os
 import re
 import time
 import datetime
+import pandas as pd
 from urllib import parse
-from collections import defaultdict, namedtuple
-from generator.src.utils.Utils import runCmd, logExecutionTime
+from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport
 from generator.src.utils.Logger import logger
-from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD
-Record = namedtuple('Record', ['cln', 'summary', 'user', 'time', 'bugId'])
+from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
+   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, VSANCORE_DESCRIBE_URL
 USER_NAME_MAX_LENGTH = 20
 SUMMARY_MAX_LENGTH = 80
 
@@ -55,43 +55,50 @@ class PerforceSpider(object):
    def getReport(self):
       if not self.loginSystem():
          raise Exception("Because of `{0}`, p4 login failed.".format("Perforce internal error"))
-
+      # get data from p4 change commands
+      result = self.getRecords()
+      # generate report
       message = []
       message.append(self.showTitle)
-      message.append("```")
-      result = self.getRecords()
-      if result:
-         userNameLength = max([len(user) for user in result.keys()])
-         columnLength = {"User": 10, "CLN": 10, "Time": 22, "PR": 16}
-         if userNameLength < columnLength["User"]:
-            columnLength["User"] = userNameLength
-         elif columnLength["User"] < userNameLength < USER_NAME_MAX_LENGTH:
-            columnLength["User"] = userNameLength
-         headerFormatter = "{:>%ds}  --  {:<%ds}{:<%ds}{:<%ds}{}" % \
-                            (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
-         bodyFormatter = " " * (columnLength["User"] + 6) + "{:<%ds}{:<%ds}{:<%ds}{}" % \
-                          (columnLength["CLN"], columnLength["Time"], columnLength["PR"])
-         message.append(headerFormatter.format("User", "CLN", "Time", "Bug Number", "Summary"))
-
+      if not result.empty:
+         result = result.sort_values(by=['assignee', 'CLN', 'checkinTime'], ascending=True)
+         assignees = set(result['assignee'].values.tolist())
+         userNameColumnLength = max([len(user) for user in assignees] + [len("User")])
+         bugIDColumnLength = max([len(pr) for pr in result['PR'].values] + [len("Bug Number")])
+         columnLength = {"User": userNameColumnLength, "CLN": 8, "Time": 11, "PR": bugIDColumnLength}
+         headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                           (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
+         message.append("```" + headerFormatter.format("User", "CLN", "Time", "Bug Number", "Summary"))
          userName = ''
-         for user in self.userList:
-            recordList = result.get(user, [])
-            recordList.sort(key=lambda a: a.cln, reverse=True)
-            for record in recordList:
-               # please avoid lines longer than 80 chars.
-               showSummary = record.summary if len(record.summary) < SUMMARY_MAX_LENGTH else record.summary[:SUMMARY_MAX_LENGTH - 3] + '...'
-               if userName == user:
-                  message.append(bodyFormatter.format(record.cln, record.time, record.bugId, showSummary))
-               else:
-                  showName = user if len(user) < USER_NAME_MAX_LENGTH else user[:columnLength["User"] - 3] + '...'
-                  message.append(headerFormatter.format(showName, record.cln, record.time, record.bugId, showSummary))
-                  userName = user
+         for _, data in result.iterrows():
+            user = data['assignee']
+            cln = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(data['CLN']), data['CLN'])
+            bugNumbers = data['PR']
+            bugIDColumnLength = columnLength["PR"]
+            if len(bugNumbers) > 0:
+               bugLinks = []
+               for bugId in bugNumbers.split(","):
+                  if bugId.startswith("VSANCORE"):
+                     bugLink = VSANCORE_DESCRIBE_URL.format(bugId)
+                  else:
+                     bugLink = BUGZILLA_DETAIL_URL + bugId
+                  bugLinks.append("<{0}|{1}>".format(bugLink, bugId))
+               bugNumbers = ",".join(bugLinks)
+               # pr column length = formatted_PR_length + original_column_length - unformatted_PR_length
+               bugIDColumnLength = len(bugNumbers) + columnLength["PR"] - len(data['PR'])
+            if userName == user:
+               bodyFormatter = " " * columnLength["User"] + "    {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                               (columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
+               message.append(bodyFormatter.format(cln, data['checkinTime'], bugNumbers, data['summary']))
+            else:
+               headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                                 (columnLength["User"], columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
+               message.append(headerFormatter.format(data['assignee'], cln, data['checkinTime'], bugNumbers,
+                                                     data['summary']))
+               userName = user
       else:
          message.append("No Changes.")
-
-      message.append("```")
-      report = "\n".join(message)
-      return report
+      return splitOverlengthReport(message, isContentInCodeBlock=(len(result) > 0))
 
    def getRecords(self):
       formatStr = "//depot/{}/...@{}"
@@ -103,7 +110,7 @@ class PerforceSpider(object):
          cmd = '{0} changes -s submitted {1} | /bin/grep -v "CBOT"'.format(self.p4Path, branchStr)
       logger.info(cmd)
 
-      result = defaultdict(list)
+      result = pd.DataFrame()
       stdout, stderr, returncode = runCmd(cmd)
       if returncode != 0:
          logger.debug("p4 changes stderr: {0}, returncode: {1}".format(stderr, returncode))
@@ -120,7 +127,7 @@ class PerforceSpider(object):
             if user in self.userList:
                detail = self.getDetail(cln)
                if detail:
-                  result[user].append(detail)
+                  result = result.append(detail, ignore_index=True)
       return result
 
    def getDetail(self, queryCln):
@@ -129,20 +136,32 @@ class PerforceSpider(object):
       if returncode != 0:
          logger.debug("p4 describe error: {0}, returncode: {1}".format(stderr, returncode))
          return None
-
       stdout = stdout.decode('utf-8')
       recordList = stdout.split('\n')
       matchObj = re.match(r"Change (.*) by (.*) on (.*)", recordList[0], re.M | re.I)
       cln = matchObj.group(1)
       user = matchObj.group(2).split('@')[0]
-      time = matchObj.group(3)
+      timeStr = matchObj.group(3)
+      try:  # change time example: 2022/06/14 03:44:29
+         checkinTime = datetime.datetime.strptime(timeStr, "%Y/%m/%d %H:%M:%S").strftime("%b%d %H:%M")
+      except:
+         checkinTime = ""
       summary = recordList[2].strip()
-      bugId = ''
+      #  please avoid lines longer than 80 chars.
+      summary = summary if len(summary) < SUMMARY_MAX_LENGTH else summary[:SUMMARY_MAX_LENGTH - 3] + '...'
+      bugIDs = []
       for record in recordList:
          if "Bug Number:" in record:
-            bugId = record.split("Bug Number:")[1].replace(' ', '')
+            bugNumbers = record.split("Bug Number:")[1].replace(' ', '')
+            # filter PRs and VSANCORE IDs
+            findPRs = re.findall(r"[0-9]{7}", bugNumbers)
+            if len(findPRs) > 0:
+               bugIDs.extend(findPRs)
+            findVsancoreIDs = re.findall(r"VSANCORE-[0-9]{4}", bugNumbers)
+            if len(findVsancoreIDs) > 0:
+               bugIDs.extend(findVsancoreIDs)
             break
-      return Record(cln, summary, user, time, bugId)
+      return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime, 'PR': ",".join(set(bugIDs)), 'summary': summary}
 
 import argparse
 def parseArgs():

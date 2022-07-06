@@ -6,13 +6,17 @@
 Module docstring.
 Utils.py
 '''
-
+import json
 import os
 import subprocess
 import time
 import functools
 import datetime
+from urllib import parse
 from generator.src.utils.Logger import logger
+
+# In order to add some mention user names, we set this value less than 4000.
+MAX_CHAR_LENGTH_IN_ONE_REPORT = 3900
 
 def runCmd(cmd, nTimeOut=300):
    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
@@ -69,3 +73,29 @@ def noIntervalPolling(func):
             return wrapper(*args, **kwargs)
       return "error"
    return wrapper
+
+def splitOverlengthReport(messages, isContentInCodeBlock=False):
+   reports = []
+   def formatReport(reportLines):
+      report = "\n".join(reportLines)
+      if isContentInCodeBlock:
+         if len(reports) > 0:
+            report = "```" + report + "```"
+         else:
+            report = report + "```"
+      logger.debug("reportLength: {0}".format(len(report)))
+      return parse.quote(report)
+
+   reportLength, reportLines = 0, []
+   for line in messages:
+      if reportLength + len(line) > MAX_CHAR_LENGTH_IN_ONE_REPORT:
+         report = formatReport(reportLines)
+         reports.append(report)
+         reportLength, reportLines = 0, []
+      reportLength += len(line) + 1
+      reportLines.append(line)
+
+   if len(reportLines) > 0:
+      report = formatReport(reportLines)
+      reports.append(report)
+   return json.dumps({"messages": reports})

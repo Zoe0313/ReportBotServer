@@ -16,7 +16,7 @@ from urllib import parse
 from collections import defaultdict
 from perforce_diff_parser import PerforceDiffParser, ReviewLinkNotFound
 from review_diff_parser import ReviewDiffParser
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import PERFORCE_DESCRIBE_URL, REVIEWBOARD_REQUEST_URL, POST_MESSAGE_BEAR_TOKEN, \
    POST_MESSAGE_API_BY_CHANNEL, POST_MESSAGE_API_BY_USER, VSAN_SLACKBOT_MONITOR_CHANNELID
@@ -150,7 +150,7 @@ class PerforceReviewCheckSpider(object):
             p4Link = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(info[0]), info[0])
             reviewLink = "<{0}|{1}>".format(REVIEWBOARD_REQUEST_URL.format(info[1]), info[1])
             message.append("      #{0}  {1}  {2}  {3}".format(p4Link, reviewLink, info[2], info[3]))
-      return "\n".join(message)
+      return message
 
    @noIntervalPolling
    def sendReportByUser(self, userName, message):
@@ -170,7 +170,7 @@ class PerforceReviewCheckSpider(object):
 
    @logExecutionTime
    def sendReports(self):
-      ret = ""
+      message = []
       noReviews, unEquals, unknowns = self.getRecords()
       if len(unknowns) > 0:
          msg = "\n".join(unknowns)
@@ -181,17 +181,16 @@ class PerforceReviewCheckSpider(object):
          noReviewList = noReviews.get(user, [])
          unEqualList = unEquals.get(user, [])
          if len(noReviewList) > 0 or len(unEqualList) > 0:
-            msg = self.getReportByChangeOwner(user, noReviewList, unEqualList)
-            self.sendReportByUser(userName=user, message=msg)
-            ret += msg + "\n"
-      if not ret:
-         message = []
+            msgs = self.getReportByChangeOwner(user, noReviewList, unEqualList)
+            report = "\n".join(msgs)
+            self.sendReportByUser(userName=user, message=report)
+            message.extend(msgs)
+      if not message:
          message.append("*Title: {0}*".format(self.title))
          message.append("Branch: {0}".format(" & ".join(self.branchList)))
          message.append(self.checkinTime)
          message.append("I haven't found any differences between last review and actual submission.")
-         return "\n".join(message)
-      return ret
+      return splitOverlengthReport(message)
 
 import argparse
 def parseArgs():
