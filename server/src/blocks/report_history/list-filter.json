@@ -16,27 +16,26 @@
          }
       },
       {
+         "type": "input",
+         "block_id": "block_history_filter_title",
+         "label": {
+            "type": "plain_text",
+            "text": "Search notification title"
+         },
+         "element": {
+            "action_id": "action_filter_by_title",
+            "min_query_length": 1,
+            "type": "multi_external_select",
+            "placeholder": {
+               "type": "plain_text",
+               "text": "Top 10 matched titles will be displayed."
+            }
+         }
+      },
+      {
          "block_id": "block_history_filter_basic",
          "type": "actions",
          "elements": [
-            {
-               "type": "static_select",
-               "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select notification title",
-                  "emoji": true
-               },
-               "options": [
-                  {
-                     "text": {
-                        "type": "plain_text",
-                        "text": "All"
-                     },
-                     "value": "all"
-                  }
-               ],
-               "action_id": "action_filter_by_report"
-            },
             {
                "type": "conversations_select",
                "placeholder": {

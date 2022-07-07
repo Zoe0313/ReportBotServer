@@ -7,6 +7,7 @@ import { ReportHistory, REPORT_HISTORY_STATUS } from '../model/report-history.js
 import { ReportHistoryState } from '../model/report-history-state.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import { performance } from 'perf_hooks'
+import { matchSorter } from 'match-sorter'
 
 const LIMIT = 5
 
@@ -46,8 +47,11 @@ export function registerReportHistoryServiceHandler(app) {
       const t0 = performance.now()
 
       let offset = (state.page - 1) * LIMIT
-      const filterReport = body?.state?.values['block_history_filter_basic' + state.filterBlockId]
-         ?.action_filter_by_report?.selected_option?.value
+
+      const filterTitles = body?.state?.values['block_history_filter_title' + state.filterBlockId]
+         ?.action_filter_by_title?.selected_options.map(selectedOption => {
+            return selectedOption.value
+         })
       const filterConversation = body?.state?.values['block_history_filter_basic' +
          state.filterBlockId]?.action_filter_by_conversation?.selected_conversation
       const filterStartDate = body?.state?.values['block_history_filter_date' + state.filterBlockId]
@@ -55,8 +59,8 @@ export function registerReportHistoryServiceHandler(app) {
       const filterEndDate = body?.state?.values['block_history_filter_date' + state.filterBlockId]
          ?.action_filter_by_end_date?.selected_date
       const filters = { creator: user }
-      if (filterReport && filterReport !== 'all') {
-         filters.title = filterReport
+      if (Array.isArray(filterTitles) && filterTitles.length > 0) {
+         filters.title = { $in: filterTitles }
       }
       if (filterConversation) {
          filters.conversations = filterConversation
@@ -76,29 +80,16 @@ export function registerReportHistoryServiceHandler(app) {
          state.page = 1
          offset = 0
       }
-      const [reportHistories, allReportHistories] = await Promise.all([
-         ReportHistory.find(filters).skip(offset).limit(LIMIT).sort({
+      const reportHistories = await ReportHistory.find(filters)
+         .skip(offset).limit(LIMIT).sort({
             sentTime: -1
-         }),
-         ReportHistory.find({ creator: user })
-      ])
+         })
       state.count = count
       // list filter
       const listFilter = loadBlocks('report_history/list-filter')
-      listFilter[1].block_id = 'block_history_filter_basic' + state.filterBlockId.toString()
-      listFilter[2].block_id = 'block_history_filter_date' + state.filterBlockId.toString()
-      if (allReportHistories.length > 0) {
-         // dedup title of report history
-         listFilter[1].elements[0].options = [...new Set(allReportHistories.map(reportHistory => {
-            return reportHistory.title
-         }))].map(title => ({
-            text: {
-               type: 'plain_text',
-               text: title
-            },
-            value: title
-         }))
-      }
+      listFilter[1].block_id = 'block_history_filter_title' + state.filterBlockId.toString()
+      listFilter[2].block_id = 'block_history_filter_basic' + state.filterBlockId.toString()
+      listFilter[3].block_id = 'block_history_filter_date' + state.filterBlockId.toString()
       // list header
       const listHeader = loadBlocks('report_history/list-header')
       listHeader[0].text.text = `There are ${count} notification histories after conditions applied.`
@@ -232,10 +223,11 @@ export function registerReportHistoryServiceHandler(app) {
       }, 'Failed to clear filters of history list.')
    })
 
-   app.action('action_filter_by_report', async ({ ack, body, client }) => {
+   app.action('action_filter_by_title', async ({ ack, body, client }) => {
       tryAndHandleError({ ack, body, client }, async() => {
+         logger.info(`action_filter_by_title body: ${JSON.stringify(body)}`)
          await listReportHistories(true, body.message?.ts, ack, body, client)
-      }, 'Failed to change filter of notification config.')
+      }, 'Failed to change filter of notification title.')
    })
 
    app.action('action_filter_by_conversation', async ({ ack, body, client }) => {
@@ -390,5 +382,41 @@ export function registerReportHistoryServiceHandler(app) {
             await listReportHistories(true, ts, ack, body, client)
          }
       }, 'Failed to delete sent notification in selected conversations.')
+   })
+
+   // Responding to the external_select options request for history filter report title
+   app.options('action_filter_by_title', async ({ ack, options }) => {
+      const keyword = options.value
+      const user = options.user?.id
+      logger.info(`keyword: ${keyword}, get all notification titles of user ${user} in db.`)
+      const t0 = performance.now()
+      // In order to query db more quickly, we add "{ title: 1, _id: 0 }" here.
+      // refer to https://stackoverflow.com/questions/25589113/
+      // how-to-select-a-single-field-for-all-documents-in-a-mongodb-collection
+      const allTitles = [...new Set((await ReportHistory.find({ creator: user },
+         { title: 1, _id: 0 })).map(reportHistory => {
+         return reportHistory.title
+      }).flat())]
+      logger.debug(`get titles in db cost ${performance.now() - t0}`)
+      // match keyword and sort by score
+      // refer to match-sorter https://www.npmjs.com/package/match-sorter
+      if (allTitles != null && allTitles.length > 0) {
+         const sortedTitlesWithLimit = matchSorter(allTitles, keyword).slice(0, 10)
+         logger.debug(`sort titles cost ${performance.now() - t0}`)
+         logger.info(`0 - 10 titles stored are ${sortedTitlesWithLimit}`)
+         const options = sortedTitlesWithLimit.map(title => ({
+            text: {
+               type: 'plain_text',
+               text: title
+            },
+            value: title
+         }))
+         await ack({
+            options: options
+         })
+         logger.debug(`ack titles cost ${performance.now() - t0}`)
+      } else {
+         await ack()
+      }
    })
 }
