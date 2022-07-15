@@ -30,18 +30,18 @@ def short2long(url):
 
 def long2short(url):
    http = urllib3.PoolManager(ca_certs=certifi.where())
-   encodedBody = json.dumps({"longUrl": url, "userLabel": "string"}).encode('utf-8')
+   encodedBody = json.dumps({"resource": url}).encode()
    try:
       res = http.request(method='POST',
-                         url="https://via.vmware.com/via-console/app-api/v1/vialink",
+                         url="https://via.vmware.com/via-console/app-api/v2/vialink",
                          headers={'Content-Type': 'application/json',
                                   "X-HeaderKey": "%241%24Yfai%2FUQF%24egNLEHGRocRPuPuzq3tsE%2F"},
                          body=encodedBody)
       r = json.loads(res.data.decode('utf-8'))
    except Exception as e:
-      logger.error("get short url error: ", e)
+      logger.error("get short url error: {0}".format(e))
       return None
-   return r.get('shortUrl')
+   return r.get('viaUrl', {}).get('url', '')
 
 def readMemoryFile(pklFile):
    if os.path.exists(pklFile):
