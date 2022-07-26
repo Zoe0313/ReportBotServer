@@ -17,11 +17,10 @@ DATE_FORMAT = "%Y/%m/%d %H:%M:%S %p"
 dirPath = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/log")
 os.makedirs(dirPath, exist_ok=True)
 
-def getBeijingTime(sec, what):
-   beijingTime = datetime.datetime.now() + datetime.timedelta(hours=8)
-   return beijingTime.timetuple()
+def getUTCTime(sec, what):
+   return datetime.datetime.utcnow().timetuple()
 
-logging.Formatter.converter = getBeijingTime
+logging.Formatter.converter = getUTCTime
 
 def createLogger():
    logger = logging.getLogger('mylogger')
