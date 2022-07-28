@@ -43,8 +43,6 @@ axis2param = {
 
 # bug summary str limit length
 SUMMARY_MAX_LENGTH = 57
-# show buglist records max number
-SHOW_BUG_RECORD_MAX_NUM = 23
 
 class BugzillaSpider(object):
    def __init__(self, args):
@@ -196,7 +194,10 @@ class BugzillaSpider(object):
          queryStr = self.countQueryStr
          paramList.append(indexName)
          paramList.append(columnName)
-      return queryStr.format(*paramList).replace("category=-total-&", "")
+      keyName = queryStr.format(*paramList)
+      if "=-total-&" in keyName:
+         keyName = keyName.split("=-total-&")[1]
+      return keyName
 
    def getShortUrlDict(self, html):
       shortUrlDict = {}
@@ -301,10 +302,6 @@ class BugzillaSpider(object):
          df = pd.read_csv(csvFile)
          if not df.empty:
             df.fillna(value="", inplace=True)
-            lineCount = len(df)
-            if lineCount > SHOW_BUG_RECORD_MAX_NUM:
-               df = df.head(SHOW_BUG_RECORD_MAX_NUM)
-            messages = []
             # get existed column name list
             headers = df.columns.values
             paramsLength = {'Bug ID': 7, 'Assignee': -1, 'Priority': 8, 'ETA': 10, 'Summary (first 60 chars)': 60}
@@ -330,34 +327,20 @@ class BugzillaSpider(object):
             showColumns = [name for param, name in nameDict.items() if param in headers]
             logger.info('show columns: {0}'.format(showColumns))
             # make buglist content
-            def getLines():
-               messages = []
-               messages.append("```")
-               messages.append(lineFormatter.format(*showColumns))
-               for _, bug in df.iterrows():
-                  valueList = []
-                  for param in showParams:
-                     value = bug[param]
-                     if "Bug ID" == param:
-                        value = "<%s|%s>" % (BUGZILLA_DETAIL_URL + str(value), str(value))
-                     elif "Summary (first 60 chars)" == param:
-                        value = value if len(value) < SUMMARY_MAX_LENGTH else value[:SUMMARY_MAX_LENGTH] + "..."
-                     valueList.append(value)
-                  messages.append(lineFormatter.format(*valueList))
-               messages.append("```")
-               return messages
-            messages.extend(getLines())
-            # if line number is more than the maximum number, only show the first maximum records and
-            # supply the buglist link here
-            if lineCount > SHOW_BUG_RECORD_MAX_NUM:
-               if "via.vmw.com" in self.buglistUrl:
-                  viewbuglistUrl = self.buglistUrl
-               else:
-                  shortUrlDict = getShortUrlsFromCacheFile(fileDir=DOWNLOAD_DIR, fileKey=self.buglistUrl,
-                                                           urlTailDict={"BugList": self.buglistUrl})
-                  viewbuglistUrl = shortUrlDict["BugList"]
-               messages.append("... ({0} more bugs not shown) For full list, you can check {1}".
-                               format(SHOW_BUG_RECORD_MAX_NUM, viewbuglistUrl))
+            messages = []
+            messages.append("```")
+            messages.append(lineFormatter.format(*showColumns))
+            for _, bug in df.iterrows():
+               valueList = []
+               for param in showParams:
+                  value = bug[param]
+                  if "Bug ID" == param:
+                     value = "<%s|%s>" % (BUGZILLA_DETAIL_URL + str(value), str(value))
+                  elif "Summary (first 60 chars)" == param:
+                     value = value if len(value) < SUMMARY_MAX_LENGTH else value[:SUMMARY_MAX_LENGTH] + "..."
+                  valueList.append(value)
+               messages.append(lineFormatter.format(*valueList))
+            messages.append("```")
             return messages
          else:
             logger.info("CSV file {0}'s content is empty.".format(csvFile))
@@ -393,12 +376,13 @@ class BugzillaSpider(object):
 
       if "/buglist.cgi" in self.longUrl:  # query buglist
          message = self.getBuglistReport(html)
+         return splitOverlengthReport(message, isContentInCodeBlock=True)
       elif "/report.cgi" in self.longUrl:  # tabular
          message = self.getTabularReport(html)
+         return splitOverlengthReport(message, isContentInCodeBlock=False)
       else:
          logger.error(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
          raise Exception(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
-      return splitOverlengthReport(message)
 
 
 import argparse

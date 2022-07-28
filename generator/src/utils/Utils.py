@@ -79,6 +79,7 @@ def splitOverlengthReport(messages, isContentInCodeBlock=False):
    def formatReport(reportLines):
       report = "\n".join(reportLines)
       if isContentInCodeBlock:
+         report = report.strip("```")
          if len(reports) > 0:
             report = "```" + report + "```"
          else:
