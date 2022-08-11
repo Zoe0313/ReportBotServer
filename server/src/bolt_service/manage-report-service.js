@@ -377,7 +377,7 @@ export function registerManageReportServiceHandler(app) {
             throw new Error(`cannot find report ${id} in db`)
          }
          const inputObj = transformInputValuesToObj(view.state.values)
-         logger.info(inputObj)
+         logger.info(`inputObj: ${JSON.stringify(inputObj)}`)
 
          const report = merge(oldReport, merge(inputObj, {
             mentionUsers: inputObj.mentionUsers || [],
@@ -399,7 +399,9 @@ export function registerManageReportServiceHandler(app) {
             repeatConfig: {
                tz,
                dayOfWeek: inputObj.repeatConfig.dayOfWeek?.map(option => option.value),
-               date: formatDate(inputObj.repeatConfig.date)
+               date: formatDate(inputObj.repeatConfig.date),
+               startDate: inputObj.repeatConfig?.startDate || null,
+               endDate: inputObj.repeatConfig?.endDate || null
             }
          }))
          logger.info(report)
