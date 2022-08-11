@@ -20,7 +20,6 @@ const systemTz = moment.tz.guess()
 logger.info('system time zone ' + systemTz)
 
 const projectRootPath = path.join(path.resolve(), '..')
-const generatorPath = path.join(path.resolve(), '../generator/')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
 
@@ -161,8 +160,7 @@ const contentEvaluate = async (report) => {
    const reportTitle = report.title.replace(/'/g, '%27')
    switch (report.reportType) {
       case 'bugzilla': {
-         // scriptPath = generatorPath + 'src/notification/bugzilla_component_report.py'
-         scriptPath = generatorPath + 'src/notification/bugzilla_report.py'
+         scriptPath = projectRootPath + '/generator/src/notification/bugzilla_report.py'
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
             `--title '${reportTitle}' ` +
             `--url '${report.reportSpecConfig.bugzillaLink}'`
@@ -175,7 +173,7 @@ const contentEvaluate = async (report) => {
          break
       }
       case 'perforce_checkin': {
-         scriptPath = generatorPath + 'src/notification/perforce_checkin_report.py'
+         scriptPath = projectRootPath + '/generator/src/notification/perforce_checkin_report.py'
          const { startTime, endTime } = calculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
@@ -190,7 +188,8 @@ const contentEvaluate = async (report) => {
       }
       case 'perforce_review_check': {
          timeout = 60 * 60 * 1000
-         scriptPath = generatorPath + 'src/notification/perforce_review_check_report.py'
+         scriptPath = projectRootPath + '/generator/src/notification/' +
+            'perforce_review_check_report.py'
          const { startTime, endTime } = calculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
@@ -204,7 +203,7 @@ const contentEvaluate = async (report) => {
          break
       }
       case 'bugzilla_by_assignee': {
-         scriptPath = generatorPath + 'src/notification/bugzilla_assignee_report.py'
+         scriptPath = projectRootPath + '/generator/src/notification/bugzilla_assignee_report.py'
          const assignees = await getUsersName(report.reportSpecConfig.bugzillaAssignee)
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
          `--title '${reportTitle}' ` +
