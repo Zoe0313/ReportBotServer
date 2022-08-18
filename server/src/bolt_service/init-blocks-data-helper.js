@@ -1,13 +1,13 @@
 import logger from '../../common/logger.js'
 import {
-   loadBlocks, findBlockById
+   LoadBlocks, FindBlockById
 } from '../../common/slack-helper.js'
 import {
-   convertTimeWithTz, formatDateTime, formatDate, parseDateWithTz
+   ConvertTimeWithTz, FormatDateTime, FormatDate, ParseDateWithTz
 } from '../../common/utils.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import {
-   ReportConfiguration, flattenMembers
+   ReportConfiguration, FlattenMembers
 } from '../model/report-configuration.js'
 import { TeamGroup } from '../model/team-group.js'
 
@@ -32,23 +32,23 @@ const MEMBERS_FILTER_HINT = {
    all_reporters: 'selected users and all direct & indirect reporters of selected users'
 }
 
-function initRecurrenceSettingValue(report, blocks, options, tz) {
+function InitRecurrenceSettingValue(report, blocks, options, tz) {
    const isNew = options?.isNew
    if (report.repeatConfig?.startDate != null) {
-      findBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
-         formatDate(report.repeatConfig.startDate)
+      FindBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
+         FormatDate(report.repeatConfig.startDate)
    } else if (isNew) {
-      findBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
-         formatDate(new Date())
+      FindBlockById(blocks, 'repeatConfig.startDate').element.initial_date =
+         FormatDate(new Date())
    }
    if (report.repeatConfig?.endDate != null) {
-      findBlockById(blocks, 'repeatConfig.endDate').element.initial_date =
-         formatDate(report.repeatConfig.endDate)
+      FindBlockById(blocks, 'repeatConfig.endDate').element.initial_date =
+         FormatDate(report.repeatConfig.endDate)
    }
    if (report.repeatConfig?.repeatType == null) {
       return
    }
-   const repeatTypeBlock = findBlockById(blocks, 'repeatConfig.repeatType')
+   const repeatTypeBlock = FindBlockById(blocks, 'repeatConfig.repeatType')
    const repeatTypeOption = repeatTypeBlock.element.options
       .find(option => option.value === report.repeatConfig.repeatType)
    if (repeatTypeOption != null) {
@@ -58,7 +58,7 @@ function initRecurrenceSettingValue(report, blocks, options, tz) {
    if (repeatConfig == null) {
       return
    }
-   const { time, dayOffset } = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
+   const { time, dayOffset } = ConvertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
    const dayOfWeek = repeatConfig.dayOfWeek?.map(day => {
       return (day + dayOffset) > 6 ? 0 : ((day + dayOffset) < 0 ? 6 : (day + dayOffset))
    }) || []
@@ -70,63 +70,63 @@ function initRecurrenceSettingValue(report, blocks, options, tz) {
 
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
-         const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
-         const dateStr = formatDateTime(date, tz)
+         const date = ParseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
+         const dateStr = FormatDateTime(date, tz)
          if (dateStr != null && dateStr.split(' ').length === 2) {
-            findBlockById(blocks, 'repeatConfig.date')
+            FindBlockById(blocks, 'repeatConfig.date')
                .element.initial_date = dateStr.split(' ')[0]
-            findBlockById(blocks, 'repeatConfig.time')
+            FindBlockById(blocks, 'repeatConfig.time')
                .element.initial_time = dateStr.split(' ')[1]
          }
          break
       case 'hourly':
          if (repeatConfig.minsOfHour != null) {
-            findBlockById(blocks, 'repeatConfig.minsOfHour')
+            FindBlockById(blocks, 'repeatConfig.minsOfHour')
                .element.initial_value = repeatConfig.minsOfHour.toString()
          }
          break
       case 'daily':
          if (time != null) {
-            findBlockById(blocks, 'repeatConfig.time')
+            FindBlockById(blocks, 'repeatConfig.time')
                .element.initial_time = time
          }
          break
       case 'weekly':
-         const dayOfWeekOptions = findBlockById(blocks, 'repeatConfig.dayOfWeek')
+         const dayOfWeekOptions = FindBlockById(blocks, 'repeatConfig.dayOfWeek')
             .element.options
             .filter(option => dayOfWeek?.includes(parseInt(option.value)))
          if (dayOfWeekOptions.length > 0) {
-            findBlockById(blocks, 'repeatConfig.dayOfWeek')
+            FindBlockById(blocks, 'repeatConfig.dayOfWeek')
                .element.initial_options = dayOfWeekOptions
          }
          if (time != null) {
-            findBlockById(blocks, 'repeatConfig.time')
+            FindBlockById(blocks, 'repeatConfig.time')
                .element.initial_time = time
          }
          break
       case 'monthly':
          if (dayOfMonth != null) {
-            findBlockById(blocks, 'repeatConfig.dayOfMonth')
+            FindBlockById(blocks, 'repeatConfig.dayOfMonth')
                .element.initial_value = dayOfMonth.toString()
          }
          if (time != null) {
-            findBlockById(blocks, 'repeatConfig.time')
+            FindBlockById(blocks, 'repeatConfig.time')
                .element.initial_time = time
          }
          break
       case 'cron_expression':
          if (repeatConfig.cronExpression != null) {
-            findBlockById(blocks, 'repeatConfig.cronExpression')
+            FindBlockById(blocks, 'repeatConfig.cronExpression')
                .element.initial_value = repeatConfig.cronExpression
          }
          break
    }
 }
 
-export async function initReportBlocks(report, view, blocks, options, tz) {
+export async function InitReportBlocks(report, view, blocks, options, tz) {
    const isInit = options?.isInit
    const isNew = options?.isNew
-   const reportTypeBlock = findBlockById(blocks, 'reportType')
+   const reportTypeBlock = FindBlockById(blocks, 'reportType')
    const reportType = report.reportType || 'bugzilla'
    if (isInit) {
       const reportTypeOption = reportTypeBlock.element.options
@@ -136,13 +136,13 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
       }
 
       if (report.title?.length > 0) {
-         findBlockById(blocks, 'title').element.initial_value = report.title
+         FindBlockById(blocks, 'title').element.initial_value = report.title
       }
       if (report.conversations?.length > 0) {
-         findBlockById(blocks, 'conversations').element.initial_conversations =
+         FindBlockById(blocks, 'conversations').element.initial_conversations =
             report.conversations
       }
-      initRecurrenceSettingValue(report, blocks, options, tz)
+      InitRecurrenceSettingValue(report, blocks, options, tz)
    }
    const reportSpecConfig = report.reportSpecConfig
 
@@ -155,26 +155,26 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
    switch (reportType) {
       case 'bugzilla':
          if (isInit && reportSpecConfig?.bugzillaLink?.length > 0) {
-            findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
+            FindBlockById(blocks, 'reportSpecConfig.bugzillaLink')
                .element.initial_value = reportSpecConfig.bugzillaLink
          }
          break
       case 'text':
          if (isInit && reportSpecConfig?.text?.length > 0) {
-            findBlockById(blocks, 'reportSpecConfig.text')
+            FindBlockById(blocks, 'reportSpecConfig.text')
                .element.initial_value = reportSpecConfig.text
          }
          break
       case 'bugzilla_by_assignee':
          if (isInit && reportSpecConfig?.bugzillaAssignee?.length > 0) {
-            findBlockById(blocks, 'reportSpecConfig.bugzillaAssignee')
+            FindBlockById(blocks, 'reportSpecConfig.bugzillaAssignee')
                .element.initial_conversations = reportSpecConfig.bugzillaAssignee
          }
          break
       case 'perforce_checkin':
       case 'perforce_review_check':
          if (isInit && reportSpecConfig[perforceSpecConfig]?.branches?.length > 0) {
-            findBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.branches`)
+            FindBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.branches`)
                .element.initial_options = reportSpecConfig[perforceSpecConfig].branches
                   .map(branch => ({
                      text: {
@@ -189,7 +189,7 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
                code: { $in: reportSpecConfig[perforceSpecConfig].teams }
             })
             if (teams.length > 0) {
-               findBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.teams`)
+               FindBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.teams`)
                   .element.initial_options = teams
                      .map(team => ({
                         text: {
@@ -199,7 +199,7 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
                         value: team.code
                      }))
             } else if (!isNew) {
-               findBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.teams`)
+               FindBlockById(blocks, `reportSpecConfig.${perforceSpecConfig}.teams`)
                   .element.initial_options = undefined
             }
          }
@@ -212,7 +212,7 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
             })
          }
          if (membersFilters.length > 0) {
-            const membersFilterTemplate = loadBlocks('report_type/perforce-member-template')
+            const membersFilterTemplate = LoadBlocks('report_type/perforce-member-template')
             const membersFilterBlocksList = membersFilters.map((membersFilter, index) => {
                const membersFilterBlocks = cloneDeep(membersFilterTemplate)
                // add index for every member filter remove block
@@ -250,27 +250,27 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
          }
          break
       // case 'svs':
-      //    findBlockById(blocks, 'reportSpecConfig.bugzillaLink')
+      //    FindBlockById(blocks, 'reportSpecConfig.bugzillaLink')
       //       .element.initial_value = reportSpecConfig.bugzillaLink
       //    break
       default:
          throw new Error(`report type ${report.reportType} is not supported`)
    }
 
-   const advancedBlocks = loadBlocks('modal/report-advanced').filter(block => {
+   const advancedBlocks = LoadBlocks('modal/report-advanced').filter(block => {
       return block.block_id != null && block.block_id !== 'advancedOptions'
    })
-   const advancedOptionBlock = findBlockById(blocks, 'advancedOptions')
-   const oldAdvancedOptionBlock = findBlockById(view?.blocks || [], 'advancedOptions')
+   const advancedOptionBlock = FindBlockById(blocks, 'advancedOptions')
+   const oldAdvancedOptionBlock = FindBlockById(view?.blocks || [], 'advancedOptions')
    const isAdvancedOptionInitOpen =
       report.mentionUsers?.length > 0 || report.mentionGroups?.length > 0
 
    const displayAdvancedOptions = () => {
       if (report.mentionUsers?.length > 0) {
-         findBlockById(blocks, 'mentionUsers').element.initial_users = report.mentionUsers
+         FindBlockById(blocks, 'mentionUsers').element.initial_users = report.mentionUsers
       }
       if (report.mentionGroups?.length > 0) {
-         findBlockById(blocks, 'mentionGroups').element.initial_options = report.mentionGroups
+         FindBlockById(blocks, 'mentionGroups').element.initial_options = report.mentionGroups
       }
       advancedOptionBlock.accessory.text.text = 'delete'
       advancedOptionBlock.accessory.value = 'delete'
@@ -298,9 +298,9 @@ export async function initReportBlocks(report, view, blocks, options, tz) {
    }
 }
 
-export function displayTimeSetting(report, tz) {
+export function DisplayTimeSetting(report, tz) {
    const repeatConfig = report.repeatConfig
-   const { time, dayOffset } = convertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
+   const { time, dayOffset } = ConvertTimeWithTz(repeatConfig.time, repeatConfig.tz, tz)
    const dayOfWeekStr = repeatConfig.dayOfWeek?.map(day => {
       return (day + dayOffset) > 6 ? 0 : ((day + dayOffset) < 0 ? 6 : (day + dayOffset))
    })?.map(day => WEEK[day])?.join(', ') || 'Empty'
@@ -310,8 +310,8 @@ export function displayTimeSetting(report, tz) {
 
    switch (repeatConfig.repeatType) {
       case 'not_repeat': {
-         const date = parseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
-         return `Not Repeat - ${formatDateTime(date, tz)}`
+         const date = ParseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, repeatConfig.tz)
+         return `Not Repeat - ${FormatDateTime(date, tz)}`
       }
       case 'hourly': return `Hourly - ${repeatConfig.minsOfHour} mins of every hour`
       case 'daily': return `Daily - ${time} of every day`
@@ -322,7 +322,7 @@ export function displayTimeSetting(report, tz) {
    }
 }
 
-export async function updateFlattenMembers(report) {
+export async function UpdateFlattenMembers(report) {
    let reportSpecConfig
    if (report.reportType === 'perforce_checkin') {
       reportSpecConfig = report.reportSpecConfig.perforceCheckIn
@@ -337,7 +337,7 @@ export async function updateFlattenMembers(report) {
    })
    const selectedTeamsMembers = teams.map(team => team.members).flat()
    const currentReport = await ReportConfiguration.findById(report._id)
-   return flattenMembers(reportSpecConfig.membersFilters, selectedTeamsMembers)
+   return FlattenMembers(reportSpecConfig.membersFilters, selectedTeamsMembers)
       .then(async allMembers => {
          switch (report.reportType) {
             case 'perforce_checkin':

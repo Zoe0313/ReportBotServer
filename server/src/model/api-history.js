@@ -20,7 +20,7 @@ const SlackbotApiHistorySchema = new mongoose.Schema({
 
 const SlackbotApiHistory = mongoose.model('api_history', SlackbotApiHistorySchema)
 
-const addApiHistoryInfo = async (state, request, response) => {
+const AddApiHistoryInfo = async (state, request, response) => {
    let _errorMsg = ''
    let _status = API_HISTORY_STATUS.PENDING
    if (response.status === 200) {
@@ -45,4 +45,4 @@ const addApiHistoryInfo = async (state, request, response) => {
    })
 }
 
-export { SlackbotApiHistory, API_HISTORY_STATUS, addApiHistoryInfo }
+export { SlackbotApiHistory, API_HISTORY_STATUS, AddApiHistoryInfo }

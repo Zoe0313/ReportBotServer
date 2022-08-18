@@ -1,6 +1,6 @@
-import { loadBlocks, updateUserTzCache } from '../../common/slack-helper.js'
+import { LoadBlocks, UpdateUserTzCache } from '../../common/slack-helper.js'
 import logger from '../../common/logger.js'
-export function registerCommonServiceHandler(app) {
+export function RegisterCommonServiceHandler(app) {
    // Reply in channel
    // app.event('app_mention', async ({ event, say }) => {
    //    await say(`Hi, <@${event.user}>. ` +
@@ -16,7 +16,7 @@ export function registerCommonServiceHandler(app) {
                type: 'home',
                private_metadata: event.channel,
                callback_id: 'home_view',
-               blocks: loadBlocks('welcome')
+               blocks: LoadBlocks('welcome')
             }
          })
       } catch (e) {
@@ -27,7 +27,7 @@ export function registerCommonServiceHandler(app) {
    // Hi page
    app.message(/^(hi|hello|hey|help)/i, async ({ say }) => {
       await say({
-         blocks: loadBlocks('welcome'),
+         blocks: LoadBlocks('welcome'),
          text: 'Select an action'
       })
    })
@@ -38,7 +38,7 @@ export function registerCommonServiceHandler(app) {
       const tz = payload?.user?.tz
       try {
          if (tz != null) {
-            updateUserTzCache(userId, tz)
+            UpdateUserTzCache(userId, tz)
          }
       } catch (e) {
          logger.error(`Failed to update tz when user_change event happened. ` +

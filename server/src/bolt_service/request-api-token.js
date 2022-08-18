@@ -1,16 +1,16 @@
 import logger from '../../common/logger.js'
 import { v4 as uuidv4 } from 'uuid'
-import { getUsersName, tryAndHandleError } from '../../common/slack-helper.js'
+import { GetUsersName, TryAndHandleError } from '../../common/slack-helper.js'
 import { SlackbotApiToken } from '../model/api-token.js'
 
-async function requestApiTokenForUser(userId, regenerate) {
+async function RequestApiTokenForUser(userId, regenerate) {
    if (userId == null) {
       throw Error('user id is null when generating API token.')
    }
    const token = uuidv4().toString().replace(/-/g, '')
    let apiToken = await SlackbotApiToken.findOne({ userId })
    if (apiToken == null) {
-      const userName = (await getUsersName([userId]))[0]
+      const userName = (await GetUsersName([userId]))[0]
       apiToken = new SlackbotApiToken({
          userId,
          userName,
@@ -24,7 +24,7 @@ async function requestApiTokenForUser(userId, regenerate) {
    return apiToken.token
 }
 
-async function queryApiTokenForUser(userId) {
+async function QueryApiTokenForUser(userId) {
    if (userId == null) {
       throw Error('user id is required for querying API token.')
    }
@@ -36,14 +36,14 @@ async function queryApiTokenForUser(userId) {
    return apiToken.token
 }
 
-export function registerRequestApiTokenServiceHandler(app) {
-   async function requestApiToken(ack, body, client, regenerate = false) {
+export function RegisterRequestApiTokenServiceHandler(app) {
+   async function RequestApiToken(ack, body, client, regenerate = false) {
       logger.info('Request api token for ' + body.user?.id)
       const userId = body.user?.id
       if (userId == null) {
          throw new Error('User is none in body, can not generate API token.')
       }
-      const token = await requestApiTokenForUser(userId, regenerate)
+      const token = await RequestApiTokenForUser(userId, regenerate)
       await ack()
       const blocks = [{
          type: 'section',
@@ -81,21 +81,21 @@ export function registerRequestApiTokenServiceHandler(app) {
       block_id: 'block_welcome',
       action_id: 'action_request_api_token'
    }, async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
-         await requestApiToken(ack, body, client)
+      TryAndHandleError({ ack, body, client }, async () => {
+         await RequestApiToken(ack, body, client)
       }, 'Failed to request API token of current user.')
    })
 
    // Regenerate API token
    app.action('action_regenerate_api_token', async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
-         await requestApiToken(ack, body, client, true)
+      TryAndHandleError({ ack, body, client }, async () => {
+         await RequestApiToken(ack, body, client, true)
       }, 'Failed to regenerate API token of current user.')
    })
 
    app.message(/^my\s+token/i, async ({ say, body }) => {
       const userId = body.event?.user
-      const token = await queryApiTokenForUser(userId)
+      const token = await QueryApiTokenForUser(userId)
       if (token == null) {
          await say('You don\'t have token requested')
       } else {

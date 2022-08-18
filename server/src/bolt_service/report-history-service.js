@@ -1,7 +1,7 @@
-import { formatDateTime } from '../../common/utils.js'
+import { FormatDateTime } from '../../common/utils.js'
 import logger from '../../common/logger.js'
 import {
-   loadBlocks, getConversationsName, getUserTz, findBlockById, tryAndHandleError
+   LoadBlocks, GetConversationsName, GetUserTz, FindBlockById, TryAndHandleError
 } from '../../common/slack-helper.js'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../model/report-history.js'
 import { ReportHistoryState } from '../model/report-history-state.js'
@@ -11,7 +11,7 @@ import { matchSorter } from 'match-sorter'
 
 const LIMIT = 5
 
-async function getState(ts) {
+async function GetState(ts) {
    let state = await ReportHistoryState.findOne({ ts })
    if (state == null) {
       state = ReportHistoryState({
@@ -27,7 +27,7 @@ async function getState(ts) {
    return state
 }
 
-async function saveState(state) {
+async function SaveState(state) {
    if (state != null) {
       await ReportHistoryState.updateOne({ _id: state._id }, state)
    } else {
@@ -35,15 +35,15 @@ async function saveState(state) {
    }
 }
 
-export function registerReportHistoryServiceHandler(app) {
-   const listReportHistories = async (isUpdate, ts, ack, body, client) => {
+export function RegisterReportHistoryServiceHandler(app) {
+   const ListReportHistories = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
-      const state = await getState(ts)
+      const state = await GetState(ts)
       const user = body.user?.id
       if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
       }
-      const tz = await getUserTz(user)
+      const tz = await GetUserTz(user)
       const t0 = performance.now()
 
       let offset = (state.page - 1) * LIMIT
@@ -86,15 +86,15 @@ export function registerReportHistoryServiceHandler(app) {
          })
       state.count = count
       // list filter
-      const listFilter = loadBlocks('report_history/list-filter')
+      const listFilter = LoadBlocks('report_history/list-filter')
       listFilter[1].block_id = 'block_history_filter_title' + state.filterBlockId.toString()
       listFilter[2].block_id = 'block_history_filter_basic' + state.filterBlockId.toString()
       listFilter[3].block_id = 'block_history_filter_date' + state.filterBlockId.toString()
       // list header
-      const listHeader = loadBlocks('report_history/list-header')
+      const listHeader = LoadBlocks('report_history/list-header')
       listHeader[0].text.text = `There are ${count} notification histories after conditions applied.`
       // list item detail
-      let listItemDetail = loadBlocks('report_history/list-item-detail')
+      let listItemDetail = LoadBlocks('report_history/list-item-detail')
       const selectedHistory = reportHistories.find((reportHistory) => {
          return reportHistory._id.toString() === state.selectedId
       })
@@ -104,17 +104,17 @@ export function registerReportHistoryServiceHandler(app) {
          listItemDetail = []
       } else {
          const [conversations, mentionUsers] = await Promise.all([
-            getConversationsName(selectedHistory.conversations),
-            getConversationsName(selectedHistory.mentionUsers)
+            GetConversationsName(selectedHistory.conversations),
+            GetConversationsName(selectedHistory.mentionUsers)
          ])
          logger.info(conversations)
          logger.info(mentionUsers)
-         const detailsBlock = findBlockById(listItemDetail, 'block_report_history_details')
-         const contentBlock = findBlockById(listItemDetail, 'block_report_history_content')
+         const detailsBlock = FindBlockById(listItemDetail, 'block_report_history_details')
+         const contentBlock = FindBlockById(listItemDetail, 'block_report_history_content')
          detailsBlock.fields[0].text += selectedHistory.title
          detailsBlock.fields[1].text += selectedHistory.status
          detailsBlock.fields[2].text += selectedHistory.reportType
-         detailsBlock.fields[3].text += formatDateTime(selectedHistory.sentTime, tz)
+         detailsBlock.fields[3].text += FormatDateTime(selectedHistory.sentTime, tz)
          detailsBlock.fields[4].text += conversations
          detailsBlock.fields[5].text += mentionUsers
          contentBlock.text.text += selectedHistory.content.substr(0, 2000)
@@ -130,10 +130,10 @@ export function registerReportHistoryServiceHandler(app) {
          }
       }
       // list items
-      const listItemTemplate = loadBlocks('report_history/list-item-template')[0]
+      const listItemTemplate = LoadBlocks('report_history/list-item-template')[0]
       const listItems = reportHistories.map(history => {
          const content = `*${history.title} - ${history.reportType}* ` +
-            `was sent at ${formatDateTime(history.sentTime, tz)}`
+            `was sent at ${FormatDateTime(history.sentTime, tz)}`
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = history._id
@@ -144,7 +144,7 @@ export function registerReportHistoryServiceHandler(app) {
          return listItem
       })
       // list pagination
-      let listPagination = loadBlocks('report_history/list-pagination')
+      let listPagination = LoadBlocks('report_history/list-pagination')
       const listPaginationElements = []
       if (state.page > 1) {
          listPaginationElements.push(listPagination[0].elements[0])
@@ -193,7 +193,7 @@ export function registerReportHistoryServiceHandler(app) {
          state.channel = response.channel
          state.ts = response.ts
       }
-      await saveState(state)
+      await SaveState(state)
    }
 
    // List all reports
@@ -201,19 +201,19 @@ export function registerReportHistoryServiceHandler(app) {
       block_id: 'block_welcome',
       action_id: 'action_history'
    }, async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async() => {
-         await listReportHistories(false, body.message?.ts, ack, body, client)
+      TryAndHandleError({ ack, body, client }, async() => {
+         await ListReportHistories(false, body.message?.ts, ack, body, client)
       }, 'Failed to display notification sent history list.')
    })
 
    app.action('action_clear_filters', async ({ ack, body, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async() => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async() => {
+         const state = await GetState(ts)
          state.filterBlockId += 1
-         await saveState(state)
-         await listReportHistories(true, ts, ack, body, client)
+         await SaveState(state)
+         await ListReportHistories(true, ts, ack, body, client)
          await client.chat.postMessage({
             channel: body.user.id,
             thread_ts: ts,
@@ -224,27 +224,27 @@ export function registerReportHistoryServiceHandler(app) {
    })
 
    app.action('action_filter_by_title', async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async() => {
+      TryAndHandleError({ ack, body, client }, async() => {
          logger.info(`action_filter_by_title body: ${JSON.stringify(body)}`)
-         await listReportHistories(true, body.message?.ts, ack, body, client)
+         await ListReportHistories(true, body.message?.ts, ack, body, client)
       }, 'Failed to change filter of notification title.')
    })
 
    app.action('action_filter_by_conversation', async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async() => {
-         await listReportHistories(true, body.message?.ts, ack, body, client)
+      TryAndHandleError({ ack, body, client }, async() => {
+         await ListReportHistories(true, body.message?.ts, ack, body, client)
       }, 'Failed to change filter of converstaion.')
    })
 
    app.action('action_filter_by_start_date', async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async() => {
-         await listReportHistories(true, body.message?.ts, ack, body, client)
+      TryAndHandleError({ ack, body, client }, async() => {
+         await ListReportHistories(true, body.message?.ts, ack, body, client)
       }, 'Failed to change filter of sent start date.')
    })
 
    app.action('action_filter_by_end_date', async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async() => {
-         await listReportHistories(true, body.message?.ts, ack, body, client)
+      TryAndHandleError({ ack, body, client }, async() => {
+         await ListReportHistories(true, body.message?.ts, ack, body, client)
       }, 'Failed to change filter of sent end date.')
    })
 
@@ -252,8 +252,8 @@ export function registerReportHistoryServiceHandler(app) {
    app.action('action_choose_report_history_item', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async() => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async() => {
+         const state = await GetState(ts)
          const selectedId = payload.value
          logger.info('choose report id ' + selectedId)
          if (state.selectedId === selectedId) {
@@ -261,8 +261,8 @@ export function registerReportHistoryServiceHandler(app) {
          } else {
             state.selectedId = selectedId
          }
-         await saveState(state)
-         await listReportHistories(true, ts, ack, body, client)
+         await SaveState(state)
+         await ListReportHistories(true, ts, ack, body, client)
       }, 'Failed to view detail of notification history.')
    })
 
@@ -273,12 +273,12 @@ export function registerReportHistoryServiceHandler(app) {
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async() => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async() => {
+         const state = await GetState(ts)
          if (state.page > 1) {
             state.page -= 1
-            await saveState(state)
-            await listReportHistories(true, ts, ack, body, client)
+            await SaveState(state)
+            await ListReportHistories(true, ts, ack, body, client)
          } else {
             await ack()
          }
@@ -292,13 +292,13 @@ export function registerReportHistoryServiceHandler(app) {
    }, async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async() => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async() => {
+         const state = await GetState(ts)
          const page = parseInt(payload.selected_option.value)
          if (page != null && !isNaN(page)) {
             state.page = page
-            await saveState(state)
-            await listReportHistories(true, ts, ack, body, client)
+            await SaveState(state)
+            await ListReportHistories(true, ts, ack, body, client)
          } else {
             await ack()
          }
@@ -312,13 +312,13 @@ export function registerReportHistoryServiceHandler(app) {
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async() => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async() => {
+         const state = await GetState(ts)
          const count = state.count
          if (state.page * LIMIT < count) {
             state.page += 1
-            await saveState(state)
-            await listReportHistories(true, ts, ack, body, client)
+            await SaveState(state)
+            await ListReportHistories(true, ts, ack, body, client)
          } else {
             await ack()
          }
@@ -331,9 +331,9 @@ export function registerReportHistoryServiceHandler(app) {
       action_id: 'action_delete_report_message'
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
-      const state = await getState(ts)
+      const state = await GetState(ts)
 
-      tryAndHandleError({ ack, body, client }, async() => {
+      TryAndHandleError({ ack, body, client }, async() => {
          const selectedHistory = await ReportHistory.findOne({ _id: state.selectedId })
          if (selectedHistory == null) {
             throw new Error(`can not find the history since no history with id ${state.selectedId}`)
@@ -379,7 +379,7 @@ export function registerReportHistoryServiceHandler(app) {
                })
             }
             await selectedHistory.save()
-            await listReportHistories(true, ts, ack, body, client)
+            await ListReportHistories(true, ts, ack, body, client)
          }
       }, 'Failed to delete sent notification in selected conversations.')
    })
