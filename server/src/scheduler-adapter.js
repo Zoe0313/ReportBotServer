@@ -1,13 +1,13 @@
 import {
-   registerScheduler, unregisterScheduler, nextInvocation,
-   cancelNextInvocation, invokeNow,
-   registerPerforceInfoScheduler, registerPerforceMembersScheduler,
-   registerTeamGroupScheduler
+   RegisterScheduler, UnregisterScheduler, NextInvocation,
+   CancelNextInvocation, InvokeNow,
+   RegisterPerforceInfoScheduler, RegisterPerforceMembersScheduler,
+   RegisterTeamGroupScheduler
 } from '../scheduler/schedule.js'
 
 export {
-   registerScheduler, unregisterScheduler, nextInvocation,
-   cancelNextInvocation, invokeNow,
-   registerPerforceInfoScheduler, registerPerforceMembersScheduler,
-   registerTeamGroupScheduler
+   RegisterScheduler, UnregisterScheduler, NextInvocation,
+   CancelNextInvocation, InvokeNow,
+   RegisterPerforceInfoScheduler, RegisterPerforceMembersScheduler,
+   RegisterTeamGroupScheduler
 }

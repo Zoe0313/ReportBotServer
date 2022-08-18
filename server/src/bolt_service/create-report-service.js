@@ -1,21 +1,21 @@
 import logger from '../../common/logger.js'
-import { formatDate, merge } from '../../common/utils.js'
+import { FormatDate, Merge } from '../../common/utils.js'
 import {
-   loadBlocks, getUserTz, transformInputValuesToObj,
-   tryAndHandleError
+   LoadBlocks, GetUserTz, TransformInputValuesToObj,
+   TryAndHandleError
 } from '../../common/slack-helper.js'
-import { initReportBlocks, updateFlattenMembers } from './init-blocks-data-helper.js'
+import { InitReportBlocks, UpdateFlattenMembers } from './init-blocks-data-helper.js'
 import {
    ReportConfiguration, REPORT_STATUS
 } from '../model/report-configuration.js'
 import { PerforceInfo } from '../model/perforce-info.js'
 import { TeamGroup } from '../model/team-group.js'
-import { registerScheduler } from '../scheduler-adapter.js'
+import { RegisterScheduler } from '../scheduler-adapter.js'
 import mongoose from 'mongoose'
 import { matchSorter } from 'match-sorter'
 import { performance } from 'perf_hooks'
 
-export async function updateModal({ ack, body, client }, options) {
+export async function UpdateModal({ ack, body, client }, options) {
    const isInit = options?.isInit || false
    const isNew = options?.isNew || false
    const ts = isInit ? body.message?.ts : body.view?.private_metadata
@@ -24,7 +24,7 @@ export async function updateModal({ ack, body, client }, options) {
    if (user == null) {
       throw new Error('User is none in body, can not list the reports.')
    }
-   const tz = await getUserTz(user)
+   const tz = await GetUserTz(user)
 
    let report = null
    if (isInit && isNew) {
@@ -32,22 +32,22 @@ export async function updateModal({ ack, body, client }, options) {
    } else if (isInit && !isNew) {
       report = await ReportConfiguration.findById(options?.id)
    } else {
-      report = transformInputValuesToObj(body.view.state.values)
+      report = TransformInputValuesToObj(body.view.state.values)
    }
    const reportType = report.reportType || 'bugzilla'
    const repeatType = report.repeatConfig?.repeatType
    logger.info(`select report type ${reportType} of report scheduler`)
    logger.info(`select repeat type ${repeatType} of report scheduler`)
 
-   const reportModalBasic = loadBlocks('modal/report-basic')
-   const reportModalReportType = loadBlocks(`report_type/${reportType}`)
-   const reportModalAdvanced = loadBlocks('modal/report-advanced')
-   const reportModalRecurrence = loadBlocks('modal/report-recurrence')
-   const reportModalRepeatType = repeatType != null ? loadBlocks(`repeat_type/${repeatType}`) : []
-   const reportModalTime = loadBlocks('modal/report-time')
+   const reportModalBasic = LoadBlocks('modal/report-basic')
+   const reportModalReportType = LoadBlocks(`report_type/${reportType}`)
+   const reportModalAdvanced = LoadBlocks('modal/report-advanced')
+   const reportModalRecurrence = LoadBlocks('modal/report-recurrence')
+   const reportModalRepeatType = repeatType != null ? LoadBlocks(`repeat_type/${repeatType}`) : []
+   const reportModalTime = LoadBlocks('modal/report-time')
    const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
       .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
-   await initReportBlocks(report, body.view, blocks, options, tz)
+   await InitReportBlocks(report, body.view, blocks, options, tz)
    if (ack) {
       await ack()
    }
@@ -81,15 +81,15 @@ export async function updateModal({ ack, body, client }, options) {
    isInit ? await client.views.open(viewOption) : await client.views.update(viewOption)
 }
 
-export function registerCreateReportServiceHandler(app) {
+export function RegisterCreateReportServiceHandler(app) {
    // New report message configuration
    app.action({
       block_id: 'block_welcome',
       action_id: 'action_create'
    }, async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          logger.info('open create report config modal')
-         await updateModal({ ack, body, client }, { isInit: true, isNew: true })
+         await UpdateModal({ ack, body, client }, { isInit: true, isNew: true })
       }, 'Failed to open create report configuration modal.')
    })
 
@@ -97,8 +97,8 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'repeatConfig.repeatType',
       action_id: 'action_repeat_type'
    }, async (event) => {
-      tryAndHandleError(event, async () => {
-         await updateModal(event)
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event)
       }, 'Failed to change repeat type.')
    })
 
@@ -106,19 +106,19 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'reportType',
       action_id: 'action_report_type'
    }, async (event) => {
-      tryAndHandleError(event, async () => {
-         await updateModal(event)
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event)
       }, 'Failed to change notification type.')
    })
 
    // Precheck and create a report request
    app.view('view_create_report', async ({ ack, body, view, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          const user = body.user.id
-         const tz = await getUserTz(user)
-         const inputObj = transformInputValuesToObj(view.state.values)
+         const tz = await GetUserTz(user)
+         const inputObj = TransformInputValuesToObj(view.state.values)
          const report = new ReportConfiguration(
-            merge(inputObj, {
+            Merge(inputObj, {
                creator: user,
                status: REPORT_STATUS.CREATED,
                mentionUsers: inputObj.mentionUsers || [],
@@ -140,7 +140,7 @@ export function registerCreateReportServiceHandler(app) {
                repeatConfig: {
                   tz,
                   dayOfWeek: inputObj.repeatConfig.dayOfWeek?.map(option => option.value),
-                  date: formatDate(inputObj.repeatConfig.date)
+                  date: FormatDate(inputObj.repeatConfig.date)
                }
             })
          )
@@ -152,12 +152,12 @@ export function registerCreateReportServiceHandler(app) {
          // if perforce_checkin type, flatten member list and save to report configuration
          if (report.reportType === 'perforce_checkin' ||
             report.reportType === 'perforce_review_check') {
-            updateFlattenMembers(report)
+            UpdateFlattenMembers(report)
          }
-         registerScheduler(report)
+         RegisterScheduler(report)
 
          logger.info(`Create successful. saved report id ${saved._id}`)
-         const blocks = loadBlocks('precheck-report')
+         const blocks = LoadBlocks('precheck-report')
          // create inited status report
          blocks.find(block => block.block_id === 'block_create_last')
             .elements.forEach(element => { element.value = saved._id })
@@ -197,7 +197,7 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'block_create_last',
       action_id: 'action_create_done'
    }, async ({ ack, payload, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          await ack()
          // change to enable status
          const ts = body.message.ts
@@ -211,8 +211,8 @@ export function registerCreateReportServiceHandler(app) {
          logger.info(`report : ${report}`)
          report.status = REPORT_STATUS.ENABLED
          await report.save()
-         registerScheduler(report)
-         const blocks = loadBlocks('done-create')
+         RegisterScheduler(report)
+         const blocks = LoadBlocks('done-create')
          await client.chat.update({
             channel: body.channel.id,
             ts,
@@ -227,7 +227,7 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'block_create_last',
       action_id: 'action_create_save'
    }, async ({ ack, payload, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          await ack()
          // change to draft status
          const ts = body.message.ts
@@ -250,7 +250,7 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'block_create_last',
       action_id: 'action_create_cancel'
    }, async ({ ack, payload, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          await ack()
          // remove record in db
          const ts = body.message.ts
@@ -336,8 +336,8 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'block_add_member_filter',
       action_id: 'action_add_member_filter'
    }, async (event) => {
-      tryAndHandleError(event, async () => {
-         await updateModal(event, { addMembersFilter: true })
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event, { addMembersFilter: true })
       }, 'Fail to add new members filter.')
    })
 
@@ -346,8 +346,8 @@ export function registerCreateReportServiceHandler(app) {
       block_id: /^reportSpecConfig\.(.*)\.membersFilters[[0-9]*]/,
       action_id: 'condition'
    }, async (event) => {
-      tryAndHandleError(event, async () => {
-         await updateModal(event)
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event)
       }, 'Failed to change condition of members filter.')
    })
 
@@ -356,8 +356,8 @@ export function registerCreateReportServiceHandler(app) {
       block_id: /^reportSpecConfig\.(.*)\.membersFilters[[0-9]*]/,
       action_id: 'type'
    }, async (event) => {
-      tryAndHandleError(event, async () => {
-         await updateModal(event)
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event)
       }, 'Failed to change type of members filter.')
    })
 
@@ -366,8 +366,8 @@ export function registerCreateReportServiceHandler(app) {
       block_id: /^block_remove_member_filter_[0-9]*/,
       action_id: 'action_remove_member_filter'
    }, async (event) => {
-      tryAndHandleError(event, async () => {
-         await updateModal(event, { removeMembersFilter: { index: parseInt(event.payload.value) } })
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event, { removeMembersFilter: { index: parseInt(event.payload.value) } })
       }, 'Fail to remove members filter.')
    })
 
@@ -376,8 +376,8 @@ export function registerCreateReportServiceHandler(app) {
       block_id: 'advancedOptions',
       action_id: 'action_advanced_options'
    }, async (event) => {
-      tryAndHandleError(event, async () => {
-         await updateModal(event, { advancedOption: event.payload.value })
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event, { advancedOption: event.payload.value })
       }, 'Fail to open advanced options.')
    })
 

@@ -3,7 +3,7 @@ import logger from './logger.js'
 import mergeWith from 'lodash/mergeWith.js'
 import { exec } from 'child_process'
 
-export function formatDate(date) {
+export function FormatDate(date) {
    if (date == null || date === '') {
       return ''
    }
@@ -15,7 +15,7 @@ export function formatDate(date) {
    }
 }
 
-export function formatDateTime(date, tz) {
+export function FormatDateTime(date, tz) {
    if (date == null || date === '') {
       return ''
    }
@@ -28,7 +28,7 @@ export function formatDateTime(date, tz) {
    }
 }
 
-export function parseDateWithTz(dateStr, tz) {
+export function ParseDateWithTz(dateStr, tz) {
    if (dateStr == null) {
       return null
    }
@@ -41,14 +41,14 @@ export function parseDateWithTz(dateStr, tz) {
    }
 }
 
-export function convertTimeWithTz(timeStr, oldTz, curTz) {
+export function ConvertTimeWithTz(timeStr, oldTz, curTz) {
    if (timeStr == null) {
       return { time: null, dayOffset: 0 }
    }
    try {
-      const todayWithConfigTime = formatDate(new Date()) + ' ' + timeStr
-      const dateWithOldTZ = parseDateWithTz(todayWithConfigTime, oldTz)
-      const dateWithNewTZ = formatDateTime(dateWithOldTZ, curTz)
+      const todayWithConfigTime = FormatDate(new Date()) + ' ' + timeStr
+      const dateWithOldTZ = ParseDateWithTz(todayWithConfigTime, oldTz)
+      const dateWithNewTZ = FormatDateTime(dateWithOldTZ, curTz)
       const timeWithNewTZ = dateWithNewTZ.split(' ')[1]
       return {
          time: timeWithNewTZ,
@@ -60,7 +60,7 @@ export function convertTimeWithTz(timeStr, oldTz, curTz) {
    }
 }
 
-export function merge(object, source) {
+export function Merge(object, source) {
    return mergeWith(object, source, (object, source) => {
       if (Array.isArray(object)) {
          return source
@@ -68,7 +68,7 @@ export function merge(object, source) {
    })
 }
 
-export function execCommand(cmd, timeout) {
+export function ExecCommand(cmd, timeout) {
    return new Promise((resolve, reject) => {
       exec(cmd, { timeout }, (error, stdout, stderr) => {
          if (error) {

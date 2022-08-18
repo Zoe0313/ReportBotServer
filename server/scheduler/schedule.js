@@ -2,12 +2,12 @@ import dotenv from 'dotenv'
 import schedule from 'node-schedule'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
 import {
-   REPORT_STATUS, flattenMembers, ReportConfiguration
+   REPORT_STATUS, FlattenMembers, ReportConfiguration
 } from '../src/model/report-configuration.js'
-import { updateP4Branches } from '../src/model/perforce-info.js'
-import { updateTeamGroup } from '../src/model/team-group.js'
-import { parseDateWithTz, execCommand } from '../common/utils.js'
-import { getConversationsName, getUsersName } from '../common/slack-helper.js'
+import { UpdateP4Branches } from '../src/model/perforce-info.js'
+import { UpdateTeamGroup } from '../src/model/team-group.js'
+import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
+import { GetConversationsName, GetUsersName } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
@@ -23,7 +23,7 @@ const projectRootPath = path.join(path.resolve(), '..')
 const scheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
 
-const asyncForEach = async function (array, callback) {
+const AsyncForEach = async function (array, callback) {
    let results = []
    for (let index = 0; index < array.length; index++) {
       results = await callback(array[index])
@@ -31,7 +31,7 @@ const asyncForEach = async function (array, callback) {
    return results
 }
 
-const notificationExecutor = async (report, contentEvaluate) => {
+const NotificationExecutor = async (report, ContentEvaluate) => {
    let reportHistory = null
    try {
       const mentionUsers = report.mentionUsers?.concat(
@@ -51,13 +51,13 @@ const notificationExecutor = async (report, contentEvaluate) => {
       await reportHistory.save()
 
       // 10 mins timeout
-      const messages = await contentEvaluate(report)
+      const messages = await ContentEvaluate(report)
       logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messages)}`)
 
       // post reports to slack channels
       const results = await Promise.all(
          report.conversations.map(conversation => {
-            return asyncForEach(messages, async message => {
+            return AsyncForEach(messages, async message => {
                return await client.chat.postMessage({
                   channel: conversation,
                   text: message
@@ -118,13 +118,13 @@ const notificationExecutor = async (report, contentEvaluate) => {
    }
 }
 
-const schedulerCommonHandler = async (report) => {
+const SchedulerCommonHandler = async (report) => {
    logger.info(`schedule for ${report.title} ${report._id}`)
-   await notificationExecutor(report, contentEvaluate)
+   await NotificationExecutor(report, ContentEvaluate)
 }
 
-const contentEvaluate = async (report) => {
-   const calculatePeriod = () => {
+const ContentEvaluate = async (report) => {
+   const CalculatePeriod = () => {
       let startTime = new Date()
       const endTime = new Date()
       switch (report.repeatConfig.repeatType) {
@@ -165,7 +165,7 @@ const contentEvaluate = async (report) => {
             `--title '${reportTitle}' ` +
             `--url '${report.reportSpecConfig.bugzillaLink}'`
          logger.debug(`execute the bugzilla report generator: ${command}`)
-         stdout = await execCommand(command, timeout)
+         stdout = await ExecCommand(command, timeout)
          break
       }
       case 'text': {
@@ -174,7 +174,7 @@ const contentEvaluate = async (report) => {
       }
       case 'perforce_checkin': {
          scriptPath = projectRootPath + '/generator/src/notification/perforce_checkin_report.py'
-         const { startTime, endTime } = calculatePeriod()
+         const { startTime, endTime } = CalculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
             --title '${reportTitle}' \
@@ -183,14 +183,14 @@ const contentEvaluate = async (report) => {
             --startTime ${startTime.getTime() / 1000} \
             --endTime ${endTime.getTime() / 1000}`
          logger.debug(`execute the perforce checkin report generator: ${command}`)
-         stdout = await execCommand(command, timeout)
+         stdout = await ExecCommand(command, timeout)
          break
       }
       case 'perforce_review_check': {
          timeout = 60 * 60 * 1000
          scriptPath = projectRootPath + '/generator/src/notification/' +
             'perforce_review_check_report.py'
-         const { startTime, endTime } = calculatePeriod()
+         const { startTime, endTime } = CalculatePeriod()
          logger.info(JSON.stringify(startTime))
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
             --title '${reportTitle}' \
@@ -199,17 +199,17 @@ const contentEvaluate = async (report) => {
             --startTime ${startTime.getTime() / 1000} \
             --endTime ${endTime.getTime() / 1000}`
          logger.debug(`execute the perforce review check report generator: ${command}`)
-         stdout = await execCommand(command, timeout)
+         stdout = await ExecCommand(command, timeout)
          break
       }
       case 'bugzilla_by_assignee': {
          scriptPath = projectRootPath + '/generator/src/notification/bugzilla_assignee_report.py'
-         const assignees = await getUsersName(report.reportSpecConfig.bugzillaAssignee)
+         const assignees = await GetUsersName(report.reportSpecConfig.bugzillaAssignee)
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
          `--title '${reportTitle}' ` +
          `--users '${assignees.join(',')}'`
          logger.debug(`execute the bugzilla by assignee report generator: ${command}`)
-         stdout = await execCommand(command, timeout)
+         stdout = await ExecCommand(command, timeout)
          break
       }
       // case 'svs':
@@ -223,7 +223,7 @@ const contentEvaluate = async (report) => {
       report.mentionGroups?.map(group => group.value) || []) || []
    logger.debug(`mentionusers: ${mentionUsers}`)
    if (mentionUsers != null && mentionUsers.length > 0) {
-      mentionUserNames = '\n' + (await getConversationsName(mentionUsers))
+      mentionUserNames = '\n' + (await GetConversationsName(mentionUsers))
    }
    // If the report type is text, we return the report content by array directly.
    if ('text' === report.reportType) {
@@ -247,7 +247,7 @@ const contentEvaluate = async (report) => {
    return [stdout]
 }
 
-const unregisterScheduler = function (id) {
+const UnregisterScheduler = function (id) {
    if (id == null) {
       throw new Error('scheduler id is null, can not unregister scheduler')
    }
@@ -262,7 +262,7 @@ const unregisterScheduler = function (id) {
    delete scheduleJobStore[id.toString()]
 }
 
-const registerScheduler = function (report) {
+const RegisterScheduler = function (report) {
    if (process.env.ENABLE_SCHEDULE !== 'true' && process.env.ENABLE_SCHEDULE !== true) {
       return
    }
@@ -285,7 +285,7 @@ const registerScheduler = function (report) {
    switch (repeatConfig.repeatType) {
       case 'not_repeat':
          const dateStr = `${repeatConfig.date} ${repeatConfig.time}`
-         const date = parseDateWithTz(dateStr, repeatConfig.tz)
+         const date = ParseDateWithTz(dateStr, repeatConfig.tz)
          scheduleOption = date
          break
       case 'hourly':
@@ -323,7 +323,7 @@ const registerScheduler = function (report) {
 
    job = schedule.scheduleJob(scheduleOption, async function (report) {
       const currentReport = await ReportConfiguration.findById(id)
-      schedulerCommonHandler(currentReport)
+      SchedulerCommonHandler(currentReport)
    })
    if (job != null) {
       logger.debug(`next invocation of report ${report.title} ${job.nextInvocation()}`)
@@ -335,7 +335,7 @@ const registerScheduler = function (report) {
    return job
 }
 
-const nextInvocation = function (id) {
+const NextInvocation = function (id) {
    if (id == null) {
       throw new Error('scheduler id is null, can not query next scheduler')
    }
@@ -349,7 +349,7 @@ const nextInvocation = function (id) {
    }
 }
 
-const cancelNextInvocation = function (id) {
+const CancelNextInvocation = function (id) {
    if (id == null) {
       throw new Error('scheduler id is null, can not cancel next report sending')
    }
@@ -362,7 +362,7 @@ const cancelNextInvocation = function (id) {
    }
 }
 
-const invokeNow = async function (id, sendToUserId) {
+const InvokeNow = async function (id, sendToUserId) {
    if (id == null) {
       throw new Error('scheduler id is null, can not cancel next report sending')
    }
@@ -371,9 +371,9 @@ const invokeNow = async function (id, sendToUserId) {
    if (job != null) {
       if (sendToUserId) {
          const report = await ReportConfiguration.findById(id)
-         const messages = await contentEvaluate(report)
+         const messages = await ContentEvaluate(report)
          logger.debug(`send notification to me now: ${JSON.stringify(messages)}`)
-         asyncForEach(messages, async message => {
+         AsyncForEach(messages, async message => {
             await client.chat.postMessage({
                channel: sendToUserId,
                text: message
@@ -388,15 +388,15 @@ const invokeNow = async function (id, sendToUserId) {
 }
 
 // register scheduler for updating branches of all perforce projects in db
-const registerPerforceInfoScheduler = function () {
+const RegisterPerforceInfoScheduler = function () {
    const job = schedule.scheduleJob('0 21 * * *', function () {
-      updateP4Branches()
+      UpdateP4Branches()
    })
    return job
 }
 
 // register scheduler for flatten members of all perforce checkin report in db
-const registerPerforceMembersScheduler = function () {
+const RegisterPerforceMembersScheduler = function () {
    const job = schedule.scheduleJob('10 21 * * *', async function () {
       const allMembersFilters = (await ReportConfiguration.find({ reportType: 'perforce_checkin' }))
          .map(report => ({
@@ -404,7 +404,7 @@ const registerPerforceMembersScheduler = function () {
             membersFilters: report.reportSpecConfig?.perforceCheckIn?.membersFilters || []
          }))
       await Promise.all(allMembersFilters.map(report => {
-         return flattenMembers(report.membersFilters).then(members => {
+         return FlattenMembers(report.membersFilters).then(members => {
             if (report.reportSpecConfig?.perforceCheckIn != null) {
                report.reportSpecConfig.perforceCheckIn.flattenMembers = members
                report.save()
@@ -415,15 +415,15 @@ const registerPerforceMembersScheduler = function () {
    return job
 }
 
-const registerTeamGroupScheduler = function () {
+const RegisterTeamGroupScheduler = function () {
    const job = schedule.scheduleJob('20 21 * * *', async function () {
-      updateTeamGroup()
+      UpdateTeamGroup()
    })
    return job
 }
 export {
-   registerScheduler, unregisterScheduler, nextInvocation,
-   cancelNextInvocation, invokeNow,
-   registerPerforceInfoScheduler, registerPerforceMembersScheduler,
-   registerTeamGroupScheduler
+   RegisterScheduler, UnregisterScheduler, NextInvocation,
+   CancelNextInvocation, InvokeNow,
+   RegisterPerforceInfoScheduler, RegisterPerforceMembersScheduler,
+   RegisterTeamGroupScheduler
 }

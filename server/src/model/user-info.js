@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 import logger from '../../common/logger.js'
-import { lookUpUserByName } from '../../common/slack-helper.js'
+import { LookUpUserByName } from '../../common/slack-helper.js'
 
 const UserInfoSchema = new mongoose.Schema({
    userName: {
@@ -20,7 +20,7 @@ const UserInfoSchema = new mongoose.Schema({
 
 const UserInfo = mongoose.model('UserInfo', UserInfoSchema)
 
-const updateUserInfo = async (userInfoList) => {
+const UpdateUserInfo = async (userInfoList) => {
    // update the user info in db
    logger.info('Start to update Slack user info.')
    if (userInfoList == null || userInfoList.length === 0) {
@@ -37,11 +37,11 @@ const updateUserInfo = async (userInfoList) => {
    logger.info(`Updated slack users information in db.`)
 }
 
-const findUserInfoByName = async (userName) => {
+const FindUserInfoByName = async (userName) => {
    let userInfo = await UserInfo.findOne({ userName: userName })
    if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
       logger.debug(`the user ${userName} not found in db. Search info by Slack API.`)
-      userInfo = await lookUpUserByName(userName)
+      userInfo = await LookUpUserByName(userName)
       if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
          return null
       }
@@ -49,4 +49,4 @@ const findUserInfoByName = async (userName) => {
    return userInfo
 }
 
-export { UserInfo, updateUserInfo, findUserInfoByName }
+export { UserInfo, UpdateUserInfo, FindUserInfoByName }

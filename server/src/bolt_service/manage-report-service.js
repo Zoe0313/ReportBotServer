@@ -1,20 +1,20 @@
 import {
-   formatDate, formatDateTime, merge
+   FormatDate, FormatDateTime, Merge
 } from '../../common/utils.js'
 import logger from '../../common/logger.js'
 import {
-   loadBlocks, getConversationsName, getUserTz,
-   transformInputValuesToObj, findBlockById, tryAndHandleError
+   LoadBlocks, GetConversationsName, GetUserTz,
+   TransformInputValuesToObj, FindBlockById, TryAndHandleError
 } from '../../common/slack-helper.js'
-import { displayTimeSetting, updateFlattenMembers } from './init-blocks-data-helper.js'
+import { DisplayTimeSetting, UpdateFlattenMembers } from './init-blocks-data-helper.js'
 import {
    ReportConfiguration, REPORT_STATUS
 } from '../model/report-configuration.js'
 import { ReportConfigurationState } from '../model/report-configuration-state.js'
 import {
-   registerScheduler, unregisterScheduler, nextInvocation, cancelNextInvocation, invokeNow
+   RegisterScheduler, UnregisterScheduler, NextInvocation, CancelNextInvocation, InvokeNow
 } from '../scheduler-adapter.js'
-import { updateModal } from './create-report-service.js'
+import { UpdateModal } from './create-report-service.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import mongoose from 'mongoose'
 // import { performance } from 'perf_hooks'
@@ -28,7 +28,7 @@ const REPORT_STATUS_DISPLAY = {
    ENABLED: ':white_check_mark: Enabled'
 }
 
-async function getState(ts) {
+async function GetState(ts) {
    let state = await ReportConfigurationState.findOne({ ts })
    if (state == null) {
       state = ReportConfigurationState({
@@ -43,7 +43,7 @@ async function getState(ts) {
    return state
 }
 
-async function saveState(state) {
+async function SaveState(state) {
    if (state != null) {
       await ReportConfigurationState.updateOne({ _id: state._id }, state)
    } else {
@@ -51,15 +51,15 @@ async function saveState(state) {
    }
 }
 
-export function registerManageReportServiceHandler(app) {
-   const listReports = async (isUpdate, ts, ack, body, client) => {
+export function RegisterManageReportServiceHandler(app) {
+   const ListReports = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
-      const state = await getState(ts)
+      const state = await GetState(ts)
       const user = body.user?.id
       if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
       }
-      const tz = await getUserTz(user)
+      const tz = await GetUserTz(user)
       let offset = (state.page - 1) * LIMIT
       const filter = {
          status: { $ne: REPORT_STATUS.CREATED }
@@ -79,36 +79,36 @@ export function registerManageReportServiceHandler(app) {
          })
 
       // list header
-      const listHeader = loadBlocks('report/list-header')
+      const listHeader = LoadBlocks('report/list-header')
       listHeader[0].text.text = `There are ${count} notifications in your account.`
 
       // list item detail
-      let listItemDetail = loadBlocks('report/list-item-detail')
+      let listItemDetail = LoadBlocks('report/list-item-detail')
       const report = await ReportConfiguration.findById(state.selectedId)
       if (state.selectedId == null || report == null) {
          state.selectedId = null
          listItemDetail = []
       } else {
          const [conversations, mentionUsers] = await Promise.all([
-            getConversationsName(report.conversations),
-            getConversationsName(report.mentionUsers?.concat(
+            GetConversationsName(report.conversations),
+            GetConversationsName(report.mentionUsers?.concat(
                report.mentionGroups?.map(group => group.value) || []) || [])
          ])
          logger.info(conversations)
          logger.info(mentionUsers)
-         const nextInvocationTime = await nextInvocation(report._id)
+         const nextInvocationTime = await NextInvocation(report._id)
          const nextReportSendingTime = nextInvocationTime
-            ? formatDateTime(new Date(nextInvocationTime), tz)
+            ? FormatDateTime(new Date(nextInvocationTime), tz)
             : 'No longer executed'
          logger.info(nextReportSendingTime)
 
          // report title
          listItemDetail[1].text.text = `*Title: ${report.title}*`
          if (process.env.ADMIN_USER_ID.includes(user)) {
-            listItemDetail[1].text.text += `  created by ${getConversationsName([report.creator])}`
+            listItemDetail[1].text.text += `  created by ${GetConversationsName([report.creator])}`
          }
          // report type
-         const reportTypeOptions = findBlockById(loadBlocks('modal/report-basic'), 'reportType')
+         const reportTypeOptions = FindBlockById(LoadBlocks('modal/report-basic'), 'reportType')
             .element.options
          listItemDetail[2].fields[0].text += reportTypeOptions.find(
             option => option.value === report.reportType).text.text
@@ -119,11 +119,11 @@ export function registerManageReportServiceHandler(app) {
          // users to be notified
          listItemDetail[2].fields[3].text += mentionUsers
          // scheduler start date
-         listItemDetail[2].fields[4].text += formatDate(report.repeatConfig.startDate)
+         listItemDetail[2].fields[4].text += FormatDate(report.repeatConfig.startDate)
          // scheduler end date
-         listItemDetail[2].fields[5].text += formatDate(report.repeatConfig.endDate)
+         listItemDetail[2].fields[5].text += FormatDate(report.repeatConfig.endDate)
          // repeat config summary
-         listItemDetail[2].fields[6].text += displayTimeSetting(report, tz)
+         listItemDetail[2].fields[6].text += DisplayTimeSetting(report, tz)
          // next sending time
          listItemDetail[2].fields[7].text += nextReportSendingTime
 
@@ -138,11 +138,11 @@ export function registerManageReportServiceHandler(app) {
       }
 
       // list items
-      const listItemTemplate = loadBlocks('report/list-item-template')[0]
+      const listItemTemplate = LoadBlocks('report/list-item-template')[0]
       const listItems = reportConfigurations.map(report => {
-         const creator = process.env.ADMIN_USER_ID.includes(user) ? ` - ${getConversationsName([report.creator])}` : ''
+         const creator = process.env.ADMIN_USER_ID.includes(user) ? ` - ${GetConversationsName([report.creator])}` : ''
          const icon = report.status === 'ENABLED' ? ':white_check_mark:' : ':black_square_for_stop:'
-         const content = `*${report.title} - ${report.reportType}*${creator} ${icon}\n${displayTimeSetting(report, tz)}`
+         const content = `*${report.title} - ${report.reportType}*${creator} ${icon}\n${DisplayTimeSetting(report, tz)}`
          const listItem = cloneDeep(listItemTemplate)
          listItem.text.text = content
          listItem.accessory.value = report._id
@@ -154,7 +154,7 @@ export function registerManageReportServiceHandler(app) {
       })
 
       // list pagination
-      let listPagination = loadBlocks('report/list-pagination')
+      let listPagination = LoadBlocks('report/list-pagination')
       const listPaginationElements = []
       if (state.page > 1) {
          listPaginationElements.push(listPagination[0].elements[0])
@@ -188,7 +188,7 @@ export function registerManageReportServiceHandler(app) {
          state.channel = response.channel
          state.ts = response.ts
       }
-      await saveState(state)
+      await SaveState(state)
    }
 
    // List all reports
@@ -196,8 +196,8 @@ export function registerManageReportServiceHandler(app) {
       block_id: 'block_welcome',
       action_id: 'action_list'
    }, async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
-         await listReports(false, body.message?.ts, ack, body, client)
+      TryAndHandleError({ ack, body, client }, async () => {
+         await ListReports(false, body.message?.ts, ack, body, client)
       }, 'Failed to open notification configs list.')
    })
 
@@ -205,8 +205,8 @@ export function registerManageReportServiceHandler(app) {
    app.action('action_choose_report_item', async ({ ack, body, payload, say, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          const selected = payload.value
          logger.info('choose report id ' + selected)
          if (state.selectedId === selected) {
@@ -214,8 +214,8 @@ export function registerManageReportServiceHandler(app) {
          } else {
             state.selectedId = selected
          }
-         await saveState(state)
-         await listReports(true, ts, ack, body, client)
+         await SaveState(state)
+         await ListReports(true, ts, ack, body, client)
       }, 'Failed to view notification detail.')
    })
 
@@ -226,12 +226,12 @@ export function registerManageReportServiceHandler(app) {
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          if (state.page > 1) {
             state.page -= 1
-            await saveState(state)
-            await listReports(true, ts, ack, body, client)
+            await SaveState(state)
+            await ListReports(true, ts, ack, body, client)
          } else {
             await ack()
          }
@@ -245,13 +245,13 @@ export function registerManageReportServiceHandler(app) {
    }, async ({ ack, body, client }) => {
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          const count = await ReportConfiguration.countDocuments()
          if (state.page * LIMIT < count) {
             state.page += 1
-            await saveState(state)
-            await listReports(true, ts, ack, body, client)
+            await SaveState(state)
+            await ListReports(true, ts, ack, body, client)
          } else {
             await ack()
          }
@@ -262,8 +262,8 @@ export function registerManageReportServiceHandler(app) {
    app.action('action_change_report_status', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
       const status = payload.value
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          const id = state.selectedId
          logger.info(`change report status, id: ${id}, status: ${status}`)
          if (!id) {
@@ -272,11 +272,11 @@ export function registerManageReportServiceHandler(app) {
          await ReportConfiguration.updateOne({ _id: id }, { status })
          const report = await ReportConfiguration.findById(id)
          if (report.status === 'ENABLED') {
-            registerScheduler(report)
+            RegisterScheduler(report)
          } else {
-            unregisterScheduler(id)
+            UnregisterScheduler(id)
          }
-         await listReports(true, ts, ack, body, client)
+         await ListReports(true, ts, ack, body, client)
          await client.chat.postMessage({
             channel: body.user.id,
             thread_ts: ts,
@@ -291,14 +291,14 @@ export function registerManageReportServiceHandler(app) {
       block_id: 'block_list_detail_actions',
       action_id: 'action_remove_report'
    }, async ({ ack, body, payload, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          const id = payload.value
          logger.info(`display remove report confirm modal, id: ${id}`)
          if (!id) {
             throw Error('id is null when remove report')
          }
          const report = await ReportConfiguration.findById(id)
-         const blocks = loadBlocks('modal/confirmation')
+         const blocks = LoadBlocks('modal/confirmation')
          blocks[0].text.text = `Are you sure remove the notification configuration *${report.title}*?`
          await ack()
          await client.views.open({
@@ -325,16 +325,16 @@ export function registerManageReportServiceHandler(app) {
    app.view('view_remove_confirmation', async ({ ack, body, payload, client }) => {
       const ts = payload.private_metadata
 
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          const id = state.selectedId
          logger.info(`remove report, id: ${id} ts: ${ts}`)
          if (!id) {
             throw Error('id is null when remove report')
          }
          await ReportConfiguration.deleteOne({ _id: id })
-         unregisterScheduler(id)
-         await listReports(true, ts, ack, body, client)
+         UnregisterScheduler(id)
+         await ListReports(true, ts, ack, body, client)
          await client.chat.postMessage({
             channel: body.user.id,
             thread_ts: ts,
@@ -349,37 +349,37 @@ export function registerManageReportServiceHandler(app) {
       block_id: 'block_list_detail_actions',
       action_id: 'action_edit_report'
    }, async ({ ack, body, client }) => {
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          const ts = body.message.ts
-         const state = await getState(ts)
+         const state = await GetState(ts)
          const id = state.selectedId
          if (!id) {
             throw new Error('report id is null')
          }
-         await updateModal({ ack, body, client }, { isInit: true, id })
+         await UpdateModal({ ack, body, client }, { isInit: true, id })
       }, 'Failed to open edit notification modal.')
    })
 
    // confirm edit
    app.view('view_edit_report', async ({ ack, body, payload, view, client }) => {
       const ts = payload.private_metadata
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          const id = state.selectedId
          logger.info(`edit report, id: ${id}`)
          if (!id) {
             throw new Error('report id is null when editing report config')
          }
          const user = body.user.id
-         const tz = await getUserTz(user)
+         const tz = await GetUserTz(user)
          const oldReport = await ReportConfiguration.findById(id)
          if (!oldReport) {
             throw new Error(`cannot find report ${id} in db`)
          }
-         const inputObj = transformInputValuesToObj(view.state.values)
+         const inputObj = TransformInputValuesToObj(view.state.values)
          logger.info(`inputObj: ${JSON.stringify(inputObj)}`)
 
-         const report = merge(oldReport, merge(inputObj, {
+         const report = Merge(oldReport, Merge(inputObj, {
             mentionUsers: inputObj.mentionUsers || [],
             mentionGroups: inputObj.mentionGroups || [],
             reportSpecConfig: {
@@ -399,7 +399,7 @@ export function registerManageReportServiceHandler(app) {
             repeatConfig: {
                tz,
                dayOfWeek: inputObj.repeatConfig.dayOfWeek?.map(option => option.value),
-               date: formatDate(inputObj.repeatConfig.date),
+               date: FormatDate(inputObj.repeatConfig.date),
                startDate: inputObj.repeatConfig?.startDate || null,
                endDate: inputObj.repeatConfig?.endDate || null
             }
@@ -409,11 +409,11 @@ export function registerManageReportServiceHandler(app) {
          await ack()
          if (report.reportType === 'perforce_checkin' ||
             report.reportType === 'perforce_review_check') {
-            updateFlattenMembers(report)
+            UpdateFlattenMembers(report)
          }
-         registerScheduler(report)
+         RegisterScheduler(report)
          logger.info(`Edit successful. report id ${id}`)
-         await listReports(true, ts, ack, body, client)
+         await ListReports(true, ts, ack, body, client)
          await client.chat.postMessage({
             channel: body.user.id,
             thread_ts: ts,
@@ -456,15 +456,15 @@ export function registerManageReportServiceHandler(app) {
       const action = payload.selected_option.value
       const ts = body.message.ts
 
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          const id = state.selectedId
          if (!id) {
             throw Error('id is null when remove report')
          }
          logger.info(`display confirmation modal, action: ${action}, id: ${id}`)
          const report = await ReportConfiguration.findById(id)
-         const blocks = loadBlocks('modal/confirmation')
+         const blocks = LoadBlocks('modal/confirmation')
          blocks[0].text.text = `Are you sure ${actionText[action]} *${report.title}*?`
          await ack()
          await client.views.open({
@@ -492,8 +492,8 @@ export function registerManageReportServiceHandler(app) {
    app.action('action_invoke_to_me_now', async ({ ack, body, payload, client }) => {
       const ts = body.message.ts
       const status = payload.value
-      tryAndHandleError({ ack, body, client }, async () => {
-         const state = await getState(ts)
+      TryAndHandleError({ ack, body, client }, async () => {
+         const state = await GetState(ts)
          const id = state.selectedId
          logger.info(`Invoke the notification to me now, id: ${id}, status: ${status}`)
          if (!id) {
@@ -501,7 +501,7 @@ export function registerManageReportServiceHandler(app) {
          }
          const report = await ReportConfiguration.findById(id)
          if (report.status === 'ENABLED') {
-            invokeNow(id, body.user.id)
+            InvokeNow(id, body.user.id)
             await ack()
          }
       }, `Failed to send notification to me now.`)
@@ -512,7 +512,7 @@ export function registerManageReportServiceHandler(app) {
       logger.info(`view_more_action_confirmation private_metadata: ${body.view.private_metadata}`)
       const privateMetadata = JSON.parse(body.view.private_metadata)
       const action = privateMetadata.action
-      tryAndHandleError({ ack, body, client }, async () => {
+      TryAndHandleError({ ack, body, client }, async () => {
          const id = privateMetadata.id
          if (!id) {
             throw new Error('report id is null')
@@ -521,16 +521,16 @@ export function registerManageReportServiceHandler(app) {
          logger.info(`execute ${action}, id: ${id}`)
          switch (action) {
             case 'invoke_now':
-               invokeNow(id)
+               InvokeNow(id)
                await ack()
                break
             case 'invoke_to_me_now':
-               invokeNow(id, body.user.id)
+               InvokeNow(id, body.user.id)
                await ack()
                break
             case 'cancel_next':
-               await cancelNextInvocation(id)
-               await listReports(true, ts, ack, body, client)
+               await CancelNextInvocation(id)
+               await ListReports(true, ts, ack, body, client)
                break
             default:
                throw new Error('unknow action for action_report_more_actions')

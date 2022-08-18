@@ -4,17 +4,17 @@ import cloneDeep from 'lodash/cloneDeep.js'
 import set from 'lodash/set.js'
 import assert from 'assert'
 import { PerforceInfo } from '../src/model/perforce-info.js'
-import { updateUserInfo } from '../src/model/user-info.js'
+import { UpdateUserInfo } from '../src/model/user-info.js'
 
 let slackClient = null
 const userTzCache = {}
 const blocksCache = {}
 
-export function initSlackClient(client) {
+export function InitSlackClient(client) {
    slackClient = client
 }
 
-export const getUserTz = async (userId) => {
+export const GetUserTz = async (userId) => {
    assert(slackClient != null, 'slackClient is null in slack helper')
    assert(userId != null, 'user id is null')
 
@@ -33,7 +33,7 @@ export const getUserTz = async (userId) => {
    }
 }
 
-export const updateUserTzCache = (userId, tz) => {
+export const UpdateUserTzCache = (userId, tz) => {
    assert(userId != null, 'user Id is null when updating user tz cache.')
 
    if (userTzCache[userId] != null) {
@@ -44,7 +44,7 @@ export const updateUserTzCache = (userId, tz) => {
    }
 }
 
-export async function verifyBranchInProject(project, branches) {
+export async function VerifyBranchInProject(project, branches) {
    if (project == null || project === '') {
       logger.error(`project is null when verifying the branches info`)
       return false
@@ -59,7 +59,7 @@ export async function verifyBranchInProject(project, branches) {
    return flag
 }
 
-export async function verifyBotInChannel(channel) {
+export async function VerifyBotInChannel(channel) {
    assert(slackClient != null, 'slackClient is not initialized in slack helper.')
 
    try {
@@ -77,7 +77,7 @@ export async function verifyBotInChannel(channel) {
    }
 }
 
-export function getConversationsName(conversationIds) {
+export function GetConversationsName(conversationIds) {
    if (conversationIds == null) {
       return ''
    }
@@ -98,7 +98,7 @@ export function getConversationsName(conversationIds) {
    }).join(', ')
 }
 
-export async function getUsersName(users) {
+export async function GetUsersName(users) {
    assert(slackClient != null, 'slackClient is not initialized in slack helper.')
    return await Promise.all(users.map(user => {
       return slackClient.users.info({ user }).then(res => {
@@ -108,7 +108,7 @@ export async function getUsersName(users) {
 }
 
 // get and store all slack user info list in VMware - do not user this function for now
-export async function getUserList(cursor) {
+export async function GetUserList(cursor) {
    assert(slackClient != null, 'slackClient is not initialized in slack helper.')
    try {
       logger.info('Start to get user list from slack client...')
@@ -127,7 +127,7 @@ export async function getUserList(cursor) {
       if (nextCursor != null && nextCursor !== '') {
          // pause 10s for the rate limits of Slack web Api
          await new Promise(resolve => setTimeout(resolve, 10000))
-         nextUserList = await getUserList(nextCursor)
+         nextUserList = await GetUserList(nextCursor)
       }
       return response.members.map(member => {
          return {
@@ -144,7 +144,7 @@ export async function getUserList(cursor) {
 
 // get the user information by VMware ID and update the User-Info db,
 // including the Slack ID, user VMware ID and full name.
-export async function lookUpUserByName(userName) {
+export async function LookUpUserByName(userName) {
    assert(slackClient != null, 'slackClient is not initialized in slack helper.')
    try {
       if (userName == null || userName === '') {
@@ -160,7 +160,7 @@ export async function lookUpUserByName(userName) {
          fullName: response.user.real_name || ''
       }
       // check if the user exists in the UserInfo collection and update
-      updateUserInfo([userInfo])
+      UpdateUserInfo([userInfo])
       logger.info(`Insert the user ${userName} info into the db successfully.`)
       return userInfo
    } catch (e) {
@@ -172,7 +172,7 @@ export async function lookUpUserByName(userName) {
       return {}
    }
 }
-export function loadBlocks(name) {
+export function LoadBlocks(name) {
    if (name.endsWith('null') || name.endsWith('undefined')) {
       return []
    }
@@ -186,7 +186,7 @@ export function loadBlocks(name) {
    }
 }
 
-export function transformInputValuesToObj(values) {
+export function TransformInputValuesToObj(values) {
    const inputObj = {}
    const getInputValueOfPayload = (payload) => {
       let inputValue = null
@@ -228,11 +228,11 @@ export function transformInputValuesToObj(values) {
    return inputObj
 }
 
-export function findBlockById(blocks, blockId) {
+export function FindBlockById(blocks, blockId) {
    return blocks.find(block => block.block_id === blockId)
 }
 
-export async function tryAndHandleError({ ack, body, client }, func, errorHandler) {
+export async function TryAndHandleError({ ack, body, client }, func, errorHandler) {
    try {
       await func()
    } catch (e) {

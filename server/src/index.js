@@ -1,32 +1,32 @@
 import dotenv from 'dotenv'
 import bolt from '@slack/bolt'
 import {
-   registerCommonServiceHandler,
-   registerCreateReportServiceHandler,
-   registerManageReportServiceHandler,
-   registerReportHistoryServiceHandler,
-   registerRequestApiTokenServiceHandler
+   RegisterCommonServiceHandler,
+   RegisterCreateReportServiceHandler,
+   RegisterManageReportServiceHandler,
+   RegisterReportHistoryServiceHandler,
+   RegisterRequestApiTokenServiceHandler
 } from './bolt_service/index.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
-   registerScheduler, registerPerforceInfoScheduler,
-   registerPerforceMembersScheduler, registerTeamGroupScheduler
+   RegisterScheduler, RegisterPerforceInfoScheduler,
+   RegisterPerforceMembersScheduler, RegisterTeamGroupScheduler
 } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
-import { connectMongoDatabase } from '../common/db-utils.js'
-import { initSlackClient } from '../common/slack-helper.js'
+import { ConnectMongoDatabase } from '../common/db-utils.js'
+import { InitSlackClient } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 dotenv.config()
 
 // connect to mongodb
-connectMongoDatabase(async () => {
+ConnectMongoDatabase(async () => {
    const reports = await ReportConfiguration.find({ status: REPORT_STATUS.ENABLED })
-   reports.forEach(report => registerScheduler(report))
-   const updatePerforceInfoJob = registerPerforceInfoScheduler()
+   reports.forEach(report => RegisterScheduler(report))
+   const updatePerforceInfoJob = RegisterPerforceInfoScheduler()
    logger.info(`next invocation of p4 info update is ${updatePerforceInfoJob.nextInvocation()}`)
-   const flattenMembersJob = registerPerforceMembersScheduler()
+   const flattenMembersJob = RegisterPerforceMembersScheduler()
    logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)
-   const updateTeamGroupJob = registerTeamGroupScheduler()
+   const updateTeamGroupJob = RegisterTeamGroupScheduler()
    logger.info(`next invocation of team group members update is ${updateTeamGroupJob.nextInvocation()}`)
    if (process.env.NODE_ENV !== 'development') {
       updatePerforceInfoJob.invoke()
@@ -44,7 +44,7 @@ const app = new bolt.App({
    signingSecret: process.env.SLACK_SIGNING_SECRET
 })
 
-initSlackClient(app.client)
+InitSlackClient(app.client)
 
 // handler performance
 app.use(async ({ body, next }) => {
@@ -80,11 +80,11 @@ app.error((error) => {
 })
 
 // register handlers for slack bolt UI
-registerCommonServiceHandler(app)
-registerCreateReportServiceHandler(app)
-registerManageReportServiceHandler(app)
-registerReportHistoryServiceHandler(app)
-registerRequestApiTokenServiceHandler(app)
+RegisterCommonServiceHandler(app)
+RegisterCreateReportServiceHandler(app)
+RegisterManageReportServiceHandler(app)
+RegisterReportHistoryServiceHandler(app)
+RegisterRequestApiTokenServiceHandler(app)
 
 app.start()
 logger.info('⚡️ Bolt app is running!')

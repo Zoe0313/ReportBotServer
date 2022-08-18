@@ -1,16 +1,16 @@
 import { ReportConfiguration } from '../model/report-configuration.js'
 import { SlackbotApiToken } from '../model/api-token.js'
-import { addApiHistoryInfo } from '../model/api-history.js'
-import { findUserInfoByName } from '../model/user-info.js'
-import { registerScheduler, unregisterScheduler } from '../scheduler-adapter.js'
+import { AddApiHistoryInfo } from '../model/api-history.js'
+import { FindUserInfoByName } from '../model/user-info.js'
+import { RegisterScheduler, UnregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
-import { merge } from '../../common/utils.js'
-import { initSlackClient } from '../../common/slack-helper.js'
+import { Merge } from '../../common/utils.js'
+import { InitSlackClient } from '../../common/slack-helper.js'
 import Koa from 'koa'
 import Router from 'koa-router'
 import koaBody from 'koa-body'
-import { connectMongoDatabase } from '../../common/db-utils.js'
+import { ConnectMongoDatabase } from '../../common/db-utils.js'
 import { WebClient } from '@slack/web-api'
 import fs from 'fs'
 import https from 'https'
@@ -18,7 +18,7 @@ import mount from 'koa-mount'
 import serve from 'koa-static'
 import path from 'path'
 
-function registerApiRouters(router, client) {
+function RegisterApiRouters(router, client) {
    router.use(async (ctx, next) => {
       if (ctx.url.endsWith('/server/health')) {
          await next()
@@ -32,7 +32,7 @@ function registerApiRouters(router, client) {
          const errorMsg = 'Authorization failure'
          ctx.response.status = 401
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo({ userId: '', ipAddr: ipAddr }, { channel: '', text: '' }, ctx.response)
+         AddApiHistoryInfo({ userId: '', ipAddr: ipAddr }, { channel: '', text: '' }, ctx.response)
          return
       }
       ctx.state.userId = apiToken.userId
@@ -75,7 +75,7 @@ function registerApiRouters(router, client) {
          const report = await new ReportConfiguration(ctx.request.body)
          report.creator = userId
          await report.save()
-         registerScheduler(report)
+         RegisterScheduler(report)
          ctx.response.body = report
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
@@ -101,10 +101,10 @@ function registerApiRouters(router, client) {
             ctx.response.body = { result: false, message: 'report configuration not found' }
             return
          }
-         const report = merge(oldReport, ctx.request.body)
+         const report = Merge(oldReport, ctx.request.body)
          logger.info(`original report: ${oldReport}\nnew report: ${report}`)
          await report.save()
-         registerScheduler(report)
+         RegisterScheduler(report)
          ctx.response.body = report
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
@@ -125,7 +125,7 @@ function registerApiRouters(router, client) {
          _id: ctx.params.id, creator: userId
       })
       if (result) {
-         unregisterScheduler(ctx.params.id)
+         UnregisterScheduler(ctx.params.id)
          ctx.response.status = 200
          ctx.response.body = { result: true }
       } else {
@@ -146,7 +146,7 @@ function registerApiRouters(router, client) {
       if (errorMsg !== '') {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo(ctx.state, request, ctx.response)
+         AddApiHistoryInfo(ctx.state, request, ctx.response)
          return
       }
       console.log(process.env.LOGGER_PATH)
@@ -166,7 +166,7 @@ function registerApiRouters(router, client) {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
       }
-      addApiHistoryInfo(ctx.state, request, ctx.response)
+      AddApiHistoryInfo(ctx.state, request, ctx.response)
    })
 
    router.post('/api/v1/user/:userName/messages', async (ctx, next) => {
@@ -181,16 +181,16 @@ function registerApiRouters(router, client) {
       if (errorMsg !== '') {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo(ctx.state, request, ctx.response)
+         AddApiHistoryInfo(ctx.state, request, ctx.response)
          return
       }
-      const userInfo = await findUserInfoByName(ctx.params.userName)
+      const userInfo = await FindUserInfoByName(ctx.params.userName)
       if (userInfo == null) {
          errorMsg = `${ctx.params.userName} not found`
          request = { channel: '', text: ctx.request.body.text }
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
-         addApiHistoryInfo(ctx.state, request, ctx.response)
+         AddApiHistoryInfo(ctx.state, request, ctx.response)
          return
       }
       logger.debug(`the message "${ctx.request.body.text}" will be sent to user ${ctx.params.userName}`)
@@ -210,22 +210,22 @@ function registerApiRouters(router, client) {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: errorMsg }
       }
-      addApiHistoryInfo(ctx.state, request, ctx.response)
+      AddApiHistoryInfo(ctx.state, request, ctx.response)
    })
 }
 
 // connect to mongodb
-connectMongoDatabase()
+ConnectMongoDatabase()
 
 const client = new WebClient(process.env.SLACK_BOT_TOKEN_REST)
 const app = new Koa()
 const router = new Router()
 
-initSlackClient(client)
+InitSlackClient(client)
 
 app.use(koaBody())
 
-registerApiRouters(router, client)
+RegisterApiRouters(router, client)
 
 app.use(async (ctx, next) => {
    try {

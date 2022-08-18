@@ -4,7 +4,7 @@ import parseUrl from 'parse-url'
 import axios from 'axios'
 import logger from '../../common/logger.js'
 import {
-   verifyBotInChannel, getUsersName
+   VerifyBotInChannel, GetUsersName
 } from '../../common/slack-helper.js'
 import { PerforceInfo } from './perforce-info.js'
 
@@ -61,7 +61,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
             } else {
                const results = await Promise.all(
                   v.filter(channel => channel.startsWith('C')).map(channel =>
-                     verifyBotInChannel(channel)
+                     VerifyBotInChannel(channel)
                         .then(inChannel => ({ channel, inChannel }))
                   )
                )
@@ -337,7 +337,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
 const ReportConfiguration = mongoose.model('ReportConfiguration', ReportConfigurationSchema)
 
 // get direct reporters username of given members through LDAP API
-const getDirectReporters = async (members) => {
+const GetDirectReporters = async (members) => {
    return await Promise.all(members.map(member => {
       const body = {
          _source: ['username'],
@@ -359,7 +359,7 @@ const getDirectReporters = async (members) => {
 }
 
 // flatten p4 checkin members based on members filters
-const flattenMembers = async (membersFilters, selectedTeamsMembers) => {
+const FlattenMembers = async (membersFilters, selectedTeamsMembers) => {
    if (membersFilters == null || membersFilters.length === 0) {
       return selectedTeamsMembers
    }
@@ -371,15 +371,15 @@ const flattenMembers = async (membersFilters, selectedTeamsMembers) => {
    }).map(membersFilter => {
       if (membersFilter.type === 'selected') {
          // get users name from users slack id
-         return getUsersName(membersFilter.members).then(selectedMembers => {
+         return GetUsersName(membersFilter.members).then(selectedMembers => {
             return {
                condition: membersFilter.condition,
                members: selectedMembers
             }
          })
       } else if (membersFilter.type === 'direct_reporters') {
-         return getUsersName(membersFilter.members).then(selectedMembers => {
-            return getDirectReporters(selectedMembers)
+         return GetUsersName(membersFilter.members).then(selectedMembers => {
+            return GetDirectReporters(selectedMembers)
                .then(directReporters => ({
                   condition: membersFilter.condition,
                   // including direct reporters and selected members
@@ -394,11 +394,11 @@ const flattenMembers = async (membersFilters, selectedTeamsMembers) => {
                new Date().getTime() - startTime > 10 * 60 * 1000) {
                return []
             }
-            const directReporters = await getDirectReporters(members)
+            const directReporters = await GetDirectReporters(members)
             // including all reporters and selected members
             return members.concat(await getAllReporters(directReporters, startTime))
          }
-         return getUsersName(membersFilter.members).then(selectedMembers => {
+         return GetUsersName(membersFilter.members).then(selectedMembers => {
             return getAllReporters(selectedMembers, new Date().getTime()).then(allReporters => {
                return {
                   condition: membersFilter.condition,
@@ -428,5 +428,5 @@ export {
    ReportConfiguration,
    PerforceCheckInMembersFilterSchema,
    REPORT_STATUS,
-   flattenMembers
+   FlattenMembers
 }
