@@ -16,7 +16,7 @@ from urllib import parse
 from collections import defaultdict
 from perforce_diff_parser import PerforceDiffParser, ReviewLinkNotFound
 from review_diff_parser import ReviewDiffParser
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, transformReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import PERFORCE_DESCRIBE_URL, REVIEWBOARD_REQUEST_URL, POST_MESSAGE_BEAR_TOKEN, \
    POST_MESSAGE_API_BY_CHANNEL, POST_MESSAGE_API_BY_USER, VSAN_SLACKBOT_MONITOR_CHANNELID
@@ -190,7 +190,7 @@ class PerforceReviewCheckSpider(object):
          message.append("Branch: {0}".format(" & ".join(self.branchList)))
          message.append(self.checkinTime)
          message.append("I haven't found any differences between last review and actual submission.")
-      return splitOverlengthReport(message)
+      return transformReport(messages=message)
 
 import argparse
 def parseArgs():

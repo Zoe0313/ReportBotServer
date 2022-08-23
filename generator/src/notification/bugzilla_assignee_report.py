@@ -12,7 +12,7 @@ import re
 from urllib import parse
 from collections import defaultdict, namedtuple
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, transformReport
 from generator.src.utils.Logger import logger
 Record = namedtuple('Record', ['bugId', 'assignee', 'reporter', 'severity', 'priority',
                                'status', 'fixBy', 'eta', 'summary'])
@@ -53,12 +53,14 @@ class BugzillaAssigneeSpider(object):
       result = self.getRecords()
       message = []
       message.append("*Title: {0}*".format(self.title))
+      isNoContent = True
       if result:
          lineFormatter = "{0}: {1} {2} _FixBy:_ {3} _ETA:_ {4}\n" + " "*26 + "_Summary_: {5}"
          for user in self.userList:
             recordList = result.get(user, [])
             recordList.sort(key=lambda r: r.bugId, reverse=True)
             if len(recordList) > 0:
+               isNoContent = False
                message.append("*{0}* (Count: *{1}*)".format(user, len(recordList)))
                for record in recordList:
                   idWithLink = "<%s|%s>" % (self.showBugUrl.format(record.bugId), record.bugId)
@@ -69,7 +71,7 @@ class BugzillaAssigneeSpider(object):
                message.append("*{0}* (No bug.) :coffee:".format(user))
       else:
          message.append("No bugs assigned to selected members. :coffee:")
-      return splitOverlengthReport(message)
+      return transformReport(messages=message, isNoContent=isNoContent)
 
    def getRecords(self, assigneeMaxLength=20, summaryMaxLength=80):
       pattern = re.compile(r'fix_by_product:(.*), fix_by_version:(.*), fix_by_phase:(.*)', re.M | re.I)

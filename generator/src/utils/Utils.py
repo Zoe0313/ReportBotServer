@@ -99,4 +99,8 @@ def splitOverlengthReport(messages, isContentInCodeBlock=False):
    if len(reportLines) > 0:
       report = formatReport(reportLines)
       reports.append(report)
-   return json.dumps({"messages": reports})
+   return reports
+
+def transformReport(messages, isNoContent=False, isContentInCodeBlock=False):
+   reports = splitOverlengthReport(messages, isContentInCodeBlock)
+   return json.dumps({'messages': reports, 'isEmpty': isNoContent})

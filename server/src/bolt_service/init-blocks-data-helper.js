@@ -263,7 +263,9 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
    const advancedOptionBlock = FindBlockById(blocks, 'advancedOptions')
    const oldAdvancedOptionBlock = FindBlockById(view?.blocks || [], 'advancedOptions')
    const isAdvancedOptionInitOpen =
-      report.mentionUsers?.length > 0 || report.mentionGroups?.length > 0
+      report.mentionUsers?.length > 0 || report.mentionGroups?.length > 0 ||
+      (report.skipEmptyReport === 'Yes' && (report.reportType === 'bugzilla' ||
+      report.reportType === 'bugzilla_by_assignee' || report.reportType === 'perforce_checkin'))
 
    const displayAdvancedOptions = () => {
       if (report.mentionUsers?.length > 0) {
@@ -271,6 +273,19 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
       }
       if (report.mentionGroups?.length > 0) {
          FindBlockById(blocks, 'mentionGroups').element.initial_options = report.mentionGroups
+      }
+      if (report.reportType === 'bugzilla' || report.reportType === 'bugzilla_by_assignee' ||
+         report.reportType === 'perforce_checkin') {
+         const isSkipEmptyReport = report.skipEmptyReport || 'No'
+         const skipEmptyReportBlock = FindBlockById(blocks, 'skipEmptyReport')
+         const skipEmptyReportOption = skipEmptyReportBlock.element.options
+            .find(option => option.value === isSkipEmptyReport)
+         if (skipEmptyReportOption != null) {
+            skipEmptyReportBlock.element.initial_option = skipEmptyReportOption
+         }
+      } else {
+         const blockIndex = blocks.findIndex(block => block.block_id === 'skipEmptyReport')
+         blocks.splice(blockIndex, 1)
       }
       advancedOptionBlock.accessory.text.text = 'delete'
       advancedOptionBlock.accessory.value = 'delete'

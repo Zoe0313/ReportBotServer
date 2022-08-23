@@ -382,6 +382,7 @@ export function RegisterManageReportServiceHandler(app) {
          const report = Merge(oldReport, Merge(inputObj, {
             mentionUsers: inputObj.mentionUsers || [],
             mentionGroups: inputObj.mentionGroups || [],
+            skipEmptyReport: inputObj.skipEmptyReport || 'No',
             reportSpecConfig: {
                perforceCheckIn: {
                   branches: inputObj.reportSpecConfig.perforceCheckIn?.branches
