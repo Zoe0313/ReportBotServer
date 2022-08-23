@@ -123,6 +123,7 @@ export function RegisterCreateReportServiceHandler(app) {
                status: REPORT_STATUS.CREATED,
                mentionUsers: inputObj.mentionUsers || [],
                mentionGroups: inputObj.mentionGroups || [],
+               skipEmptyReport: inputObj.skipEmptyReport || 'No',
                reportSpecConfig: {
                   perforceCheckIn: {
                      branches: inputObj.reportSpecConfig.perforceCheckIn?.branches

@@ -59,6 +59,41 @@
 					"emoji": true
 				}
 			}
-		}
+	  },
+	  {
+		 "type": "input",
+		 "block_id": "skipEmptyReport",
+		 "label": {
+		    "type": "plain_text",
+			"text": "Skip report if no bug/change found"
+		 },
+		 "dispatch_action": true,
+		 "element": {
+			"type": "static_select",
+			"action_id": "action_skip_empty_report",
+			"placeholder": {
+			   "type": "plain_text",
+			   "text": "If choose Yes, you won’t receive report when no bug/change."
+			},
+			"options": [
+			   {
+				  "text": {
+				     "type": "plain_text",
+					 "text": "Yes",
+					 "emoji": true
+				  },
+				  "value": "Yes"
+			   },
+			   {
+				  "text": {
+					 "type": "plain_text",
+					 "text": "No",
+					 "emoji": true
+				  },
+				  "value": "No"
+			   }
+			]
+		 }
+	  }
    ]
 }

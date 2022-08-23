@@ -16,7 +16,7 @@ from lxml import etree
 import pandas as pd
 import math
 from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD, BUGZILLA_DETAIL_URL
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, transformReport
 from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, short2long
 from generator.src.utils.Logger import logger
 
@@ -272,6 +272,7 @@ class BugzillaSpider(object):
       return message
 
    def getBuglistReport(self, html):
+      isNoContent = False
       bugCountInfos = html.xpath('//*[@id="buglistHeader"]/div/div[2]/h3[1]/text()')
       if not (len(bugCountInfos) > 0 and "bug" in bugCountInfos[0].lower()):
          logger.error(f"{self.buglistUrl} can't find bug count")
@@ -292,8 +293,9 @@ class BugzillaSpider(object):
          message.append(bugCountInfo)
          message.extend(self.getBuglistDetail())
       else:
+         isNoContent = True
          message.append("No bugs currently.")
-      return message
+      return message, isNoContent
 
    def getBuglistDetail(self):
       downloadUrl = self.longUrl + ';ctype=csv'
@@ -354,6 +356,7 @@ class BugzillaSpider(object):
                          f"Maybe temporary bugzilla server down.")
 
       csvRes = self.getCsvContent(html)
+      isNoContent = csvRes is "No bugs currently."
       message = []
       message.append("*Title: {0}*".format(self.title))
       if isinstance(csvRes, dict):
@@ -363,7 +366,7 @@ class BugzillaSpider(object):
             message.extend(self.generateTable(tableTitle, tableDataDf, shortUrlDict))
       else:
          message.append(csvRes)
-      return message
+      return message, isNoContent
 
    @logExecutionTime
    def getReport(self):
@@ -375,11 +378,11 @@ class BugzillaSpider(object):
       html = etree.HTML(content)
 
       if "/buglist.cgi" in self.longUrl:  # query buglist
-         message = self.getBuglistReport(html)
-         return splitOverlengthReport(message, isContentInCodeBlock=True)
+         message, isNoContent = self.getBuglistReport(html)
+         return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=True)
       elif "/report.cgi" in self.longUrl:  # tabular
-         message = self.getTabularReport(html)
-         return splitOverlengthReport(message, isContentInCodeBlock=False)
+         message, isNoContent = self.getTabularReport(html)
+         return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=False)
       else:
          logger.error(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
          raise Exception(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")

@@ -51,9 +51,19 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       await reportHistory.save()
 
       // 10 mins timeout
-      const messages = await ContentEvaluate(report)
-      logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messages)}`)
+      const messageInfo = await ContentEvaluate(report)
+      const messages = messageInfo.messages
+      logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messageInfo)}`)
 
+      const isSkipEmptyReport = report.skipEmptyReport
+      if (isSkipEmptyReport === 'Yes' && messageInfo.isEmpty === true) {
+         logger.info(`The option of skip empty report is ${isSkipEmptyReport} `)
+         reportHistory.content = JSON.stringify(messages[0])
+         reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
+         reportHistory.sentTime = new Date()
+         await reportHistory.save()
+         return
+      }
       // post reports to slack channels
       const results = await Promise.all(
          report.conversations.map(conversation => {
@@ -226,25 +236,25 @@ const ContentEvaluate = async (report) => {
       mentionUserNames = '\n' + (await GetConversationsName(mentionUsers))
    }
    // If the report type is text, we return the report content by array directly.
-   if ('text' === report.reportType) {
+   if (report.reportType === 'text') {
       stdout += mentionUserNames
-      return [stdout]
+      return { messages: [stdout], isEmpty: false }
    }
    try {
       const output = JSON.parse(stdout)
-      // Here output's format is {“message”: [“……“, “……“]}
+      // Here output's format is {“messages”: [“……“, “……“], “isEmpty”: False}
       if (typeof output === 'object' && Array.isArray(output.messages)) {
          const messages = output.messages?.map(message => unescape(message)) || []
          if (messages.length > 0) {
             messages[messages.length - 1] += mentionUserNames
          }
-         return messages
+         return { messages: messages, isEmpty: output.isEmpty }
       }
    } catch (e) {
       logger.error(`failed to JSON.parse(stdout):`)
       logger.error(e)
    }
-   return [stdout]
+   return { messages: [stdout], isEmpty: false }
 }
 
 const UnregisterScheduler = function (id) {
@@ -371,8 +381,9 @@ const InvokeNow = async function (id, sendToUserId) {
    if (job != null) {
       if (sendToUserId) {
          const report = await ReportConfiguration.findById(id)
-         const messages = await ContentEvaluate(report)
-         logger.debug(`send notification to me now: ${JSON.stringify(messages)}`)
+         const messageInfo = await ContentEvaluate(report)
+         const messages = messageInfo.messages
+         logger.debug(`send notification to me now: ${JSON.stringify(messageInfo)}`)
          AsyncForEach(messages, async message => {
             await client.chat.postMessage({
                channel: sendToUserId,

@@ -13,7 +13,7 @@ import time
 import datetime
 import pandas as pd
 from urllib import parse
-from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport
+from generator.src.utils.Utils import runCmd, logExecutionTime, transformReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
    BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, VSANCORE_DESCRIBE_URL
@@ -60,6 +60,7 @@ class PerforceSpider(object):
       # generate report
       message = []
       message.append(self.showTitle)
+      isNoContent = (result.empty is True)
       if not result.empty:
          result = result.sort_values(by=['assignee', 'CLN', 'checkinTime'], ascending=True)
          assignees = set(result['assignee'].values.tolist())
@@ -98,7 +99,7 @@ class PerforceSpider(object):
                userName = user
       else:
          message.append("No Changes.")
-      return splitOverlengthReport(message, isContentInCodeBlock=(len(result) > 0))
+      return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=(len(result) > 0))
 
    def getRecords(self):
       formatStr = "//depot/{}/...@{}"
