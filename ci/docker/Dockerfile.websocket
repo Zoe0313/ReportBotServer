@@ -32,6 +32,6 @@ COPY . .
 
 WORKDIR server
 
-RUN npm install && cp .env.product .env
+RUN npm install
 
 CMD [ "npm", "run", "start:prod" ]
