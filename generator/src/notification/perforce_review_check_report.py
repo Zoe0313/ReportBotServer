@@ -58,19 +58,22 @@ class PerforceReviewCheckSpider(object):
    def isVSAN(self, branch):
       '''
       the perforce path should be //depot///...
-      For vSAN, project we can focus on bora, scons, vsan-mgmt-ui.
+      For vSAN, project we can focus on main branch of bora, scons, vsan-mgmt-ui.
       '''
       return branch in ['bora/main', 'scons/main', 'vsan-mgmt-ui/main']
 
    def compareTwoDiffs(self, lastChangeDiff, lastReviewDiff):
-      # check diff file count
-      if len(lastChangeDiff) != len(lastReviewDiff):
-         raise CompareNotEqual(f"compare file list unequal review({len(lastReviewDiff)}) change({len(lastChangeDiff)})")
       # check diff file list
       changeDiffFileList = [file for file in lastChangeDiff.keys()]
-      for file in lastReviewDiff.keys():
-         if file not in changeDiffFileList:
-            raise CompareNotEqual(f"compare file list unequal {file}")
+      reviewDiffFileList = [file for file in lastReviewDiff.keys()]
+      differentFiles = set(changeDiffFileList) ^ set(reviewDiffFileList)
+      if len(differentFiles) > 0:
+         lastReviewDiffFileCount, lastChangeDiffFileCount = len(lastReviewDiff), len(lastChangeDiff)
+         if lastReviewDiffFileCount != lastChangeDiffFileCount:
+            raise CompareNotEqual(f"compare file list unequal review({lastReviewDiffFileCount}) "
+                                  f"change({lastChangeDiffFileCount})")
+         else:
+            raise CompareNotEqual(f"compare file list unequal due to: {differentFiles.pop()}")
       for file, reviewCodes in lastReviewDiff.items():
          changeCodes = lastChangeDiff[file]
          # sort diff line no
@@ -107,18 +110,20 @@ class PerforceReviewCheckSpider(object):
             for change in changeList:
                if not change:
                   continue
-               matchObj = re.match(r"Change (.*) on (.*) by (.*) '(.*)'", change)
-               cln = matchObj.group(1)
-               user = matchObj.group(3).split('@')[0]
-               if user not in self.userList:
-                  continue
-               logger.info("-"*30)
-               logger.info("p4 change cln={0}, user={1}".format(cln, user))
-               changeTime, reviewRequestId = "", ""
                try:
+                  matchObj = re.match(r"Change (.*) on (.*) by (.*) '(.*)'", change)
+                  cln = matchObj.group(1)
+                  user = matchObj.group(3).split('@')[0]
+                  if user not in self.userList:
+                     continue
+                  logger.info("-"*30)
+                  logger.info("p4 change cln={0}, user={1}".format(cln, user))
+                  changeTime, reviewRequestId = "", ""
                   describeList, changeTime = self.p4Parser.getDescribes(cln)
+                  if self.p4Parser.isEmergencyBackout(describeList):
+                     logger.info("It is emergency back out change")
+                     continue
                   reviewRequestId = self.p4Parser.getReviewRequestId(describeList)
-                  # reviewerList = self.p4Parser.getReviewers(describeList)
                   lastChangeDiff = self.p4Parser.getDifference(describeList)
                   lastReviewDiff = self.rbParser.getDifference(reviewRequestId)
                   # last change diff compare with last review diff
@@ -158,7 +163,7 @@ class PerforceReviewCheckSpider(object):
       session = requests.session()
       session.headers = {"Authorization": POST_MESSAGE_BEAR_TOKEN}
       result = session.post(url, data={"text": message}, verify=False)
-      logger.info("sendReportByUser response: {0}".format(result.content.decode()))
+      logger.info("sendReportByUser response: {0}".format(result.content.decode(errors='ignore')))
 
    @noIntervalPolling
    def sendReportByChannelId(self, channelId, message):
@@ -166,7 +171,7 @@ class PerforceReviewCheckSpider(object):
       session = requests.session()
       session.headers = {"Authorization": POST_MESSAGE_BEAR_TOKEN}
       result = session.post(url, data={"text": message}, verify=False)
-      logger.info("sendReportByChannelId response: {0}".format(result.content.decode()))
+      logger.info("sendReportByChannelId response: {0}".format(result.content.decode(errors='ignore')))
 
    @logExecutionTime
    def sendReports(self):

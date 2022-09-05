@@ -27,6 +27,7 @@ class PerforceDiffParser(object):
       self.linePattern2 = re.compile(r"^(\d+)([acd])(\d+),(\d+)$")
       self.linePattern3 = re.compile(r"^(\d+),(\d+)([acd])(\d+)$")
       self.linePattern4 = re.compile(r"^(\d+),(\d+)([acd])(\d+),(\d+)$")
+      self.reviewIdPattern = re.compile(r"https://reviewboard.eng.vmware.com/r/(\d{7,})", re.I)
       self.changeCommand = '%s changes -s submitted -u {0} %s | /bin/grep -v "CBOT"'
       self.addFiles = []
 
@@ -57,7 +58,7 @@ class PerforceDiffParser(object):
       elif returncode != 0:
          logger.debug("p4 changes stdout:{0}, stderr:{1}, returncode:{2}".format(stdout, stderr, returncode))
          raise Exception("Perforce internal error")
-      return stdout.decode('utf-8').split('\n')[:-1]
+      return stdout.decode('utf-8', errors='ignore').split('\n')[:-1]
 
    def getDescribes(self, cln):
       '''
@@ -74,10 +75,20 @@ class PerforceDiffParser(object):
       if returncode != 0:
          logger.debug("p4 describe stdout:{0}, stderr:{1}, returncode:{2}".format(stdout, stderr, returncode))
          raise Exception("Perforce internal error")
-      describes = stdout.decode('utf-8').split('\n')
+      describes = stdout.decode('utf-8', errors='ignore').split('\n')
       matchObj = re.match(r"Change (.*) by (.*) on (.*)", describes[0], re.M | re.I)
       changeTime = matchObj.group(3)
       return describes[1:], changeTime
+
+   def isEmergencyBackout(self, describes):
+      isBackout = "Back out" in "".join(describes[:5])
+      isEmergency = False
+      for line in describes:
+         if "Reviewed by:" in line:
+            line = line.replace("Reviewed by:", "")
+            isEmergency = "emergency" in line.lower()
+            break
+      return isBackout and isEmergency
 
    def getReviewers(self, describes):
       '''
@@ -98,18 +109,23 @@ class PerforceDiffParser(object):
    def getReviewRequestId(self, describes):
       '''
       Get review request id from Review URL
-      If Review URL is None, raise `ReviewLinkNotFound` exception
+      If Review URL is None, raise `ReviewLinkNotFound`
+      ReviewLinkNotFound means that on the right of "Review URL:" is nothing, or not find "Review URL:"
+         Example cln: 9785582,9800681
       '''
       reviewUrl = ""
       for line in describes:
          if "Review URL:" in line:
             reviewUrl = line.replace("Review URL:", "").strip()
             break
-      if not reviewUrl:
-         logger.info("review url is none")
-         raise ReviewLinkNotFound()
-      reviewRequestId = re.findall(r"\d{7}", reviewUrl)[0]
-      return reviewRequestId
+      if reviewUrl:
+         # get the multi-review-ids in Review URL line
+         reviewRequestIds = self.reviewIdPattern.findall(reviewUrl)
+         reviewRequestIds = list(set(reviewRequestIds))
+         if len(reviewRequestIds) > 0:
+            return reviewRequestIds[0]  # next step here return reviewRequestIds
+      # There is no link on the right of "Review URL" or not find "Review URL:" keywords
+      raise ReviewLinkNotFound()
 
    def getDifference(self, describes):
       '''
@@ -279,45 +295,3 @@ class PerforceDiffParser(object):
                addLineNo += 1
       fileDiff.extend(codes)
       return fileDiff
-
-
-if __name__ == "__main__":
-   import os, datetime, re
-   # Test dir:
-   downloadDir = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/p4-review-check-report")
-   os.makedirs(downloadDir, exist_ok=True)
-   # params
-   utc7 = datetime.timezone(offset=-datetime.timedelta(hours=7))
-   startTime = datetime.datetime.fromtimestamp(1638608696.181, tz=utc7)
-   endTime = datetime.datetime.fromtimestamp(1641287096.181, tz=utc7)
-   branchList = ['bora/main', 'scons/main', 'vsan-mgmt-ui/main']
-   cln = '9426368'  # normal: 9422624, multi: 9417864, inregular: 9438043  file list move/delete: 9426368
-   userName = 'bis'
-   # p4 login
-   parser = PerforceDiffParser()
-   parser.loginPerforce()
-   parser.setParams(startTime, endTime, branchList)
-   # describeList, changeTime = parser.getDescribes(cln)
-   # reviewId = parser.getReviewRequestId(describeList)
-   # print("review request id: {0}".format(reviewId))
-   # lastChangeDiff = parser.getDifference(describeList)
-
-   # p4 changes -s submitted -u
-   changeList = parser.getChanges(userName)
-   print("{0} change list count {1}".format(userName, len(changeList)))
-   for change in changeList:
-      matchObj = re.match(r"Change (.*) on (.*) by (.*) '(.*)'", change)
-      cln = matchObj.group(1)
-      user = matchObj.group(3).split('@')[0]
-      # p4 describe -a
-      describeList, changeTime = parser.getDescribes(cln)
-      diffFile = os.path.join(downloadDir, "p4-{0}.txt".format(cln))
-      with open(diffFile, 'w') as f:
-         f.write('\n'.join(describeList))
-      print("checkin time: {0}".format(changeTime))
-      reviewId = parser.getReviewRequestId(describeList)
-      print("review request id: {0}".format(reviewId))
-      # lastChangeDiff = parser.getDifference(describeList)
-      # print("change different list: ", lastChangeDiff)
-
-
