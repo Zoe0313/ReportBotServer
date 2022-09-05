@@ -59,7 +59,7 @@ class ReviewDiffParser(object):
       logger.info("review request #{0}".format(reviewRequestId))
       *_, lastReviewDiffResource = allReviewDiffRes.all_items
       patchInfo = lastReviewDiffResource.get_patch()
-      return patchInfo.data.decode()
+      return patchInfo.data.decode(errors='ignore')
 
    def parseLastReviewDiff(self, differences):
       '''
@@ -148,34 +148,3 @@ class ReviewDiffParser(object):
          elif 0 == len(list((r for r in fileDiff if '-' == r[0]))):  # add file
             return fileDiff
       return fileDiff
-
-
-if __name__ == "__main__":
-   # Test:
-   import os
-   downloadDir = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/p4-review-check-report")
-   reviewRequestId = "1833044"
-   diffFile = os.path.join(downloadDir, "{0}.txt".format(reviewRequestId))
-   url = "https://reviewboard.eng.vmware.com/api/review-requests/{0}/diffs/".format(reviewRequestId)
-   clientRB = RBClient('https://reviewboard.eng.vmware.com/')
-   clientRB.login(username=SERVICE_ACCOUNT, password=SERVICE_PASSWORD)
-   allReviewDiffRes = clientRB.get_url(url)
-   *_, lastReviewDiffResource = allReviewDiffRes.all_items
-   patchInfo = lastReviewDiffResource.get_patch()
-   with open(diffFile, 'w') as f:
-      f.write(patchInfo.data.decode())
-
-   # parser = ReviewDiffParser()
-   # with parser:
-   #    lastReviewDiff = parser.getDifference(reviewRequestId)
-   # for filePath, fileDiff in lastReviewDiff.items():
-   #    print("-"*30)
-   #    print(filePath)
-   #    fileDiff.sort(key=lambda a: a[1], reverse=False)
-   #    reviewAdd = (r for r in fileDiff if '+' == r[0])
-   #    reviewDelete = (r for r in fileDiff if '-' == r[0])
-   #    for diff in reviewDelete:
-   #       print(diff)
-   #    print("*"*20)
-   #    for diff in reviewAdd:
-   #       print(diff)
