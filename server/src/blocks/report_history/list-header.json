@@ -8,6 +8,13 @@
          }
       },
       {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": "(Only the latest 500 histories are displayed.)"
+         }
+      },
+      {
          "type": "divider"
       }
    ]
