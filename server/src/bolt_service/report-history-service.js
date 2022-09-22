@@ -75,7 +75,11 @@ export function RegisterReportHistoryServiceHandler(app) {
          }
       }
       logger.info(JSON.stringify(filters))
-      const count = await ReportHistory.countDocuments(filters)
+      const realCount = await ReportHistory.countDocuments(filters)
+      let count = realCount
+      if (realCount > 500) {
+         count = 500
+      }
       if (offset >= count) {
          state.page = 1
          offset = 0
@@ -92,7 +96,7 @@ export function RegisterReportHistoryServiceHandler(app) {
       listFilter[3].block_id = 'block_history_filter_date' + state.filterBlockId.toString()
       // list header
       const listHeader = LoadBlocks('report_history/list-header')
-      listHeader[0].text.text = `There are ${count} notification histories after conditions applied.`
+      listHeader[0].text.text = `There are ${realCount} notification histories after conditions applied.`
       // list item detail
       let listItemDetail = LoadBlocks('report_history/list-item-detail')
       const selectedHistory = reportHistories.find((reportHistory) => {
