@@ -30,6 +30,8 @@ components:
 tags:
   - name: public
     description: Public vNotifier rest Api for VMware users
+  - name: private
+    description: Private vNotifier rest Api for vSANSlackbot admins
 paths:
   /api/v1/channel/{channelID}/messages:
     post:
@@ -124,6 +126,39 @@ paths:
         401:
           description: Unauthorized
         500:
+          description: Internal Server Error
+  /api/v1/metrics:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - private
+      summary: Get metrics from vSANSlackbot server
+      operationId: getMetrics
+      description: >
+        This internal API can be used to get metrics from vSANSlackbot server.
+        It will response datas include number of sent report, number of enabled report
+        by vSANSlackbot and number of API used times by vNotifier.
+
+        After the metrics endpoint registered in chronus, we can setup the dashboard
+        of each report type count. It will be easier for us to monitor slackbot service health.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Text'
+              example:
+                text: This is the example message to be post via vNotifier APP
+
+        description: The text message need to be sent
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
           description: Internal Server Error
 servers:
   - url: https://slackbot.vela.decc.vmware.com
