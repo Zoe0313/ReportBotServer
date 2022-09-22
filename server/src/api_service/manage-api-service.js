@@ -5,11 +5,13 @@ import { FindUserInfoByName } from '../model/user-info.js'
 import { RegisterScheduler, UnregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
+import { performance } from 'perf_hooks'
 import { Merge } from '../../common/utils.js'
+import { GetMetrics } from './report-db-utils.js'
 
 function RegisterApiRouters(router, client) {
    router.use(async (ctx, next) => {
-      if (ctx.url.endsWith('/server/health')) {
+      if (ctx.url.endsWith('/server/health') || ctx.url.endsWith('/metrics')) {
          await next()
          return
       }
@@ -32,6 +34,21 @@ function RegisterApiRouters(router, client) {
    router.get('/api/v1/server/health', (ctx, next) => {
       ctx.response.status = 200
       ctx.response.body = { result: true }
+   })
+
+   router.get('/api/v1/metrics', async (ctx, next) => {
+      const t0 = performance.now()
+      try {
+         const metrics = await GetMetrics()
+         ctx.response.status = 200
+         ctx.response.body = metrics
+      } catch (error) {
+         const errorMsg = `Failed to get sent report count: ${error}`
+         logger.error(errorMsg)
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+      logger.debug(`API /metrics ${performance.now() - t0} cost`)
    })
 
    router.get('/api/v1/report_configurations', async (ctx, next) => {
