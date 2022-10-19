@@ -379,7 +379,7 @@ class BugzillaSpider(object):
 
       if "/buglist.cgi" in self.longUrl:  # query buglist
          message, isNoContent = self.getBuglistReport(html)
-         return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=True)
+         return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=isNoContent is False)
       elif "/report.cgi" in self.longUrl:  # tabular
          message, isNoContent = self.getTabularReport(html)
          return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=False)
