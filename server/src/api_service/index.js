@@ -6,8 +6,7 @@ import { WebClient } from '@slack/web-api'
 import Koa from 'koa'
 import Router from 'koa-router'
 import koaBody from 'koa-body'
-import fs from 'fs'
-import https from 'https'
+import http from 'http'
 import mount from 'koa-mount'
 import serve from 'koa-static'
 import path from 'path'
@@ -43,10 +42,6 @@ app
    .use(router.routes())
    .use(router.allowedMethods())
 
-const clientTls = {
-   key: fs.readFileSync('src/key.pem'),
-   cert: fs.readFileSync('src/cert.pem')
-}
 const serverCallback = app.callback()
 
 // Serve static files
@@ -54,4 +49,4 @@ const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
 console.log(swaggerPath)
 app.use(mount('/api/v1/', serve(swaggerPath)))
 
-https.createServer(clientTls, serverCallback).listen(process.env.API_PORT || 443)
+http.createServer(serverCallback).listen(process.env.API_PORT || 443)
