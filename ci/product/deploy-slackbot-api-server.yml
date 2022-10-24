@@ -3,17 +3,55 @@ kind: Service
 metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: slackbot.vela.decc.vmware.com
+    nodeportlocal.antrea.io/enabled: "true"
   name: slackbot-api-server
   labels:
     app: slackbot-api-server
 spec:
-  type: LoadBalancer
+  # type must be ClusterIP for all DECC clusters, except Lyra. For Lyra please use type: NodePort
+  type: ClusterIP
   selector:
     app: slackbot-api-server
   ports:
   - protocol: TCP
     port: 443
     targetPort: 443
+    name: https
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app: slackbot-api-server
+  name: slackbot-api-server
+spec:
+  ingressClassName: avi-lb
+  rules:
+    - host: slackbot.vela.decc.vmware.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: slackbot-api-server
+                port:
+                  number: 443
+---
+apiVersion: ako.vmware.com/v1alpha1
+kind: HostRule
+metadata:
+  name: slackbot-api-server-host-rule
+spec:
+  virtualhost:
+    # fqdn is a mandatory field and it must match the host in Ingress spec
+    # The domain also must match the appropriate DECC cluster.
+    fqdn: slackbot.vela.decc.vmware.com
+    tls: # optional
+      sslKeyCertificate:
+        name: "decc-ssl-cert"
+        type: ref
+      termination: edge
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -25,6 +63,7 @@ spec:
   selector:
     matchLabels:
       app: slackbot-api-server
+  replicas: 3
   template:
     metadata:
       labels:
@@ -42,6 +81,10 @@ spec:
           value: "27017"
         - name: PORT
           value: "443"
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         ports:
         - containerPort: 443
         resources:
