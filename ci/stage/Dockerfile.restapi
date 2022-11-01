@@ -1,0 +1,21 @@
+# Slackbot Server Dockerfile
+FROM nikolaik/python-nodejs:python3.8-nodejs14
+
+RUN apt-get install tzdata
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+ENV TZ=Asia/Shanghai
+
+# set perforce environment
+ENV P4PORT perforce.eng.vmware.com:1666
+
+WORKDIR slackbot
+
+COPY . .
+
+WORKDIR server
+
+RUN npm install
+
+EXPOSE 443
+
+CMD [ "npm", "run", "start:api" ]

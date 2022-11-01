@@ -8,13 +8,12 @@ metadata:
   labels:
     app: slackbot-api-server
 spec:
-  # type must be ClusterIP for all DECC clusters, except Lyra. For Lyra please use type: NodePort
   type: ClusterIP
   selector:
     app: slackbot-api-server
   ports:
   - protocol: TCP
-    port: 443
+    port: 80
     targetPort: 443
     name: https
 ---
@@ -36,7 +35,7 @@ spec:
               service:
                 name: slackbot-api-server
                 port:
-                  number: 443
+                  number: 80
 ---
 apiVersion: ako.vmware.com/v1alpha1
 kind: HostRule
@@ -44,8 +43,6 @@ metadata:
   name: slackbot-api-server-host-rule
 spec:
   virtualhost:
-    # fqdn is a mandatory field and it must match the host in Ingress spec
-    # The domain also must match the appropriate DECC cluster.
     fqdn: slackbot.vela.decc.vmware.com
     tls: # optional
       sslKeyCertificate:
