@@ -3,17 +3,52 @@ kind: Service
 metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: slackbot.ara.decc.vmware.com
+    nodeportlocal.antrea.io/enabled: "true"
   name: slackbot-api-server-stage
   labels:
     app: slackbot-api-server-stage
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: slackbot-api-server-stage
   ports:
   - protocol: TCP
-    port: 443
+    port: 80
     targetPort: 443
+    name: https
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app: slackbot-api-server-stage
+  name: slackbot-api-server-stage
+spec:
+  ingressClassName: avi-lb
+  rules:
+    - host: slackbot.ara.decc.vmware.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: slackbot-api-server-stage
+                port:
+                  number: 80
+---
+apiVersion: ako.vmware.com/v1alpha1
+kind: HostRule
+metadata:
+  name: slackbot-api-server-stage-host-rule
+spec:
+  virtualhost:
+    fqdn: slackbot.ara.decc.vmware.com
+    tls: # optional
+      sslKeyCertificate:
+        name: "decc-ssl-cert"
+        type: ref
+      termination: edge
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -25,15 +60,16 @@ spec:
   selector:
     matchLabels:
       app: slackbot-api-server-stage
+  replicas: 3
   template:
     metadata:
       labels:
         app: slackbot-api-server-stage
-        environment: product
+        environment: stage
     spec:
       containers:
       - name: slackbot-api-server-stage
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-api-server-stage:1.4
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-api-server-stage:release-now
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
@@ -42,6 +78,10 @@ spec:
           value: "27017"
         - name: PORT
           value: "443"
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         ports:
         - containerPort: 443
         resources:
