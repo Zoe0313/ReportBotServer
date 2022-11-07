@@ -7,7 +7,7 @@ import logger from '../../common/logger.js'
 const GetSentReportCount = async () => {
    // The sum of report histories count group by report status
    // return metrics example:
-   // slackbot_sent_report_count{status=/"succeed/"} 196
+   // slackbot_sent_report_count{status="succeed"} 196
    let metrics = ''
    const docs = await ReportHistory.aggregate().group({
       _id: '$status', count: { $sum: 1 }
@@ -15,7 +15,7 @@ const GetSentReportCount = async () => {
    for (const doc of docs) {
       const reportStatus = doc._id
       const count = doc.count
-      metrics += `slackbot_sent_report_count{status=/"${reportStatus.toLowerCase()}/"} ${count}\n`
+      metrics += `slackbot_sent_report_count{status="${reportStatus.toLowerCase()}"} ${count}\n`
       metrics += await FilterSentCountByStatus(reportStatus)
    }
    return metrics
@@ -24,7 +24,7 @@ const GetSentReportCount = async () => {
 async function FilterSentCountByStatus(reportStatus) {
    // Match specified report status, the sum of report histories count group by report type
    // return metrics example:
-   // slackbot_sent_report_count{status=/"succeed/", reportType=/"bugzilla/"} 105
+   // slackbot_sent_report_count{status="succeed", reportType="bugzilla"} 105
    let metrics = ''
    const docs = await ReportHistory.aggregate().match({
       status: reportStatus
@@ -35,7 +35,7 @@ async function FilterSentCountByStatus(reportStatus) {
    for (const doc of docs) {
       const reportType = doc._id
       const count = doc.count
-      metrics += `slackbot_sent_report_count{status=/"${reportStatus.toLowerCase()}/", reportType=/"${reportType}/"} ${count}\n`
+      metrics += `slackbot_sent_report_count{status="${reportStatus.toLowerCase()}", reportType="${reportType}"} ${count}\n`
    }
    return metrics
 }
@@ -49,14 +49,14 @@ const GetReportConfigurationCount = async () => {
       status: { $ne: REPORT_STATUS.CREATED }
    }
    const totalCount = await ReportConfiguration.countDocuments(filter)
-   metrics += `slackbot_report_configuration_count{reportType=/"/"} ${totalCount}\n`
+   metrics += `slackbot_report_configuration_count{reportType=""} ${totalCount}\n`
    const docs = await ReportConfiguration.aggregate().match(filter).group({
       _id: '$reportType', count: { $sum: 1 }
    })
    for (const doc of docs) {
       const reportType = doc._id
       const count = doc.count
-      metrics += `slackbot_report_configuration_count{reportType=/"${reportType}/"} ${count}\n`
+      metrics += `slackbot_report_configuration_count{reportType="${reportType}"} ${count}\n`
    }
    logger.info(`metrics: ${metrics}`)
    return metrics
