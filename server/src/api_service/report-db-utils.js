@@ -31,7 +31,6 @@ async function FilterSentCountByStatus(reportStatus) {
    }).group({
       _id: '$reportType', count: { $sum: 1 }
    })
-   logger.info(`${JSON.stringify(docs)}`)
    for (const doc of docs) {
       const reportType = doc._id
       const count = doc.count
@@ -58,7 +57,6 @@ const GetReportConfigurationCount = async () => {
       const count = doc.count
       metrics += `slackbot_report_configuration_count{reportType="${reportType}"} ${count}\n`
    }
-   logger.info(`metrics: ${metrics}`)
    return metrics
 }
 
