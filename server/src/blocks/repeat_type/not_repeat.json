@@ -30,7 +30,7 @@
          "type": "input",
          "label": {
             "type": "plain_text",
-            "text": ":clock2: Select a time for your notificatoin",
+            "text": ":clock2: Select a time for your notification",
             "emoji": true
          },
          "hint": {

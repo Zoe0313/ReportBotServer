@@ -62,6 +62,14 @@
                {
                   "text": {
                      "type": "plain_text",
+                     "text": "Nanny reminder",
+                     "emoji": true
+                  },
+                  "value": "nanny_reminder"
+               },
+               {
+                  "text": {
+                     "type": "plain_text",
                      "text": "Plain text",
                      "emoji": true
                   },

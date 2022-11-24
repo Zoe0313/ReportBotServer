@@ -80,3 +80,23 @@ export function ExecCommand(cmd, timeout) {
       })
    })
 }
+
+export function GetDayOfThisWeek(date, dayOfWeek) {
+   const oneDayTime = 24 * 60 * 60 * 1000
+   const nowTime = date.getTime()
+   const day = date.getDay()
+   const dayOfWeekTime = nowTime - (day - dayOfWeek) * oneDayTime
+   return new Date(dayOfWeekTime)
+}
+
+export function FormatDateWithTz(date, tz) {
+   if (date == null || date === '') {
+      return ''
+   }
+   try {
+      return moment(date).tz(tz || 'Asia/Shanghai').format('YYYY-MM-DD')
+   } catch (e) {
+      logger.warn(e)
+      return ''
+   }
+}

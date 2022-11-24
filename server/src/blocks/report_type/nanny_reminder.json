@@ -1,0 +1,84 @@
+{
+	"blocks": [
+		{
+			"type": "input",
+			"block_id": "reportSpecConfig.nannyAssignee",
+			"label": {
+				"type": "plain_text",
+				"text": ":four: Select nanny assignee(s) from the list"
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "Select the assignee(s) you want to add into nanny duty roster from this time one by one."
+			},
+			"element": {
+				"type": "multi_conversations_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Add someone into the nanny list",
+					"emoji": true
+				},
+				"filter": {
+					"include": [
+						"im"
+					],
+					"exclude_external_shared_channels": true,
+					"exclude_bot_users": true
+				},
+				"action_id": "action_pick_nanny_assignee"
+			}
+		},
+		{
+			"type": "section",
+			"block_id": "previewNannyRosterButton",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Click the button to preview nanny duty roster."
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "preview",
+					"emoji": true
+				},
+				"value": "preview",
+				"style": "primary",
+				"action_id": "action_preview_nanny_roster"
+			}
+		},
+		{
+			"type": "context",
+			"block_id": "previewNannyRoster",
+			"elements": [
+				{
+					"type": "plain_text",
+					"text": "Preview nanny duty roster by time.",
+					"emoji": true
+				}
+			]
+		},
+		{
+			"type": "input",
+			"block_id": "reportSpecConfig.text",
+			"hint": {
+				"type": "plain_text",
+				"text": "@this-nanny means the current nanny.\n@next-nanny means the next nanny."
+			},
+			"element": {
+				"type": "plain_text_input",
+				"multiline": true,
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Input text message"
+				},
+				"action_id": "action_input_text"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":five: Plain text message",
+				"emoji": true
+			}
+		}
+	]
+}
