@@ -6,7 +6,10 @@ import {
    LoadBlocks, GetConversationsName, GetUserTz,
    TransformInputValuesToObj, FindBlockById, TryAndHandleError
 } from '../../common/slack-helper.js'
-import { DisplayTimeSetting, UpdateFlattenMembers } from './init-blocks-data-helper.js'
+import {
+   DisplayTimeSetting, UpdateFlattenMembers,
+   GenerateNannyRoster
+} from './init-blocks-data-helper.js'
 import {
    ReportConfiguration, REPORT_STATUS
 } from '../model/report-configuration.js'
@@ -378,7 +381,7 @@ export function RegisterManageReportServiceHandler(app) {
          }
          const inputObj = TransformInputValuesToObj(view.state.values)
          logger.info(`inputObj: ${JSON.stringify(inputObj)}`)
-
+         const nannyRoster = await GenerateNannyRoster(inputObj, false, tz)
          const report = Merge(oldReport, Merge(inputObj, {
             mentionUsers: inputObj.mentionUsers || [],
             mentionGroups: inputObj.mentionGroups || [],
@@ -395,7 +398,8 @@ export function RegisterManageReportServiceHandler(app) {
                      ?.map(option => option.value),
                   teams: inputObj.reportSpecConfig.perforceReviewCheck?.teams
                      ?.map(option => option.value)
-               }
+               },
+               nannyRoster: nannyRoster
             },
             repeatConfig: {
                tz,

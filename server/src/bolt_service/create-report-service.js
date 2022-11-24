@@ -4,7 +4,10 @@ import {
    LoadBlocks, GetUserTz, TransformInputValuesToObj,
    TryAndHandleError, GetConversationsList
 } from '../../common/slack-helper.js'
-import { InitReportBlocks, UpdateFlattenMembers } from './init-blocks-data-helper.js'
+import {
+   InitReportBlocks, UpdateFlattenMembers,
+   GenerateNannyRoster
+} from './init-blocks-data-helper.js'
 import {
    ReportConfiguration, REPORT_STATUS
 } from '../model/report-configuration.js'
@@ -120,6 +123,7 @@ export function RegisterCreateReportServiceHandler(app) {
          const user = body.user.id
          const tz = await GetUserTz(user)
          const inputObj = TransformInputValuesToObj(view.state.values)
+         const nannyRoster = await GenerateNannyRoster(inputObj, false, tz)
          const report = new ReportConfiguration(
             Merge(inputObj, {
                creator: user,
@@ -139,7 +143,8 @@ export function RegisterCreateReportServiceHandler(app) {
                         ?.map(option => option.value),
                      teams: inputObj.reportSpecConfig.perforceReviewCheck?.teams
                         ?.map(option => option.value)
-                  }
+                  },
+                  nannyRoster: nannyRoster
                },
                repeatConfig: {
                   tz,
@@ -440,5 +445,15 @@ export function RegisterCreateReportServiceHandler(app) {
          options: privateChannelOptions
       })
       logger.debug(`ack bot in private channels cost ${performance.now() - t0}`)
+   })
+
+   // Listen to preview nanny duty roster button and update modal
+   app.action({
+      block_id: 'previewNannyRosterButton',
+      action_id: 'action_preview_nanny_roster'
+   }, async (event) => {
+      TryAndHandleError(event, async () => {
+         await UpdateModal(event)
+      }, 'Failed to preview nanny duty roster.')
    })
 }

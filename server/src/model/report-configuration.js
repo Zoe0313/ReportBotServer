@@ -23,7 +23,8 @@ const REPORT_TYPE_ENUM = [
    'text',
    'customized',
    'bugzilla_by_assignee',
-   'perforce_review_check'
+   'perforce_review_check',
+   'nanny_reminder'
 ]
 const REPEAT_TYPE_ENUM = ['not_repeat', 'hourly', 'daily', 'weekly', 'monthly', 'cron_expression']
 
@@ -242,6 +243,27 @@ const ReportConfigurationSchema = new mongoose.Schema({
                return v.length >= 0 && v.length <= 50
             },
             message: 'The number of bugzilla assignee should be greater than 0 and less than 50.'
+         }
+      },
+      nannyAssignee: {
+         type: [String],
+         required: function(v) {
+            return this.reportType === 'nanny_reminder'
+         },
+         validate: {
+            validator: async function(v) {
+               if (v == null) {
+                  return true
+               }
+               return v.length >= 2 && v.length <= 50
+            },
+            message: 'The number of nanny should be greater than 1 and less than 50.'
+         }
+      },
+      nannyRoster: {
+         type: String,
+         required: function(v) {
+            return this.reportType === 'nanny_reminder'
          }
       }
    },

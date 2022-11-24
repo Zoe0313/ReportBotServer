@@ -1,15 +1,18 @@
 import logger from '../../common/logger.js'
 import {
-   LoadBlocks, FindBlockById
+   LoadBlocks, FindBlockById, GetUsersName
 } from '../../common/slack-helper.js'
 import {
-   ConvertTimeWithTz, FormatDateTime, FormatDate, ParseDateWithTz
+   ConvertTimeWithTz, FormatDateTime, FormatDate, ParseDateWithTz,
+   GetDayOfThisWeek, FormatDateWithTz
 } from '../../common/utils.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import {
    ReportConfiguration, FlattenMembers
 } from '../model/report-configuration.js'
 import { TeamGroup } from '../model/team-group.js'
+import cronParser from 'cron-parser'
+import { FindUserInfoByName } from '../model/user-info.js'
 
 const WEEK = {
    1: 'Monday',
@@ -253,6 +256,24 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
       //    FindBlockById(blocks, 'reportSpecConfig.bugzillaLink')
       //       .element.initial_value = reportSpecConfig.bugzillaLink
       //    break
+      case 'nanny_reminder':
+         if (isInit) {
+            if (reportSpecConfig?.nannyAssignee?.length > 0) {
+               FindBlockById(blocks, 'reportSpecConfig.nannyAssignee')
+                  .element.initial_conversations = reportSpecConfig.nannyAssignee
+            }
+            if (reportSpecConfig?.text?.length > 0) {
+               FindBlockById(blocks, 'reportSpecConfig.text')
+                  .element.initial_value = reportSpecConfig.text
+            }
+         }
+         const previewNannyRosterBlock = FindBlockById(blocks, 'previewNannyRoster')
+         if (reportSpecConfig?.nannyAssignee?.length > 0 && !isInit) {
+            previewNannyRosterBlock.elements[0].text = await GenerateNannyRoster(report, false, tz)
+         } else {
+            previewNannyRosterBlock.elements[0].text = 'Preview nanny duty roster'
+         }
+         break
       default:
          throw new Error(`report type ${report.reportType} is not supported`)
    }
@@ -381,4 +402,188 @@ export async function UpdateFlattenMembers(report) {
          await currentReport.save()
          logger.debug(`new report config: ${JSON.stringify(await ReportConfiguration.findById(report._id))}`)
       })
+}
+
+const GetThisNannyIndex = async function(report, tz) {
+   const nannyRoster = report.reportSpecConfig?.nannyRoster
+   if (!nannyRoster || nannyRoster.length === 0) {
+      return 0
+   }
+   const nannyDatas = nannyRoster.split('\n')
+   if (nannyDatas.length === 0) {
+      return 0
+   }
+   const roster = []
+   for (const data of nannyDatas) {
+      let nanny = ''
+      let serveFrom = ''
+      let serveTo = ''
+      if (data.includes(' serve day: ')) {
+         nanny = data.split(' serve day: ')[0]
+         serveFrom = data.split(' serve day: ')[1]
+         serveTo = serveFrom
+      } else if (data.includes(' serve from ')) {
+         nanny = data.split(' serve from ')[0]
+         const serveTimeRange = data.split(' serve from ')[1]
+         serveFrom = serveTimeRange.split(' to ')[0]
+         serveTo = serveTimeRange.split(' to ')[1]
+      } else {
+         break
+      }
+      const userInfo = await FindUserInfoByName(nanny)
+      if (userInfo !== null) {
+         roster.push({
+            nanny: nanny,
+            slackId: userInfo.slackId,
+            serveFrom: ParseDateWithTz(serveFrom, tz),
+            serveTo: serveTo === '??' ? null : ParseDateWithTz(serveTo, tz)
+         })
+      }
+   }
+   const repeatConfig = report.repeatConfig
+   const now = new Date()
+   let index = 0
+   for (const data of roster) {
+      if (data.serveTo === null) break
+      if (repeatConfig.repeatType === 'daily' ||
+         repeatConfig.repeatType === 'weekly' ||
+         repeatConfig.repeatType === 'monthly') {
+         const startTime = new Date(data.serveFrom.getFullYear(), data.serveFrom.getMonth(),
+            data.serveFrom.getDate(), 0, 0, 0)
+         const endTime = new Date(data.serveTo.getFullYear(), data.serveTo.getMonth(),
+            data.serveTo.getDate(), 23, 59, 59)
+         if (now >= startTime && now <= endTime) {
+            break
+         }
+      } else if (now >= data.serveFrom && now <= data.serveTo) {
+         break
+      }
+      index += 1
+   }
+   return index
+}
+
+const RecycleAssignees = function(assignees, index) {
+   const result = []
+   for (let i = index; i < assignees.length; i++) {
+      result.push(assignees[i])
+   }
+   for (let i = 0; i < index; i++) {
+      result.push(assignees[i])
+   }
+   return result
+}
+
+export async function GenerateNannyRoster(report, isRecycle, tz) {
+   if (report.reportType !== 'nanny_reminder') {
+      return ''
+   }
+   let assigneeIDs = report.reportSpecConfig.nannyAssignee
+   if (!assigneeIDs || assigneeIDs.length === 0) {
+      return 'The number of nanny assignee should be greater than 1.'
+   }
+   if (isRecycle) {
+      const index = await GetThisNannyIndex(report, tz)
+      if (index > 0) {
+         assigneeIDs = RecycleAssignees(assigneeIDs, index)
+         report.reportSpecConfig.nannyAssignee = assigneeIDs
+      }
+   }
+   const assignees = await GetUsersName(assigneeIDs)
+   const result = []
+   const repeatConfig = report.repeatConfig
+   if (repeatConfig.repeatType === 'not_repeat') {
+      if (repeatConfig.date == null) {
+         return 'Please select a date for your notification'
+      } else if (repeatConfig.time == null) {
+         return 'Please select a time for your notification'
+      }
+      const date = ParseDateWithTz(`${repeatConfig.date} ${repeatConfig.time}`, tz)
+      result.push({ nanny: assignees[0], start: FormatDateTime(date, tz), end: '??' })
+   } else if (repeatConfig.repeatType === 'hourly') {
+      const startDate = new Date()
+      startDate.setMinutes(0)
+      const endDate = new Date()
+      endDate.setMinutes(59)
+      for (const assignee of assignees) {
+         result.push({
+            nanny: assignee,
+            start: FormatDateTime(startDate, tz),
+            end: FormatDateTime(endDate, tz)
+         })
+         startDate.setHours(startDate.getHours() + 1)
+         endDate.setHours(endDate.getHours() + 1)
+      }
+   } else if (repeatConfig.repeatType === 'daily') {
+      const startDate = new Date()
+      for (const assignee of assignees) {
+         result.push({
+            nanny: assignee,
+            start: FormatDateWithTz(startDate, tz),
+            end: ''
+         })
+         startDate.setDate(startDate.getDate() + 1)
+      }
+   } else if (repeatConfig.repeatType === 'weekly') {
+      const now = new Date()
+      const startDate = GetDayOfThisWeek(now, 1)
+      const endDate = GetDayOfThisWeek(now, 7)
+      for (const assignee of assignees) {
+         result.push({
+            nanny: assignee,
+            start: FormatDateWithTz(startDate, tz),
+            end: FormatDateWithTz(endDate, tz)
+         })
+         startDate.setDate(startDate.getDate() + 7)
+         endDate.setDate(endDate.getDate() + 7)
+      }
+   } else if (repeatConfig.repeatType === 'monthly') {
+      const now = new Date()
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+      let endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      for (const assignee of assignees) {
+         result.push({
+            nanny: assignee,
+            start: FormatDateWithTz(startDate, tz),
+            end: FormatDateWithTz(endDate, tz)
+         })
+         startDate.setMonth(startDate.getMonth() + 1)
+         endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0)
+      }
+   } else if (repeatConfig.repeatType === 'cron_expression') {
+      if (repeatConfig.cronExpression == null) {
+         return 'Please enter the crontab expression.'
+      }
+      const interval = cronParser.parseExpression(repeatConfig.cronExpression)
+      let startDate = new Date(interval.prev())
+      let endDate = interval.hasNext() ? new Date(interval.next()) : ''
+      let i = 0
+      while (interval.hasNext()) {
+         result.push({
+            nanny: assignees[i],
+            start: FormatDateTime(startDate, tz),
+            end: FormatDateTime(endDate, tz)
+         })
+         i += 1
+         if (i >= assignees.length) break
+         const next = interval.next()
+         startDate = new Date(endDate)
+         endDate = new Date(next)
+      }
+      if (result.length === 0) {
+         result.push({ nanny: assignees[0], start: FormatDateTime(startDate, tz), end: '??' })
+      }
+   }
+   if (result.length === 0) {
+      return 'Please select recurrence type first.'
+   }
+   let nannyRoster = ''
+   for (const data of result) {
+      if (data.end === '') {
+         nannyRoster += `${data.nanny} serve day: ${data.start}\n`
+      } else {
+         nannyRoster += `${data.nanny} serve from ${data.start} to ${data.end}\n`
+      }
+   }
+   return nannyRoster
 }

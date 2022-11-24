@@ -14,6 +14,7 @@ import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
 import cronParser from 'cron-parser'
+import { GenerateNannyRoster } from '../src/bolt_service/init-blocks-data-helper.js'
 // check timezone
 import moment from 'moment-timezone'
 
@@ -66,7 +67,12 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
          status: REPORT_HISTORY_STATUS.PENDING
       })
       await reportHistory.save()
-
+      if (report.reportType === 'nanny_reminder') {
+         const tz = report.repeatConfig.tz
+         report.reportSpecConfig.nannyRoster = await GenerateNannyRoster(report, true, tz)
+         logger.info(`Recycle nanny roster: ${report.reportSpecConfig.nannyRoster}`)
+         await report.save()
+      }
       // 10 mins timeout
       const messageInfo = await ContentEvaluate(report)
       const messages = messageInfo.messages
@@ -239,6 +245,15 @@ const ContentEvaluate = async (report) => {
          stdout = await ExecCommand(command, timeout)
          break
       }
+      case 'nanny_reminder': {
+         const assignees = report.reportSpecConfig.nannyAssignee
+         const thisTimeNanny = assignees[0]
+         const nextTimeNanny = assignees[1]
+         stdout = report.reportSpecConfig.text
+            .replace('@this-nanny', `<@${thisTimeNanny}>`)
+            .replace('@next-nanny', `<@${nextTimeNanny}>`)
+         break
+      }
       // case 'svs':
       // case 'fastsvs':
       // case 'customized':
@@ -252,8 +267,8 @@ const ContentEvaluate = async (report) => {
    if (mentionUsers != null && mentionUsers.length > 0) {
       mentionUserNames = '\n' + (await GetConversationsName(mentionUsers))
    }
-   // If the report type is text, we return the report content by array directly.
-   if (report.reportType === 'text') {
+   // If the report type is text or nanny_reminder, we return the report content by array directly.
+   if (report.reportType === 'text' || report.reportType === 'nanny_reminder') {
       stdout += mentionUserNames
       return { messages: [stdout], isEmpty: false }
    }
