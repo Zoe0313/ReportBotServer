@@ -7,7 +7,9 @@ import {
 import { UpdateP4Branches } from '../src/model/perforce-info.js'
 import { UpdateTeamGroup } from '../src/model/team-group.js'
 import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
-import { GetConversationsName, GetUsersName } from '../common/slack-helper.js'
+import {
+   GetConversationsName, GetUsersName, VerifyBotInChannel
+} from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
@@ -37,12 +39,27 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       const mentionUsers = report.mentionUsers?.concat(
          report.mentionGroups?.map(group => group.value) || []) || []
       logger.debug(`mentionusers: ${mentionUsers}`)
+
+      // filter channel IDs which bot is not in
+      let adminChannelIDs = report.adminConfig?.channels?.map(
+         channel => channel.split('/')[0]) || []
+      if (adminChannelIDs != null && adminChannelIDs.length > 0) {
+         const results = await Promise.all(
+            adminChannelIDs.map(channelID => VerifyBotInChannel(channelID)
+               .then(inChannel => ({ channelID, inChannel }))
+            ))
+         adminChannelIDs = results.filter(result => result.inChannel)
+            .map(result => result.channelID)
+      }
+      const sendConversations = Array.from(new Set(report.conversations?.concat(
+         adminChannelIDs || []) || []))
+      logger.debug(`Send conversations: ${sendConversations}`)
       reportHistory = new ReportHistory({
          reportConfigId: report._id,
          title: report.title,
          creator: report.creator,
          reportType: report.reportType,
-         conversations: report.conversations,
+         conversations: sendConversations,
          mentionUsers: mentionUsers,
          sentTime: null,
          content: '',
@@ -66,7 +83,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       }
       // post reports to slack channels
       const results = await Promise.all(
-         report.conversations.map(conversation => {
+         sendConversations.map(conversation => {
             return AsyncForEach(messages, async message => {
                return await client.chat.postMessage({
                   channel: conversation,

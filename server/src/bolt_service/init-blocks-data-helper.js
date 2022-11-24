@@ -311,6 +311,20 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
    } else if (oldAdvancedOptionBlock?.accessory?.value === 'open') {
       hideAdvancedOptions()
    }
+   // initialize selected private channel ids in admin config
+   if (isInit && report.adminConfig?.channels?.length > 0) {
+      const adminInputChannelIDs = FindBlockById(blocks, 'adminConfig.channels')
+      if (typeof adminInputChannelIDs !== 'undefined' && adminInputChannelIDs != null) {
+         adminInputChannelIDs.element.initial_options = report.adminConfig.channels
+            .map(channel => ({
+               text: {
+                  type: 'plain_text',
+                  text: channel
+               },
+               value: channel
+            }))
+      }
+   }
 }
 
 export function DisplayTimeSetting(report, tz) {

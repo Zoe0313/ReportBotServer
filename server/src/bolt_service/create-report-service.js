@@ -2,7 +2,7 @@ import logger from '../../common/logger.js'
 import { FormatDate, Merge } from '../../common/utils.js'
 import {
    LoadBlocks, GetUserTz, TransformInputValuesToObj,
-   TryAndHandleError
+   TryAndHandleError, GetConversationsList
 } from '../../common/slack-helper.js'
 import { InitReportBlocks, UpdateFlattenMembers } from './init-blocks-data-helper.js'
 import {
@@ -25,6 +25,7 @@ export async function UpdateModal({ ack, body, client }, options) {
       throw new Error('User is none in body, can not list the reports.')
    }
    const tz = await GetUserTz(user)
+   const isAdmin = process.env.ADMIN_USER_ID.includes(user)
 
    let report = null
    if (isInit && isNew) {
@@ -45,8 +46,10 @@ export async function UpdateModal({ ack, body, client }, options) {
    const reportModalRecurrence = LoadBlocks('modal/report-recurrence')
    const reportModalRepeatType = repeatType != null ? LoadBlocks(`repeat_type/${repeatType}`) : []
    const reportModalTime = LoadBlocks('modal/report-time')
+   const reportModalAdmin = isAdmin ? LoadBlocks('modal/report-admin') : []
    const blocks = reportModalBasic.concat(reportModalReportType).concat(reportModalAdvanced)
       .concat(reportModalRecurrence).concat(reportModalRepeatType).concat(reportModalTime)
+      .concat(reportModalAdmin)
    await InitReportBlocks(report, body.view, blocks, options, tz)
    if (ack) {
       await ack()
@@ -142,6 +145,9 @@ export function RegisterCreateReportServiceHandler(app) {
                   tz,
                   dayOfWeek: inputObj.repeatConfig.dayOfWeek?.map(option => option.value),
                   date: FormatDate(inputObj.repeatConfig.date)
+               },
+               adminConfig: {
+                  channels: inputObj.adminConfig?.channels?.map(option => option.value)
                }
             })
          )
@@ -407,5 +413,32 @@ export function RegisterCreateReportServiceHandler(app) {
       })
       logger.debug(`ack slack user group cost ${performance.now() - t0}`)
       slackUserGroups = (await client.usergroups.list()).usergroups
+   })
+
+   // Responding to the external_select options request for private channels which bot in it
+   app.options('action_admin_select_channel_ids', async ({ ack, options }) => {
+      const t0 = performance.now()
+      const keyword = options.value
+      logger.info(`keyword: ${keyword}, get all private channels in slack`)
+      const botInPrivateChannels = await GetConversationsList('', 'private_channel')
+      const sortedPrivateChannelsWithLimit = matchSorter(
+         botInPrivateChannels.map(channel => channel.slackId), keyword).slice(0, 20)
+      logger.debug(`sort bot in private channels cost ${performance.now() - t0}`)
+      logger.info(`0 - 20 bot in private channels stored are ${sortedPrivateChannelsWithLimit}`)
+      const optionItems = sortedPrivateChannelsWithLimit.map(channelID => ({
+         id: channelID,
+         name: botInPrivateChannels.find(channel => channel.slackId === channelID)?.channelName
+      })).filter(item => item.name != null)
+      const privateChannelOptions = optionItems.map(item => ({
+         text: {
+            type: 'plain_text',
+            text: `${item.id}/${item.name}`
+         },
+         value: `${item.id}/${item.name}`
+      }))
+      await ack({
+         options: privateChannelOptions
+      })
+      logger.debug(`ack bot in private channels cost ${performance.now() - t0}`)
    })
 }

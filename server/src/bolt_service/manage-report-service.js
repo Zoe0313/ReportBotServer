@@ -403,6 +403,9 @@ export function RegisterManageReportServiceHandler(app) {
                date: FormatDate(inputObj.repeatConfig.date),
                startDate: inputObj.repeatConfig?.startDate || null,
                endDate: inputObj.repeatConfig?.endDate || null
+            },
+            adminConfig: {
+               channels: inputObj.adminConfig?.channels?.map(option => option.value)
             }
          }))
          logger.info(report)
