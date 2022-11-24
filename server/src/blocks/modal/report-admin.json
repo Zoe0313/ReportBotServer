@@ -1,0 +1,36 @@
+{
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Admin space"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "adminConfig.channels",
+			"optional": true,
+			"label": {
+				"type": "plain_text",
+				"text": "Search private channel IDs which bot in"
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "Display top 20 matching results."
+			},
+			"element": {
+				"action_id": "action_admin_select_channel_ids",
+				"min_query_length": 3,
+				"type": "multi_external_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "E.g. C020CL1Fxxx/slackbot-test-only"
+				}
+			}
+		}
+	]
+}

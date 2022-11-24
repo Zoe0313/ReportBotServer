@@ -107,6 +107,37 @@ export async function GetUsersName(users) {
    }))
 }
 
+// get all private channel list which vSANSlackbot in it
+export async function GetConversationsList(cursor, types) {
+   assert(slackClient != null, 'slackClient is not initialized in slack helper.')
+   try {
+      const response = await slackClient.conversations.list({
+         cursor,
+         types,
+         limit: 200
+      })
+      assert(response?.ok === true, 'Failed to get slack conversations list.')
+      logger.info('got conversations list ' + response.ok)
+      const nextCursor = response.response_metadata.next_cursor
+      logger.info(`nextCursor: ${nextCursor}`)
+      let nextConversationList = []
+      if (nextCursor != null && nextCursor !== '') {
+         // pause 10s for the rate limits of Slack web Api
+         await new Promise(resolve => setTimeout(resolve, 10000))
+         nextConversationList = await GetConversationsList(nextCursor)
+      }
+      return response.channels.map(channel => {
+         return {
+            slackId: channel.id,
+            channelName: channel.name || ''
+         }
+      }).concat(nextConversationList)
+   } catch (e) {
+      logger.error(`Can not get slack conversations list due to ${JSON.stringify(e)}`)
+      return []
+   }
+}
+
 // get and store all slack user info list in VMware - do not user this function for now
 export async function GetUserList(cursor) {
    assert(slackClient != null, 'slackClient is not initialized in slack helper.')

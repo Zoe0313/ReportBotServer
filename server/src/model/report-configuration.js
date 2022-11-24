@@ -342,6 +342,29 @@ const ReportConfigurationSchema = new mongoose.Schema({
          min: [0, 'Day of month should be greater than or equal to 0'],
          max: [59, 'Day of month should be less than or equal to 59']
       }
+   },
+   adminConfig: {
+      channels: {
+         type: [String],
+         validate: {
+            validator: async function(v) {
+               if (v == null) {
+                  return true
+               }
+               const channelIDs = v.map(channel => channel.split('/')[0])
+               const results = await Promise.all(
+                  channelIDs.map(channelID => VerifyBotInChannel(channelID)
+                     .then(inChannel => ({ channelID, inChannel }))
+                  )
+               )
+               const notInChannelList = results.filter(result => !result.inChannel)
+                  .map(result => result.channelID)
+               if (notInChannelList.length > 0) {
+                  throw new Error(`vSANSlackbot is NOT in the channel(s): ${notInChannelList.join(', ')}`)
+               }
+            }
+         }
+      }
    }
 }, { timestamps: true })
 
