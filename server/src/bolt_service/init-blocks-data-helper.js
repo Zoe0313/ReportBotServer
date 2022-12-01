@@ -479,7 +479,7 @@ export async function GenerateNannyRoster(report, isRecycle, tz) {
       return ''
    }
    let assigneeIDs = report.reportSpecConfig.nannyAssignee
-   if (!assigneeIDs || assigneeIDs.length === 0) {
+   if (!assigneeIDs || assigneeIDs.length <= 1) {
       return 'The number of nanny assignee should be greater than 1.'
    }
    if (isRecycle) {
