@@ -252,7 +252,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
          },
          validate: {
             validator: async function(v) {
-               if (v == null) {
+               if (v == null || this.reportType !== 'nanny_reminder') {
                   return true
                }
                return v.length >= 2 && v.length <= 50
