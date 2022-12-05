@@ -28,7 +28,8 @@ const REPORT_STATUS_DISPLAY = {
    CREATED: 'Created',
    DRAFT: ':black_square_for_stop: Draft',
    DISABLED: ':black_square_for_stop: Disabled',
-   ENABLED: ':white_check_mark: Enabled'
+   ENABLED: ':white_check_mark: Enabled',
+   REMOVED: ':black_square_for_stop: REMOVED'
 }
 
 async function GetState(ts) {
@@ -65,7 +66,10 @@ export function RegisterManageReportServiceHandler(app) {
       const tz = await GetUserTz(user)
       let offset = (state.page - 1) * LIMIT
       const filter = {
-         status: { $ne: REPORT_STATUS.CREATED }
+         $and: [
+            { status: { $ne: REPORT_STATUS.CREATED } },
+            { status: { $ne: REPORT_STATUS.REMOVED } }
+         ]
       }
       if (!process.env.ADMIN_USER_ID.includes(user)) {
          filter.creator = user
@@ -335,7 +339,7 @@ export function RegisterManageReportServiceHandler(app) {
          if (!id) {
             throw Error('id is null when remove report')
          }
-         await ReportConfiguration.deleteOne({ _id: id })
+         await ReportConfiguration.updateOne({ _id: id }, { status: REPORT_STATUS.REMOVED })
          UnregisterScheduler(id)
          await ListReports(true, ts, ack, body, client)
          await client.chat.postMessage({
