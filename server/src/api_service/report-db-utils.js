@@ -1,7 +1,5 @@
 import { ReportHistory } from '../model/report-history.js'
-import {
-   ReportConfiguration, REPORT_STATUS
-} from '../model/report-configuration.js'
+import { ReportConfiguration } from '../model/report-configuration.js'
 import logger from '../../common/logger.js'
 
 const GetSentReportCount = async () => {
@@ -40,22 +38,37 @@ async function FilterSentCountByStatus(reportStatus) {
 }
 
 const GetReportConfigurationCount = async () => {
-   // The sum of used report configurations count group by report type
+   // The sum of used report configurations count group by report configuration status
    // return metrics example:
-   // slackbot_report_configuration_count{reportType=/"bugzilla/"} 56
+   // slackbot_report_configuration_count{status="enabled"} 72
    let metrics = ''
-   const filter = {
-      status: { $ne: REPORT_STATUS.CREATED }
+   const docs = await ReportConfiguration.aggregate().group({
+      _id: '$status', count: { $sum: 1 }
+   })
+   for (const doc of docs) {
+      const configStatus = doc._id
+      const count = doc.count
+      metrics += `slackbot_report_configuration_count{status="${configStatus.toLowerCase()}"} ${count}\n`
+      metrics += await FilterReportConfigurationCountByStatus(configStatus)
    }
-   const totalCount = await ReportConfiguration.countDocuments(filter)
-   metrics += `slackbot_report_configuration_count{reportType=""} ${totalCount}\n`
-   const docs = await ReportConfiguration.aggregate().match(filter).group({
+   return metrics
+}
+
+async function FilterReportConfigurationCountByStatus(configStatus) {
+   // Match specified report configuration status, the sum of report configurations count
+   // group by report type.
+   // return metrics example:
+   // slackbot_report_configuration_count{status="enabled", reportType="bugzilla"} 55
+   let metrics = ''
+   const docs = await ReportConfiguration.aggregate().match({
+      status: configStatus
+   }).group({
       _id: '$reportType', count: { $sum: 1 }
    })
    for (const doc of docs) {
       const reportType = doc._id
       const count = doc.count
-      metrics += `slackbot_report_configuration_count{reportType="${reportType}"} ${count}\n`
+      metrics += `slackbot_report_configuration_count{status="${configStatus.toLowerCase()}", reportType="${reportType}"} ${count}\n`
    }
    return metrics
 }
