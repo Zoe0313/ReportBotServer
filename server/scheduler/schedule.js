@@ -24,6 +24,7 @@ logger.info('system time zone ' + systemTz)
 
 const projectRootPath = path.join(path.resolve(), '..')
 const scheduleJobStore = {}
+const updateNannyScheduleJobStore = {}
 const client = new WebClient(process.env.SLACK_BOT_TOKEN)
 
 const AsyncForEach = async function (array, callback) {
@@ -67,12 +68,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
          status: REPORT_HISTORY_STATUS.PENDING
       })
       await reportHistory.save()
-      if (report.reportType === 'nanny_reminder') {
-         const tz = report.repeatConfig.tz
-         report.reportSpecConfig.nannyRoster = await GenerateNannyRoster(report, true, tz)
-         logger.info(`Recycle nanny roster: ${report.reportSpecConfig.nannyRoster}`)
-         await report.save()
-      }
+
       // 10 mins timeout
       const messageInfo = await ContentEvaluate(report)
       const messages = messageInfo.messages
@@ -289,38 +285,7 @@ const ContentEvaluate = async (report) => {
    return { messages: [stdout], isEmpty: false }
 }
 
-const UnregisterScheduler = function (id) {
-   if (id == null) {
-      throw new Error('scheduler id is null, can not unregister scheduler')
-   }
-   logger.info(`start to cancel previous schedule job ${id}`)
-   const job = scheduleJobStore[id.toString()]
-   if (job != null) {
-      logger.info(`cancel previous schedule job ${id}`)
-      job.cancel()
-   } else {
-      logger.warn(`failed to cancel previous schedule job ${id}`)
-   }
-   delete scheduleJobStore[id.toString()]
-}
-
-const RegisterScheduler = function (report) {
-   if (process.env.ENABLE_SCHEDULE !== 'true' && process.env.ENABLE_SCHEDULE !== true) {
-      return
-   }
-   const id = report._id.toString()
-   let job = scheduleJobStore[id]
-   if (job != null) {
-      logger.info(`cancel previous schedule job ${id} of ${report.title}`)
-      job.cancel()
-   }
-
-   if (report.status !== REPORT_STATUS.ENABLED) {
-      logger.info(`this report ${id} is ${report.status}, not enabled, skip the register.`)
-      return null
-   }
-
-   const repeatConfig = report.repeatConfig
+const ScheduleOption = function (repeatConfig) {
    let scheduleOption = { start: repeatConfig.startDate, end: repeatConfig.endDate }
    let rule = new schedule.RecurrenceRule()
 
@@ -362,7 +327,45 @@ const RegisterScheduler = function (report) {
       default:
          throw new Error('invalid repeat type')
    }
+   return scheduleOption
+}
 
+const UnregisterScheduler = function (id) {
+   if (id == null) {
+      throw new Error('scheduler id is null, can not unregister scheduler')
+   }
+   logger.info(`start to cancel previous schedule job ${id}`)
+   const job = scheduleJobStore[id.toString()]
+   if (job != null) {
+      logger.info(`cancel previous schedule job ${id}`)
+      job.cancel()
+   } else {
+      logger.warn(`failed to cancel previous schedule job ${id}`)
+   }
+   delete scheduleJobStore[id.toString()]
+
+   // unregister update nanny roster scheduler job
+   UnregisterUpdateNannyScheduler(id)
+}
+
+const RegisterScheduler = function (report) {
+   if (process.env.ENABLE_SCHEDULE !== 'true' && process.env.ENABLE_SCHEDULE !== true) {
+      return
+   }
+   const id = report._id.toString()
+   let job = scheduleJobStore[id]
+   if (job != null) {
+      logger.info(`cancel previous schedule job ${id} of ${report.title}`)
+      job.cancel()
+   }
+
+   if (report.status !== REPORT_STATUS.ENABLED) {
+      logger.info(`this report ${id} is ${report.status}, not enabled, skip the register.`)
+      return null
+   }
+
+   const repeatConfig = report.repeatConfig
+   const scheduleOption = ScheduleOption(repeatConfig)
    job = schedule.scheduleJob(scheduleOption, async function (report) {
       const currentReport = await ReportConfiguration.findById(id)
       SchedulerCommonHandler(currentReport)
@@ -373,6 +376,9 @@ const RegisterScheduler = function (report) {
       logger.info(`success to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
    } else {
       logger.warn(`fail to schedule job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
+   }
+   if (report.reportType === 'nanny_reminder') {
+      RegisterUpdateNannyScheduler(report)
    }
    return job
 }
@@ -464,6 +470,76 @@ const RegisterTeamGroupScheduler = function () {
    })
    return job
 }
+
+const UpdateNannyRoster = async function (report) {
+   const tz = report.repeatConfig.tz
+   if (report.reportSpecConfig?.nannyRoster != null) {
+      report.reportSpecConfig.nannyRoster = await GenerateNannyRoster(report, true, tz)
+      await report.save()
+   }
+   logger.info(`Recycle nanny roster:\n${report.reportSpecConfig?.nannyRoster}`)
+}
+
+const UnregisterUpdateNannyScheduler = function (id) {
+   if (id == null) {
+      throw new Error('scheduler id is null, can not unregister scheduler')
+   }
+   logger.info(`Start to cancel previous update nanny list schedule job ${id}`)
+   const job = updateNannyScheduleJobStore[id.toString()]
+   if (job != null) {
+      logger.info(`Cancel update nanny roster schedule job ${id}`)
+      job.cancel()
+   } else {
+      logger.warn(`Failed to cancel previous update nanny list schedule job ${id}`)
+   }
+   delete updateNannyScheduleJobStore[id.toString()]
+}
+
+const RegisterUpdateNannyScheduler = function (report) {
+   const id = report._id.toString()
+   let job = updateNannyScheduleJobStore[id]
+   if (job != null) {
+      logger.info(`Cancel previous update nanny list schedule job ${id} of ${report.title}`)
+      job.cancel()
+   }
+
+   if (report.status !== REPORT_STATUS.ENABLED) {
+      logger.info(`this report ${id} is ${report.status}, not enabled, skip the register.`)
+      return null
+   }
+
+   const repeatConfig = report.repeatConfig
+   switch (repeatConfig.repeatType) {
+      case 'hourly':
+         repeatConfig.minsOfHour = '0'
+         break
+      case 'daily':
+         repeatConfig.time = '00:00'
+         break
+      case 'weekly':
+         repeatConfig.dayOfWeek = 1
+         repeatConfig.time = '00:00'
+         break
+      case 'monthly':
+         repeatConfig.dayOfMonth = 1
+         repeatConfig.time = '00:00'
+         break
+   }
+   const scheduleOption = ScheduleOption(repeatConfig)
+   job = schedule.scheduleJob(scheduleOption, async function (report) {
+      const currentReport = await ReportConfiguration.findById(id)
+      UpdateNannyRoster(currentReport)
+   })
+   if (job != null) {
+      logger.debug(`Next invocation of report ${report.title} ${job.nextInvocation()}`)
+      updateNannyScheduleJobStore[report._id] = job
+      logger.info(`Success to schedule update nanny job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
+   } else {
+      logger.warn(`Fail to schedule update nanny job ${report._id} ${report.title} ${JSON.stringify(scheduleOption)}`)
+   }
+   return job
+}
+
 export {
    RegisterScheduler, UnregisterScheduler, NextInvocation,
    CancelNextInvocation, InvokeNow,

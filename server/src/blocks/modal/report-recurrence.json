@@ -18,6 +18,10 @@
             "text": ":repeat: Recurrence",
             "emoji": true
          },
+         "hint": {
+             "type": "plain_text",
+             "text": "\"Do not repeat\" option is not recommended for nanny reminder reports as it disables the rolling of nanny duty."
+         },
          "dispatch_action": true,
          "element": {
             "type": "static_select",
