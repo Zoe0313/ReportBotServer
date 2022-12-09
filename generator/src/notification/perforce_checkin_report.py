@@ -11,14 +11,15 @@ import os
 import re
 import time
 import datetime
+import requests
 import pandas as pd
 from urllib import parse
-from generator.src.utils.Utils import runCmd, logExecutionTime, transformReport
+from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport, transformReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
-   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, VSANCORE_DESCRIBE_URL
-USER_NAME_MAX_LENGTH = 20
+   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, VSANCORE_DESCRIBE_URL, BUGZILLA_BASE
 SUMMARY_MAX_LENGTH = 80
+BUG_NUMBER_MAX_LENGTH = 18
 
 class PerforceSpider(object):
    def __init__(self, args):
@@ -31,7 +32,7 @@ class PerforceSpider(object):
       endTime = datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S")
       self.checkTime = "{0},{1}".format(startTime, endTime)
       self.userList = args.users.split(",")
-      self.showTitle = '*Title: {0}*\nBranch: {1}\nCheckin Time(PST): {2} --- {3}'.\
+      self.showTitle = '*Title: {0}*\nBranch: {1}\nCheckin Time(PST): {2} --- {3}\n'.\
          format(self.title, " & ".join(self.branchList),
                 datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d %H:%M"),
                 datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d %H:%M"))
@@ -59,47 +60,74 @@ class PerforceSpider(object):
       result = self.getRecords()
       # generate report
       message = []
-      message.append(self.showTitle)
       isNoContent = (result.empty is True)
       if not result.empty:
          result = result.sort_values(by=['assignee', 'CLN', 'checkinTime'], ascending=True)
-         assignees = set(result['assignee'].values.tolist())
-         userNameColumnLength = max([len(user) for user in assignees] + [len("User")])
-         bugIDColumnLength = max([len(pr) for pr in result['PR'].values] + [len("Bug Number")])
-         columnLength = {"User": userNameColumnLength, "CLN": 8, "Time": 11, "PR": bugIDColumnLength}
-         headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
-                           (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
-         message.append("```" + headerFormatter.format("User", "CLN", "Time", "Bug Number", "Summary"))
-         userName = ''
-         for _, data in result.iterrows():
-            user = data['assignee']
-            cln = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(data['CLN']), data['CLN'])
-            bugNumbers = data['PR']
-            bugIDColumnLength = columnLength["PR"]
-            if len(bugNumbers) > 0:
-               bugLinks = []
-               for bugId in bugNumbers.split(","):
-                  if bugId.startswith("VSANCORE"):
-                     bugLink = VSANCORE_DESCRIBE_URL.format(bugId)
-                  else:
-                     bugLink = BUGZILLA_DETAIL_URL + bugId
-                  bugLinks.append("<{0}|{1}>".format(bugLink, bugId))
-               bugNumbers = ",".join(bugLinks)
-               # pr column length = formatted_PR_length + original_column_length - unformatted_PR_length
-               bugIDColumnLength = len(bugNumbers) + columnLength["PR"] - len(data['PR'])
-            if userName == user:
-               bodyFormatter = " " * columnLength["User"] + "    {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
-                               (columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
-               message.append(bodyFormatter.format(cln, data['checkinTime'], bugNumbers, data['summary']))
-            else:
-               headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
-                                 (columnLength["User"], columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
-               message.append(headerFormatter.format(data['assignee'], cln, data['checkinTime'], bugNumbers,
-                                                     data['summary']))
-               userName = user
+         withApprovedMessage = self.GenerateTabluaReport(result[result['approved'] == 'with'])
+         if len(withApprovedMessage) > 0:
+            withApprovedReports = splitOverlengthReport(messages=withApprovedMessage, isContentInCodeBlock=True,
+                                                        enablePagination=True)
+            withApprovedReports[0] = self.showTitle + ':arrow_down: *With Approval*\n' + withApprovedReports[0]
+            message.extend(withApprovedReports)
+         withoutApprovedMessage = self.GenerateTabluaReport(result[result['approved'] == 'without'])
+         if len(withoutApprovedMessage) > 0:
+            withoutApprovedReports = splitOverlengthReport(messages=withoutApprovedMessage, isContentInCodeBlock=True,
+                                                           enablePagination=True)
+            withoutApprovedReports[0] = ':arrow_down: *`Without Approval`*\n' + withoutApprovedReports[0]
+            if len(message) == 0:
+               withoutApprovedReports[0] = self.showTitle + withoutApprovedReports[0]
+            message.extend(withoutApprovedReports)
       else:
-         message.append("No Changes.")
-      return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=(len(result) > 0))
+         message.append(self.showTitle + 'No Changes.')
+      return transformReport(messages=message, isNoContent=isNoContent, enableSplitReport=False)
+
+   def GenerateTabluaReport(self, result):
+      message = []
+      if result.empty:
+         return message
+      assignees = set(result['assignee'].values.tolist())
+      userNameColumnLength = max([len(user) for user in assignees] + [len("User")])
+      bugIDColumnLength = max([len(pr) for pr in result['PR'].values] + [len("Bug Number")])
+      if bugIDColumnLength > BUG_NUMBER_MAX_LENGTH:
+         bugIDColumnLength = BUG_NUMBER_MAX_LENGTH
+      columnLength = {"User": userNameColumnLength, "CLN": 8, "Time": 11, "PR": bugIDColumnLength}
+      headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                        (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
+      message.append("```" + headerFormatter.format("User", "CLN", "Time", "Bug Number", "Summary"))
+      userName = ''
+      for _, data in result.iterrows():
+         user = data['assignee']
+         cln = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(data['CLN']), data['CLN'])
+         bugNumbers = data['PR']
+         bugIDColumnLength = columnLength["PR"]
+         if len(bugNumbers) > 0:
+            bugLinks = []
+            bugIDs = bugNumbers.split(",")
+            for bugId in bugIDs[:2]:
+               if bugId.startswith("VSANCORE"):
+                  bugLink = VSANCORE_DESCRIBE_URL.format(bugId)
+               else:
+                  bugLink = BUGZILLA_DETAIL_URL + bugId
+               bugLinks.append("<{0}|{1}>".format(bugLink, bugId))
+            bugNumbers = ",".join(bugLinks)
+            unformattedPrStr = data['PR']
+            if len(bugIDs) > 2:
+               bugNumbers += "..."
+               unformattedPrStr = ",".join(bugIDs[:2]) + "..."
+            # pr column length = formatted_PR_length + original_column_length - unformatted_PR_length
+            bugIDColumnLength = len(bugNumbers) + columnLength["PR"] - len(unformattedPrStr)
+         if userName == user:
+            bodyFormatter = " " * columnLength["User"] + "    {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                            (columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
+            message.append(bodyFormatter.format(cln, data['checkinTime'], bugNumbers, data['summary']))
+         else:
+            headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                              (columnLength["User"], columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
+            message.append(headerFormatter.format(data['assignee'], cln, data['checkinTime'], bugNumbers,
+                                                  data['summary']))
+            userName = user
+      message.append('```')
+      return message
 
    def getRecords(self):
       formatStr = "//depot/{}/...@{}"
@@ -151,18 +179,38 @@ class PerforceSpider(object):
       #  please avoid lines longer than 80 chars.
       summary = summary if len(summary) < SUMMARY_MAX_LENGTH else summary[:SUMMARY_MAX_LENGTH - 3] + '...'
       bugIDs = []
+      isCheckinApproved = False
       for record in recordList:
          if "Bug Number:" in record:
-            bugNumbers = record.split("Bug Number:")[1].replace(' ', '')
+            bugNumbers = record.split("Bug Number:")[1].replace(' ', '').upper()
             # filter PRs and VSANCORE IDs
-            findPRs = re.findall(r"[0-9]{7}", bugNumbers)
-            if len(findPRs) > 0:
-               bugIDs.extend(findPRs)
-            findVsancoreIDs = re.findall(r"VSANCORE-[0-9]{4}", bugNumbers)
-            if len(findVsancoreIDs) > 0:
-               bugIDs.extend(findVsancoreIDs)
+            findIDs = re.findall(r"\d+", bugNumbers)
+            PRs = []
+            for findID in findIDs:
+               vsancoreId = "VSANCORE-" + findID
+               if vsancoreId in bugNumbers:
+                  bugIDs.append(vsancoreId)
+               else:
+                  bugIDs.append(findID)
+                  PRs.append(findID)
+            # PR with keyword `CheckinApproved` or not
+            if self.CheckCheckinApproved(PRs):
+               isCheckinApproved = True
             break
-      return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime, 'PR': ",".join(set(bugIDs)), 'summary': summary}
+      return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime, 'PR': ",".join(set(bugIDs)),
+              'approved': 'with' if isCheckinApproved else 'without', 'summary': summary}
+
+   def CheckCheckinApproved(self, PRs):
+      isCheckinApproved = False
+      for bugId in PRs:
+         bugzilla_detail_url = BUGZILLA_BASE + str(bugId)
+         res = requests.get(bugzilla_detail_url, auth=(SERVICE_ACCOUNT, SERVICE_PASSWORD))
+         bugDetail = res.json().get('bugs')[0]
+         keywords = [k.strip() for k in bugDetail.get('keywords', '').split(',')]
+         if 'CheckinApproved' in keywords:
+            isCheckinApproved = True
+            break
+      return isCheckinApproved
 
 import argparse
 def parseArgs():

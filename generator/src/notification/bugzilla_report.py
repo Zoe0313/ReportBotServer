@@ -16,7 +16,7 @@ from lxml import etree
 import pandas as pd
 import math
 from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD, BUGZILLA_DETAIL_URL
-from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, transformReport
+from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport, transformReport
 from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, short2long
 from generator.src.utils.Logger import logger
 
@@ -291,7 +291,10 @@ class BugzillaSpider(object):
       if bugCount > 0:
          bugCountInfo = "One bug found." if 1 == bugCount else "{0} bugs found.".format(bugCount)
          message.append(bugCountInfo)
-         message.extend(self.getBuglistDetail())
+         detail = self.getBuglistDetail()
+         reports = splitOverlengthReport(detail, isContentInCodeBlock=True, enablePagination=True)
+         reports[0] = "\n".join(message) + reports[0]
+         message = reports
       else:
          isNoContent = True
          message.append("No bugs currently.")
@@ -330,8 +333,7 @@ class BugzillaSpider(object):
             logger.info('show columns: {0}'.format(showColumns))
             # make buglist content
             messages = []
-            messages.append("```")
-            messages.append(lineFormatter.format(*showColumns))
+            messages.append("```" + lineFormatter.format(*showColumns))
             for _, bug in df.iterrows():
                valueList = []
                for param in showParams:
@@ -379,7 +381,7 @@ class BugzillaSpider(object):
 
       if "/buglist.cgi" in self.longUrl:  # query buglist
          message, isNoContent = self.getBuglistReport(html)
-         return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=isNoContent is False)
+         return transformReport(messages=message, isNoContent=isNoContent, enableSplitReport=False)
       elif "/report.cgi" in self.longUrl:  # tabular
          message, isNoContent = self.getTabularReport(html)
          return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=False)
