@@ -74,18 +74,14 @@ def noIntervalPolling(func):
       return "error"
    return wrapper
 
-def splitOverlengthReport(messages, isContentInCodeBlock=False):
+def splitOverlengthReport(messages, isContentInCodeBlock=False, enablePagination=False):
    reports = []
    def formatReport(reportLines):
       report = "\n".join(reportLines)
       if isContentInCodeBlock:
          report = report.strip("```")
-         if len(reports) > 0:
-            report = "```" + report + "```"
-         else:
-            report = report + "```"
-      logger.debug("reportLength: {0}".format(len(report)))
-      return parse.quote(report)
+         report = "```" + report + "```"
+      return report
 
    reportLength, reportLines = 0, []
    for line in messages:
@@ -99,8 +95,23 @@ def splitOverlengthReport(messages, isContentInCodeBlock=False):
    if len(reportLines) > 0:
       report = formatReport(reportLines)
       reports.append(report)
+
+   if enablePagination:
+      # Add pagination
+      pages = []
+      pageSize = len(reports)
+      for pageIndex, pageContent in enumerate(reports, start=1):
+         if isContentInCodeBlock:
+            pages.append("```Page ({0}/{1})\n{2}".format(pageIndex, pageSize, pageContent.lstrip("```")))
+         else:
+            pages.append("Page ({0}/{1})\n{2}".format(pageIndex, pageSize, pageContent))
+      return pages
    return reports
 
-def transformReport(messages, isNoContent=False, isContentInCodeBlock=False):
-   reports = splitOverlengthReport(messages, isContentInCodeBlock)
+def transformReport(messages, isNoContent=False, isContentInCodeBlock=False, enablePagination=False, enableSplitReport=True):
+   if enableSplitReport:
+      reports = splitOverlengthReport(messages, isContentInCodeBlock, enablePagination)
+   else:
+      reports = messages
+   reports = [parse.quote(report) for report in reports]
    return json.dumps({'messages': reports, 'isEmpty': isNoContent})
