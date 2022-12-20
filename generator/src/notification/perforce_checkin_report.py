@@ -19,7 +19,6 @@ from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
    BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, VSANCORE_DESCRIBE_URL, BUGZILLA_BASE
 SUMMARY_MAX_LENGTH = 80
-BUG_NUMBER_MAX_LENGTH = 18
 
 class PerforceSpider(object):
    def __init__(self, args):
@@ -87,9 +86,16 @@ class PerforceSpider(object):
          return message
       assignees = set(result['assignee'].values.tolist())
       userNameColumnLength = max([len(user) for user in assignees] + [len("User")])
-      bugIDColumnLength = max([len(pr) for pr in result['PR'].values] + [len("Bug Number")])
-      if bugIDColumnLength > BUG_NUMBER_MAX_LENGTH:
-         bugIDColumnLength = BUG_NUMBER_MAX_LENGTH
+      bugIDColumnLength = len("Bug Number")
+      for strPR in result['PR'].values:
+         bugNumberLen = len(strPR)
+         if bugNumberLen > bugIDColumnLength:
+            bugIDs = strPR.split(",")
+            if len(bugIDs) <= 2:
+               bugIDColumnLength = bugNumberLen
+            else:
+               bugNumberLen = len(bugIDs[:2] + '...')
+               bugIDColumnLength = bugNumberLen if bugNumberLen > bugIDColumnLength else bugIDColumnLength
       columnLength = {"User": userNameColumnLength, "CLN": 8, "Time": 11, "PR": bugIDColumnLength}
       headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
                         (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
@@ -204,12 +210,19 @@ class PerforceSpider(object):
       isCheckinApproved = False
       for bugId in PRs:
          bugzilla_detail_url = BUGZILLA_BASE + str(bugId)
-         res = requests.get(bugzilla_detail_url, auth=(SERVICE_ACCOUNT, SERVICE_PASSWORD))
-         bugDetail = res.json().get('bugs')[0]
-         keywords = [k.strip() for k in bugDetail.get('keywords', '').split(',')]
-         if 'CheckinApproved' in keywords:
-            isCheckinApproved = True
-            break
+         try:
+            res = requests.get(bugzilla_detail_url, auth=(SERVICE_ACCOUNT, SERVICE_PASSWORD)).json()
+            if res.get('status'):
+               statusCode = res.get('status')
+               message = res.get('message', '')
+               raise Exception(f"status code:{statusCode}, {message}")
+            bugDetail = res.get('bugs', [])[0]
+            keywords = [k.strip() for k in bugDetail.get('keywords', '').split(',')]
+            if 'CheckinApproved' in keywords:
+               isCheckinApproved = True
+               break
+         except Exception as e:
+            logger.error('Query bugzilla API error: {0}'.format(e))
       return isCheckinApproved
 
 import argparse
