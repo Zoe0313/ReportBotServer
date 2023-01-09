@@ -32,15 +32,19 @@ const UpdateTeamGroup = async () => {
       membersFilters: [{
          condition: 'include',
          type: 'all_reporters',
-         // include vgunturu(WAAPGUG8J), vsubhashini(WPVQ9M7QT), bstoicov(WAAGN7CBE),
-         // achakravarti(WABLCQTFG) all
-         members: ['WAAPGUG8J', 'WPVQ9M7QT', 'WAAGN7CBE', 'WABLCQTFG']
+         // include vsubhashini(WPVQ9M7QT), bstoicov(WAAGN7CBE), Venkata(WABQUSMQX),
+         // Ninad(WABQS3KK9), ffeng(WAATHDZK7), pudis(WABQY8DF1), Abhijit(WAAGJJCMA),
+         // jakeli(WAAPBH3FC), achakravarti(WABLCQTFG) all
+         members: ['WPVQ9M7QT', 'WAAGN7CBE', 'WABQUSMQX', 'WABQS3KK9', 'WAATHDZK7',
+            'WABQY8DF1', 'WAAGJJCMA', 'WAAPBH3FC', 'WABLCQTFG']
       },
       {
          condition: 'include',
          type: 'selected',
-         // include amdurm(WAA2WLE72), daip(WABL9CTK8), randhirs(WAAGK72PN)
-         members: ['WAA2WLE72', 'WABL9CTK8', 'WAAGK72PN']
+         // include amdurm(WAA2WLE72), daip(WABL9CTK8), randhirs(WAAGK72PN), adesai(WABLDKJPQ),
+         // eknauft(WAAPCHAHY), prenauld(WAA319ZK2), wenguangw(WAAGMNVHS), ochen(WCJQY2KSM) all
+         members: ['WAA2WLE72', 'WABL9CTK8', 'WAAGK72PN', 'WABLDKJPQ', 'WAAPCHAHY',
+            'WAA319ZK2', 'WAAGMNVHS', 'WCJQY2KSM']
       }
       ]
    }]
