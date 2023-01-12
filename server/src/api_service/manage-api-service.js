@@ -1,7 +1,8 @@
-import { ReportConfiguration } from '../model/report-configuration.js'
+import { ReportConfiguration, FlattenMembers } from '../model/report-configuration.js'
 import { SlackbotApiToken } from '../model/api-token.js'
 import { AddApiHistoryInfo } from '../model/api-history.js'
 import { FindUserInfoByName } from '../model/user-info.js'
+import { TeamGroup } from '../model/team-group.js'
 import { RegisterScheduler, UnregisterScheduler } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import mongoose from 'mongoose'
@@ -45,10 +46,86 @@ function RegisterApiRouters(router, client) {
       } catch (error) {
          const errorMsg = `Failed to get sent report count: ${error}`
          logger.error(errorMsg)
-         ctx.response.status = 400
+         ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
       }
       logger.debug(`API /metrics ${performance.now() - t0} cost`)
+   })
+
+   router.get('/api/v1/team_members/vsan', async (ctx, next) => {
+      const t0 = performance.now()
+      try {
+         const team = await TeamGroup.findOne({ code: 'vsan' })
+         ctx.response.status = 200
+         ctx.response.body = team.members
+      } catch (e) {
+         const errorMsg = `Failed to get members of vsan team.`
+         logger.error(errorMsg)
+         ctx.response.status = 500
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+      logger.debug(`API /team_members/vsan ${performance.now() - t0} cost`)
+   })
+
+   router.get('/api/v1/team_members/:managerName/:filterType', async (ctx, next) => {
+      const t0 = performance.now()
+      const managerName = ctx.params.managerName
+      const filterType = ctx.params.filterType
+      try {
+         if (managerName == null || managerName === '') {
+            ctx.response.status = 400
+            ctx.response.body = { result: false, message: 'Bad request: manager name not given.' }
+            return
+         }
+         const managerInfo = await FindUserInfoByName(managerName)
+         if (managerInfo == null) {
+            ctx.response.status = 400
+            ctx.response.body = {
+               result: false, message: 'Bad request: manager name is invalid.'
+            }
+            return
+         }
+         if (filterType == null || filterType === '') {
+            ctx.response.status = 400
+            ctx.response.body = {
+               result: false, message: 'Bad request: filter type not given.'
+            }
+            return
+         }
+         if (filterType !== 'direct' && filterType !== 'all') {
+            ctx.response.status = 400
+            ctx.response.body = {
+               result: false,
+               message: 'Bad request: filter type is invalid, please use /all or /direct.'
+            }
+            return
+         }
+         const team = {
+            code: managerName,
+            name: managerName + ' engineers',
+            membersFilters: [{
+               condition: 'include', type: filterType + '_reporters', members: [managerInfo.slackId]
+            }]
+         }
+         team.members = await FlattenMembers(team.membersFilters)
+         if (team.members.length <= 1) {
+            ctx.response.status = 400
+            ctx.response.body = {
+               result: false,
+               message: 'Bad request: the given manager name is an individual engineer, ' +
+                  'no one reports to him/her.'
+            }
+            return
+         }
+         ctx.response.status = 200
+         ctx.response.body = team.members
+      } catch (e) {
+         const errorMsg = `Failed to get members of ${managerName} team.`
+         logger.error(errorMsg)
+         ctx.response.status = 500
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+      logger.debug(`API /team_members/${managerName}/${filterType} ${performance.now() - t0} cost`)
    })
 
    router.get('/api/v1/report_configurations', async (ctx, next) => {
@@ -64,7 +141,7 @@ function RegisterApiRouters(router, client) {
    router.get('/api/v1/report_configurations/:id', async (ctx, next) => {
       if (ctx.params.id == null) {
          ctx.response.status = 400
-         ctx.response.body = { result: false, message: 'Invalid id' }
+         ctx.response.body = { result: false, message: 'Bad request: invalid id' }
          return
       }
       const userId = ctx.state.userId
@@ -86,7 +163,7 @@ function RegisterApiRouters(router, client) {
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
             ctx.response.status = 400
-            ctx.response.body = e.errors
+            ctx.response.body = 'Bad request: ' + e.errors
          } else {
             ctx.response.status = 500
             ctx.response.body = { result: false, message: 'Internal Server Error' }
@@ -115,7 +192,7 @@ function RegisterApiRouters(router, client) {
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
             ctx.response.status = 400
-            ctx.response.body = e.errors
+            ctx.response.body = 'Bad request: ' + e.errors
          } else {
             ctx.response.status = 500
             ctx.response.body = { result: false, message: 'Internal Server Error' }
@@ -144,9 +221,9 @@ function RegisterApiRouters(router, client) {
       let errorMsg = ''
       let request = { channel: '', text: '' }
       if (ctx.request.body.text == null || ctx.request.body.text === '') {
-         errorMsg = 'The message is not given, can not post the empty message.'
+         errorMsg = 'Bad request: the message is not given, can not post the empty message.'
       } else if (ctx.params.channelId == null || ctx.params.channelId === '') {
-         errorMsg = 'Channel ID is not given when posting message.'
+         errorMsg = 'Bad request: channel ID is not given when posting message.'
          request = { channel: '', text: ctx.request.body.text }
       }
       if (errorMsg !== '') {
@@ -169,7 +246,7 @@ function RegisterApiRouters(router, client) {
       } catch (error) {
          const errorMsg = `post message occur error: ${error}`
          logger.error(errorMsg)
-         ctx.response.status = 400
+         ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
       }
       AddApiHistoryInfo(ctx.state, request, ctx.response)
@@ -179,9 +256,9 @@ function RegisterApiRouters(router, client) {
       let errorMsg = ''
       let request = { channel: '', text: '' }
       if (ctx.request.body.text == null || ctx.request.body.text === '') {
-         errorMsg = 'The message is not given, can not post the empty message.'
+         errorMsg = 'Bad request: the message is not given, can not post the empty message.'
       } else if (ctx.params.userName == null || ctx.params.userName === '') {
-         errorMsg = 'User name is not given when posting message.'
+         errorMsg = 'Bad request: user name is not given when posting message.'
          request = { channel: '', text: ctx.request.body.text }
       }
       if (errorMsg !== '') {
@@ -213,7 +290,7 @@ function RegisterApiRouters(router, client) {
       } catch (error) {
          const errorMsg = `post message occur error: ${error}`
          logger.error(errorMsg)
-         ctx.response.status = 400
+         ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
       }
       AddApiHistoryInfo(ctx.state, request, ctx.response)

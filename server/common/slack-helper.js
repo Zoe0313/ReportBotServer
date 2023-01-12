@@ -102,7 +102,7 @@ export async function GetUsersName(users) {
    assert(slackClient != null, 'slackClient is not initialized in slack helper.')
    return await Promise.all(users.map(user => {
       return slackClient.users.info({ user }).then(res => {
-         return res.user.name
+         return res.user.profile.email.split('@')[0]
       })
    }))
 }
