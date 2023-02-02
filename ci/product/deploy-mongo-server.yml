@@ -64,11 +64,11 @@ spec:
             mountPath: /data/db
         resources:
           requests:
-            memory: "100Mi"
-            cpu: "100m"
-          limits:
             memory: "200Mi"
             cpu: "200m"
+          limits:
+            memory: "400Mi"
+            cpu: "400m"
   volumeClaimTemplates:
   - metadata:
       name: mongo-persistent-storage-prd
