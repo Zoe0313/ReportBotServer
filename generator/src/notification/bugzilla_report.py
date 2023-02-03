@@ -302,8 +302,9 @@ class BugzillaSpider(object):
       return message, isNoContent
 
    def getBuglistDetail(self):
-      # Keyword "#" will make downloading failed. For example: #buglistsort=pri,asc
-      self.longUrl = self.longUrl.replace('#', '%23')
+      # Keyword "#" will make downloading failed such as #buglistsort=pri,asc.
+      # Replace by "&" which split each bugzilla query condition.
+      self.longUrl = self.longUrl.replace('#', '&')
       downloadUrl = self.longUrl + ';ctype=csv'
       csvFile = self.downloadCsvFile(downloadUrl)
       if os.path.exists(csvFile):
@@ -312,6 +313,7 @@ class BugzillaSpider(object):
             df.fillna(value="", inplace=True)
             # get existed column name list
             headers = df.columns.values
+            logger.info('headers: {0}'.format(headers))
             paramsLength = {'Bug ID': 7, 'Assignee': -1, 'Priority': 8, 'ETA': 10, 'Summary (first 60 chars)': 60}
             showParams = [k for k, v in paramsLength.items()]
             showParams = [param for param in showParams if param in headers]
