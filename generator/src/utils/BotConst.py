@@ -45,7 +45,7 @@ PERFORCE_DESCRIBE_URL = "https://p4swarm.eng.vmware.com/perforce_1666/changes/{0
 # review board request url
 REVIEWBOARD_REQUEST_URL = "https://reviewboard.eng.vmware.com/r/{0}/"
 # vsancore describe url
-VSANCORE_DESCRIBE_URL = "https://jira.eng.vmware.com/browse/{0}"
+JIRA_BROWSE_URL = "https://jira.eng.vmware.com/browse/{0}"
 # restful API: post message to a given channel id
 POST_MESSAGE_API_BY_CHANNEL = "https://slackbot.vela.decc.vmware.com/api/v1/channel/{0}/messages"
 # restful API: post message to a given user name

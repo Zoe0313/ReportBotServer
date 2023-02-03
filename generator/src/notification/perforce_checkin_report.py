@@ -17,7 +17,7 @@ from urllib import parse
 from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport, transformReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
-   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, VSANCORE_DESCRIBE_URL, BUGZILLA_BASE
+   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, JIRA_BROWSE_URL, BUGZILLA_BASE
 SUMMARY_MAX_LENGTH = 80
 
 class PerforceSpider(object):
@@ -86,16 +86,15 @@ class PerforceSpider(object):
          return message
       assignees = set(result['assignee'].values.tolist())
       userNameColumnLength = max([len(user) for user in assignees] + [len("User")])
+      # calculate bug number column width
       bugIDColumnLength = len("Bug Number")
       for strPR in result['PR'].values:
          bugNumberLen = len(strPR)
          if bugNumberLen > bugIDColumnLength:
             bugIDs = strPR.split(",")
-            if len(bugIDs) <= 2:
-               bugIDColumnLength = bugNumberLen
-            else:
-               bugNumberLen = len(bugIDs[:2] + '...')
-               bugIDColumnLength = bugNumberLen if bugNumberLen > bugIDColumnLength else bugIDColumnLength
+            if len(bugIDs) > 2:
+               bugNumberLen = len(','.join(bugIDs[:2]) + '...')
+            bugIDColumnLength = bugNumberLen
       columnLength = {"User": userNameColumnLength, "CLN": 8, "Time": 11, "PR": bugIDColumnLength}
       headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
                         (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
@@ -110,8 +109,8 @@ class PerforceSpider(object):
             bugLinks = []
             bugIDs = bugNumbers.split(",")
             for bugId in bugIDs[:2]:
-               if bugId.startswith("VSANCORE"):
-                  bugLink = VSANCORE_DESCRIBE_URL.format(bugId)
+               if '-' in bugId:
+                  bugLink = JIRA_BROWSE_URL.format(bugId)
                else:
                   bugLink = BUGZILLA_DETAIL_URL + bugId
                bugLinks.append("<{0}|{1}>".format(bugLink, bugId))
@@ -188,20 +187,13 @@ class PerforceSpider(object):
       isCheckinApproved = False
       for record in recordList:
          if "Bug Number:" in record:
-            bugNumbers = record.split("Bug Number:")[1].replace(' ', '').upper()
-            # filter PRs and VSANCORE IDs
-            findIDs = re.findall(r"\d+", bugNumbers)
-            PRs = []
-            for findID in findIDs:
-               vsancoreId = "VSANCORE-" + findID
-               if vsancoreId in bugNumbers:
-                  bugIDs.append(vsancoreId)
-               else:
-                  bugIDs.append(findID)
-                  PRs.append(findID)
-            # PR with keyword `CheckinApproved` or not
-            if self.CheckCheckinApproved(PRs):
-               isCheckinApproved = True
+            bugNumberStr = record.split("Bug Number:")[1].replace(' ', '').upper()
+            bugIDs = [bugNumber.strip() for bugNumber in bugNumberStr.split(',') if len(bugNumber.strip()) > 0]
+            PRs = [bugId for bugId in bugIDs if '-' not in bugId]  # jira bug number must with '-'
+            if len(PRs) > 0:
+               # PR with keyword `CheckinApproved` or not
+               if self.CheckCheckinApproved(PRs):
+                  isCheckinApproved = True
             break
       return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime, 'PR': ",".join(set(bugIDs)),
               'approved': 'with' if isCheckinApproved else 'without', 'summary': summary}
