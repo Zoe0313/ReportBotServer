@@ -298,9 +298,12 @@ class BugzillaSpider(object):
       else:
          isNoContent = True
          message.append("No bugs currently.")
+         message = ["\n".join(message)]
       return message, isNoContent
 
    def getBuglistDetail(self):
+      # Keyword "#" will make downloading failed. For example: #buglistsort=pri,asc
+      self.longUrl = self.longUrl.replace('#', '%23')
       downloadUrl = self.longUrl + ';ctype=csv'
       csvFile = self.downloadCsvFile(downloadUrl)
       if os.path.exists(csvFile):
