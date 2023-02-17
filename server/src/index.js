@@ -48,10 +48,10 @@ InitSlackClient(app.client)
 
 // handler performance
 app.use(async ({ body, next }) => {
-   const user = body?.user?.id || body?.message?.user ||
+   const user = body?.user?.id || body?.message?.user || body?.user_id ||
       body?.event?.user?.id || body?.event?.user || body?.event?.message?.user
    const type = body?.actions?.map(action => action.action_id)?.join(', ') ||
-      body?.subtype || body?.type
+      body?.subtype || body?.type || body?.command
    const t0 = performance.now()
    await next()
    const t1 = performance.now()

@@ -8,6 +8,7 @@ Utils.py
 '''
 import json
 import os
+import pytz
 import subprocess
 import time
 import functools
@@ -17,6 +18,8 @@ from generator.src.utils.Logger import logger
 
 # In order to add some mention user names, we set this value less than 4000.
 MAX_CHAR_LENGTH_IN_ONE_REPORT = 3900
+# Cache for slash command usages
+slashCmdUsagesCache = {}
 
 def runCmd(cmd, nTimeOut=300):
    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
@@ -115,3 +118,22 @@ def transformReport(messages, isNoContent=False, isContentInCodeBlock=False, ena
       reports = messages
    reports = [parse.quote(report) for report in reports]
    return json.dumps({'messages': reports, 'isEmpty': isNoContent})
+
+def LoadSlashCommandUsage(fileName):
+   if not fileName:
+      return ''
+   if slashCmdUsagesCache.get(fileName):
+      return slashCmdUsagesCache[fileName]
+   filePath = os.path.join(os.path.abspath(__file__).split("/generator")[0],
+                           "persist", "slash_cmd_usage", fileName + ".txt")
+   if os.path.exists(filePath):
+      with open(filePath, 'rt') as f:
+         slashCmdUsagesCache[fileName] = f.read()
+      return slashCmdUsagesCache[fileName]
+   return ''
+
+def Local2Utc(localTime, timezone="Asia/Shanghai"):
+   localTimezone = pytz.timezone(timezone)
+   localDt = localTimezone.localize(localTime)
+   utcTime = localTime + localDt.utcoffset()
+   return utcTime
