@@ -1,5 +1,6 @@
 import { LoadBlocks, UpdateUserTzCache } from '../../common/slack-helper.js'
 import logger from '../../common/logger.js'
+import { SlashCommandHandler } from '../slashcommand/handler.js'
 export function RegisterCommonServiceHandler(app) {
    // Reply in channel
    // app.event('app_mention', async ({ event, say }) => {
@@ -45,5 +46,10 @@ export function RegisterCommonServiceHandler(app) {
             `Payload: ${JSON.stringify(payload)}. ` + `Error: ${JSON.stringify(e)}`)
          throw e
       }
+   })
+
+   // slash command
+   app.command('/whois-vsan-nanny', async ({ client, payload, ack }) => {
+      await SlashCommandHandler(client, payload, ack)
    })
 }
