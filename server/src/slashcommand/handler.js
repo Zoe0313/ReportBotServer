@@ -35,6 +35,15 @@ const ContentEvaluate = async (payload) => {
 const SlashCommandExecutor = async (client, payload, ack, ContentEvaluate) => {
    let slashCommandHistory = null
    try {
+      await ack()
+      const messages = await ContentEvaluate(payload)
+      logger.info(`stdout of slash command '${payload.command}': ${messages}`)
+      // post messages to the channel which is bot in
+      const result = await client.chat.postEphemeral({
+         channel: payload.channel_id,
+         text: messages,
+         user: payload.user_id
+      })
       slashCommandHistory = new SlashCommandHistory({
          creator: payload.user_id,
          conversation: payload.channel_id,
@@ -44,15 +53,6 @@ const SlashCommandExecutor = async (client, payload, ack, ContentEvaluate) => {
          status: SLASH_COMMAND_HISTORY_STATUS.PENDING
       })
       await slashCommandHistory.save()
-      const messages = await ContentEvaluate(payload)
-      logger.info(`stdout of slash command '${payload.command}': ${messages}`)
-      // post messages to the channel which is bot in
-      await ack()
-      const result = await client.chat.postEphemeral({
-         channel: payload.channel_id,
-         text: messages,
-         user: payload.user_id
-      })
       if (result?.ok === true) {
          slashCommandHistory.status = SLASH_COMMAND_HISTORY_STATUS.SUCCEED
          slashCommandHistory.sendTime = new Date()
