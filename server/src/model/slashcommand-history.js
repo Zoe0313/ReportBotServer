@@ -3,8 +3,7 @@ import mongoose from 'mongoose'
 const SLASH_COMMAND_HISTORY_STATUS = {
    SUCCEED: 'SUCCEED',
    FAILED: 'FAILED',
-   TIMEOUT: 'TIMEOUT',
-   PENDING: 'PENDING'
+   TIMEOUT: 'TIMEOUT'
 }
 
 const SlashCommandHistorySchema = new mongoose.Schema({
@@ -20,8 +19,7 @@ const SlashCommandHistorySchema = new mongoose.Schema({
    errorMsg: {
       type: String,
       required: function(v) {
-         return this.status === SLASH_COMMAND_HISTORY_STATUS.FAILED ||
-            this.status === SLASH_COMMAND_HISTORY_STATUS.TIMEOUT
+         return this.status !== SLASH_COMMAND_HISTORY_STATUS.SUCCEED
       }
    },
    status: { type: String, enum: Object.values(SLASH_COMMAND_HISTORY_STATUS), required: true }
