@@ -3,12 +3,14 @@ import fs from 'fs'
 import cloneDeep from 'lodash/cloneDeep.js'
 import set from 'lodash/set.js'
 import assert from 'assert'
+import path from 'path'
 import { PerforceInfo } from '../src/model/perforce-info.js'
 import { UpdateUserInfo } from '../src/model/user-info.js'
 
 let slackClient = null
 const userTzCache = {}
 const blocksCache = {}
+const slashCmdUsagesCache = {}
 
 export function InitSlackClient(client) {
    slackClient = client
@@ -282,5 +284,20 @@ export async function TryAndHandleError({ ack, body, client }, func, errorHandle
          })
          throw e
       }
+   }
+}
+
+export function LoadSlashCommandUsage(name) {
+   if (name.endsWith('null') || name.endsWith('undefined')) {
+      return ''
+   }
+   if (slashCmdUsagesCache[name]) {
+      return slashCmdUsagesCache[name]
+   } else {
+      const usageFilePath = path.join(path.resolve(), '..') +
+         `/persist/slash_cmd_usage/${name}.txt`
+      const usage = fs.readFileSync(usageFilePath).toString()
+      slashCmdUsagesCache[name] = usage
+      return usage
    }
 }

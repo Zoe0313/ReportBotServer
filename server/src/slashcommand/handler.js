@@ -2,7 +2,8 @@ import path from 'path'
 import logger from '../../common/logger.js'
 import { ExecCommand } from '../../common/utils.js'
 import {
-   GetUserTz, GetConversationsName, TryAndHandleError
+   GetUserTz, GetConversationsName, TryAndHandleError,
+   LoadSlashCommandUsage
 } from '../../common/slack-helper.js'
 import {
    SLASH_COMMAND_HISTORY_STATUS, SlashCommandHistory
@@ -34,32 +35,27 @@ const ContentEvaluate = async (payload) => {
    return stdout
 }
 
-const SlashCommandExecutor = async (client, payload) => {
+const SlashCommandExecutor = async (ack, payload) => {
    const messages = await ContentEvaluate(payload)
-   logger.info(`stdout of slash command '${payload.command}': ${messages}`)
-   // post messages to the channel which is bot in
-   const result = await client.chat.postEphemeral({
-      channel: payload.channel_id,
-      text: messages,
-      user: payload.user_id
+   logger.info(`stdout of slash command '${payload.command}':\n${messages}`)
+   // post ephemeral messages to channel by ack
+   await ack({
+      response_type: 'ephemeral',
+      text: messages
    })
-   if (result?.ok === true) {
-      const slashCommandHistory = new SlashCommandHistory({
-         creator: payload.user_id,
-         conversation: payload.channel_id,
-         command: payload.command + ((payload.text.length > 0) ? (' ' + payload.text) : ''),
-         sendTime: new Date(),
-         errorMsg: '',
-         status: SLASH_COMMAND_HISTORY_STATUS.SUCCEED
-      })
-      await slashCommandHistory.save()
-      logger.info(`record: ${slashCommandHistory}`)
-   } else {
-      throw new Error(`post ephemeral response is not ok: ${JSON.stringify(result)}`)
-   }
+   const slashCommandHistory = new SlashCommandHistory({
+      creator: payload.user_id,
+      conversation: payload.channel_id,
+      command: payload.command + ((payload.text.length > 0) ? (' ' + payload.text) : ''),
+      sendTime: new Date(),
+      errorMsg: '',
+      status: SLASH_COMMAND_HISTORY_STATUS.SUCCEED
+   })
+   await slashCommandHistory.save()
+   logger.info(`record: ${slashCommandHistory}`)
 }
 
-const ErrorHandler = async (client, payload, error) => {
+const ErrorHandler = async (client, ack, payload, error) => {
    const slashCommandHistory = new SlashCommandHistory({
       creator: payload.user_id,
       conversation: payload.channel_id,
@@ -78,23 +74,37 @@ const ErrorHandler = async (client, payload, error) => {
       logger.error(`Save failed slash command history failed since error:`)
       logger.error(e)
    }
-   // service e2e verify - send error message to monitoring channel
-   let errorMessage = 'Slash command: `' + `${slashCommandHistory.command}` + '`'
-   errorMessage += ` created by ${GetConversationsName([slashCommandHistory.creator])}` +
-      ` in ${GetConversationsName([slashCommandHistory.conversation])} ` +
-      ` at ${slashCommandHistory.sendTime}\n`
-   errorMessage += `Error: ${slashCommandHistory.errorMsg}`
-   client.chat.postMessage({ channel: process.env.ISSUE_CHANNEL_ID, text: errorMessage })
+   if (error.message.startsWith('Command failed:') &&
+      error.message.includes('error: argument')) {
+      try {
+         const usage = LoadSlashCommandUsage(payload.command.replace('/', ''))
+         // post ephemeral command usage messages to channel by ack
+         await ack({
+            response_type: 'ephemeral',
+            text: '```USAGE:\n' + `${usage}` + '```'
+         })
+      } catch (e) {
+         logger.error(`Send command usage failed since error:`)
+         logger.error(e)
+      }
+   } else {
+      // service e2e verify - send error message to monitoring channel
+      let errorMessage = 'Slash command: `' + `${slashCommandHistory.command}` + '`'
+      errorMessage += ` created by ${GetConversationsName([slashCommandHistory.creator])}` +
+         ` in ${GetConversationsName([slashCommandHistory.conversation])} ` +
+         ` at ${slashCommandHistory.sendTime}\n`
+      errorMessage += `Error: ${slashCommandHistory.errorMsg}`
+      client.chat.postMessage({ channel: process.env.ISSUE_CHANNEL_ID, text: errorMessage })
+   }
 }
 
 const SlashCommandHandler = async (client, payload, ack) => {
    TryAndHandleError({ ack, payload, client }, async () => {
-      await ack()
-      await SlashCommandExecutor(client, payload)
+      await SlashCommandExecutor(ack, payload)
    }, async (e) => {
       logger.error(`Failed to send an ephemeral message by slash command ${payload?.command}`)
       logger.error(e)
-      await ErrorHandler(client, payload, e)
+      await ErrorHandler(client, ack, payload, e)
    })
 }
 
