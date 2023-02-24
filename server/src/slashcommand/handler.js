@@ -1,4 +1,5 @@
 import path from 'path'
+import axios from 'axios'
 import logger from '../../common/logger.js'
 import { ExecCommand } from '../../common/utils.js'
 import {
@@ -13,7 +14,7 @@ const projectRootPath = path.join(path.resolve(), '..')
 
 const ContentEvaluate = async (payload) => {
    // execute the different slash command response generator
-   const timeout = 10 * 60 * 1000
+   const timeout = 30 * 1000
    let scriptPath = ''
    let stdout = ''
    let command = ''
@@ -38,21 +39,24 @@ const ContentEvaluate = async (payload) => {
 const SlashCommandExecutor = async (ack, payload) => {
    const messages = await ContentEvaluate(payload)
    logger.info(`stdout of slash command '${payload.command}':\n${messages}`)
-   // post ephemeral messages to channel by ack
-   await ack({
-      response_type: 'ephemeral',
+   // post ephemeral messages to channel by response url
+   const res = await axios.post(payload.response_url, {
       text: messages
    })
-   const slashCommandHistory = new SlashCommandHistory({
-      creator: payload.user_id,
-      conversation: payload.channel_id,
-      command: payload.command + ((payload.text.length > 0) ? (' ' + payload.text) : ''),
-      sendTime: new Date(),
-      errorMsg: '',
-      status: SLASH_COMMAND_HISTORY_STATUS.SUCCEED
-   })
-   await slashCommandHistory.save()
-   logger.info(`record: ${slashCommandHistory}`)
+   if (res.data === 'ok') {
+      const slashCommandHistory = new SlashCommandHistory({
+         creator: payload.user_id,
+         conversation: payload.channel_id,
+         command: payload.command + ((payload.text.length > 0) ? (' ' + payload.text) : ''),
+         sendTime: new Date(),
+         errorMsg: '',
+         status: SLASH_COMMAND_HISTORY_STATUS.SUCCEED
+      })
+      await slashCommandHistory.save()
+      logger.info(`record: ${slashCommandHistory}`)
+   } else {
+      throw new Error(`Failed to post message by ${payload.response_url}.`)
+   }
 }
 
 const ErrorHandler = async (client, ack, payload, error) => {
@@ -78,9 +82,8 @@ const ErrorHandler = async (client, ack, payload, error) => {
       error.message.includes('error: argument')) {
       try {
          const usage = LoadSlashCommandUsage(payload.command.replace('/', ''))
-         // post ephemeral command usage messages to channel by ack
-         await ack({
-            response_type: 'ephemeral',
+         // post ephemeral command usage messages to channel by response url
+         await axios.post(payload.response_url, {
             text: '```USAGE:\n' + `${usage}` + '```'
          })
       } catch (e) {
@@ -100,6 +103,7 @@ const ErrorHandler = async (client, ack, payload, error) => {
 
 const SlashCommandHandler = async (client, payload, ack) => {
    TryAndHandleError({ ack, payload, client }, async () => {
+      await ack()
       await SlashCommandExecutor(ack, payload)
    }, async (e) => {
       logger.error(`Failed to send an ephemeral message by slash command ${payload?.command}`)
