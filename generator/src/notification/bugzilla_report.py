@@ -310,21 +310,22 @@ class BugzillaSpider(object):
       if os.path.exists(csvFile):
          df = pd.read_csv(csvFile)
          if not df.empty:
+            # drop empty columns
+            df.dropna(axis=1, how='all', inplace=True)
             df.fillna(value="", inplace=True)
             # get existed column name list
             headers = df.columns.values
             logger.info('headers: {0}'.format(headers))
-            paramsLength = {'Bug ID': 7, 'Assignee': -1, 'Priority': 8, 'ETA': 10, 'Summary (first 60 chars)': 60}
+            summaryColumnName = 'Summary' if 'Summary' in headers else 'Summary (first 60 chars)'
+            paramsLength = {'Bug ID': 7, 'Assignee': -1, 'Priority': 3, 'Status': -1, 'ETA': 10, summaryColumnName: 60}
             showParams = [k for k, v in paramsLength.items()]
             showParams = [param for param in showParams if param in headers]
             if 'Assignee' in showParams:
                paramsLength['Assignee'] = max([len(user) for user in df['Assignee'].values] + [len('Assignee')])
-            # sort by columns
-            sortParams = ['Priority', 'ETA']
-            sortParams = [param for param in sortParams if param in headers]
-            if len(sortParams) > 0:
-               ascendingList = [param != 'ETA' for param in sortParams]
-               df = df.sort_values(by=sortParams, ascending=ascendingList)
+            if 'Status' in showParams:
+               paramsLength['Status'] = max([len(status) for status in df['Status'].values] + [len('Status')])
+            # default sort by 'Bug ID' column
+            df = df.sort_values(by='Bug ID', ascending=True)
             # calculate column chars size
             formatList = []
             for param, length in paramsLength.items():
@@ -332,8 +333,8 @@ class BugzillaSpider(object):
                   formatList.append("{:<%ds}" % length)
             lineFormatter = formatList[0] + "  " + " ".join(formatList[1:-1]) + " {}"
             # get show column list
-            nameDict = {'Bug ID': 'PR', 'Assignee': 'Assignee', 'Priority': 'Priority', 'ETA': 'ETA',
-                        'Summary (first 60 chars)': 'Summary'}
+            nameDict = {'Bug ID': 'PR', 'Assignee': 'Assignee', 'Priority': 'Pri', 'Status': 'Status', 'ETA': 'ETA',
+                        summaryColumnName: 'Summary'}
             showColumns = [name for param, name in nameDict.items() if param in headers]
             logger.info('show columns: {0}'.format(showColumns))
             # make buglist content
@@ -345,7 +346,7 @@ class BugzillaSpider(object):
                   value = bug[param]
                   if "Bug ID" == param:
                      value = "<%s|%s>" % (BUGZILLA_DETAIL_URL + str(value), str(value))
-                  elif "Summary (first 60 chars)" == param:
+                  elif summaryColumnName == param:
                      value = value if len(value) < SUMMARY_MAX_LENGTH else value[:SUMMARY_MAX_LENGTH] + "..."
                   valueList.append(value)
                messages.append(lineFormatter.format(*valueList))
