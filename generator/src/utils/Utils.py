@@ -99,10 +99,10 @@ def splitOverlengthReport(messages, isContentInCodeBlock=False, enablePagination
       report = formatReport(reportLines)
       reports.append(report)
 
-   if enablePagination:
+   pageSize = len(reports)
+   if enablePagination and pageSize > 1:
       # Add pagination
       pages = []
-      pageSize = len(reports)
       for pageIndex, pageContent in enumerate(reports, start=1):
          if isContentInCodeBlock:
             pages.append("```Page ({0}/{1})\n{2}".format(pageIndex, pageSize, pageContent.lstrip("```")))
