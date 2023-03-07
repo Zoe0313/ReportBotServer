@@ -10,24 +10,19 @@ https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster
 All Global timezone assignee
 '''
 
-import os
 import datetime
 import argparse
-import pandas as pd
 from generator.src.utils.Logger import logger
 from generator.src.utils.Utils import LoadSlashCommandUsage, Local2Utc
+from generator.src.utils.RefreshVsanNannyList import GetNannyList
 
-projectPath = os.path.abspath(__file__).split("/generator")[0]
-csvFile = os.path.join(projectPath, "persist/config", "vsan-nanny.csv")
 buglistLine = "Bug list: https://via.vmw.com/UKKDDr"
 BotSorryReply = '''Sorry, I can't get the information now since some error hit when querying the resource.
 Please refer to the source page - https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster for more details.'''
 
 def _GetDutyInfoByDay(day):
-   if not os.path.exists(csvFile):
-      return
-   df = pd.read_csv(csvFile)
-   df['week'] = df['WeekBegins'].apply(lambda x: datetime.datetime.strptime(x, '%m/%d/%Y'))
+   df = GetNannyList()
+   logger.debug("Get Nanny List: {}".format(df.head()))
    dutyDf = df[df['week'] <= day]
    if dutyDf.empty:
       raise Exception(f"{day.strftime('%Y-%m-%d')} is before `Vsan-nanny Duty Roster` first begin day.")
