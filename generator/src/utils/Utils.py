@@ -77,6 +77,20 @@ def noIntervalPolling(func):
       return "error"
    return wrapper
 
+# Maybe in python generator this memo dict couldn't cache any result.
+funcResultMemo = {}
+def memorize(func):
+   global funcResultMemo
+   @functools.wraps(func)
+   def wrapper(*args, **kwargs):
+      if args in funcResultMemo:
+         return funcResultMemo[args]
+      else:
+         result = func(*args, **kwargs)
+         funcResultMemo[args] = result
+         return result
+   return wrapper
+
 def splitOverlengthReport(messages, isContentInCodeBlock=False, enablePagination=False):
    reports = []
    def formatReport(reportLines):

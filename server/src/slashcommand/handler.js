@@ -1,5 +1,6 @@
 import path from 'path'
 import axios from 'axios'
+import { performance } from 'perf_hooks'
 import logger from '../../common/logger.js'
 import { ExecCommand } from '../../common/utils.js'
 import {
@@ -37,12 +38,17 @@ const ContentEvaluate = async (payload) => {
 }
 
 const SlashCommandExecutor = async (ack, payload) => {
+   const t0 = performance.now()
    const messages = await ContentEvaluate(payload)
    logger.info(`stdout of slash command '${payload.command}':\n${messages}`)
+   const t1 = performance.now()
+   logger.debug(`Generate response content ${t1 - t0} cost`)
    // post ephemeral messages to channel by response url
    const res = await axios.post(payload.response_url, {
       text: messages
    })
+   const t2 = performance.now()
+   logger.debug(`Post message by response url ${t2 - t1} cost`)
    if (res.data === 'ok') {
       const slashCommandHistory = new SlashCommandHistory({
          creator: payload.user_id,
@@ -54,6 +60,7 @@ const SlashCommandExecutor = async (ack, payload) => {
       })
       await slashCommandHistory.save()
       logger.info(`record: ${slashCommandHistory}`)
+      logger.debug(`Save record ${performance.now() - t2} cost`)
    } else {
       throw new Error(`Failed to post message by ${payload.response_url}.`)
    }

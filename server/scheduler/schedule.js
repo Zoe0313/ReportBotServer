@@ -540,9 +540,30 @@ const RegisterUpdateNannyScheduler = function (report) {
    return job
 }
 
+const UpdateVSANNanny = async () => {
+   try {
+      const command = `PYTHONPATH=${projectRootPath} python3 ${projectRootPath}` +
+         '/generator/src/utils/RefreshVsanNannyList.py'
+      logger.debug(`execute the refresh vsan-nanny.csv command: ${command}`)
+      await ExecCommand(command, 60 * 1000)
+   } catch (e) {
+      client.chat.postMessage({
+         channel: process.env.ISSUE_CHANNEL_ID,
+         text: `*Update vsan-nanny.csv occur error*\n${e.message}`
+      })
+   }
+}
+
+const RegisterVSANNannyScheduler = function () {
+   const job = schedule.scheduleJob('30 1 * * 1', async function () {
+      await UpdateVSANNanny()
+   })
+   return job
+}
+
 export {
    RegisterScheduler, UnregisterScheduler, NextInvocation,
    CancelNextInvocation, InvokeNow,
    RegisterPerforceInfoScheduler, RegisterPerforceMembersScheduler,
-   RegisterTeamGroupScheduler
+   RegisterTeamGroupScheduler, RegisterVSANNannyScheduler
 }
