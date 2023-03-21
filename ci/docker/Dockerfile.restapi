@@ -14,7 +14,7 @@ COPY . .
 
 WORKDIR server
 
-RUN npm install
+RUN npm install && cp .env.product .env
 
 EXPOSE 443
 
