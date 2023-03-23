@@ -1,4 +1,7 @@
-import base64
+import os
+from dotenv import load_dotenv
+ProjectPath = os.path.abspath(__file__).split("/utils")[0]
+load_dotenv(dotenv_path=os.path.join(ProjectPath, 'server', '.env'))
 
 SLACK_API = "https://slack.com/api/"
 
@@ -14,8 +17,8 @@ BUGZILLA_BASE = "https://bugzilla.eng.vmware.com/show_bug.cgi?id="
 # bugzilla bug detail API
 BUGZILLA_DETAIL_URL = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/"
 
-SERVICE_ACCOUNT = "svc.vsan-er"
-SERVICE_PASSWORD = base64.b64decode("RkM3TEQuWXF5NnFzOTI0LkBALg==").decode('utf-8')
+SERVICE_ACCOUNT = os.environ.get('SERVICE_ACCOUNT')
+SERVICE_PASSWORD = os.environ.get('SERVICE_PASSWORD')
 
 # content type
 CONTENT_TYPE_JSON_UTF = "application/json;charset=utf-8"
