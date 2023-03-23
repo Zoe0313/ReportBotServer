@@ -15,7 +15,7 @@ from urllib import parse
 from lxml import etree
 import pandas as pd
 import math
-from generator.src.utils.BotConst import BUGZILLA_ACCOUNT, BUGZILLA_PASSWORD, BUGZILLA_DETAIL_URL
+from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, BUGZILLA_DETAIL_URL
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport, transformReport
 from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, short2long
 from generator.src.utils.Logger import logger
@@ -66,8 +66,8 @@ class BugzillaSpider(object):
                            '\\': 2, ']': 1, '^': 2, '_': 2, '`': 1, '{': 1, '|': 0.5, '}': 1, '~': 2.5}
 
    def loginSystem(self):
-      result = self.session.post(self.loginUrl, data={"Bugzilla_login": BUGZILLA_ACCOUNT,
-                                                      "Bugzilla_password": BUGZILLA_PASSWORD})
+      result = self.session.post(self.loginUrl, data={"Bugzilla_login": SERVICE_ACCOUNT,
+                                                      "Bugzilla_password": SERVICE_PASSWORD})
       content = result.content.decode()
       html = etree.HTML(content)
       textList = html.xpath('//*[@id="bugzilla-body"]/div/div//text()')
