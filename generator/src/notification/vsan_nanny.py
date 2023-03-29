@@ -13,16 +13,16 @@ All Global timezone assignee
 import datetime
 import argparse
 from generator.src.utils.Logger import logger
-from generator.src.utils.Utils import LoadSlashCommandUsage, Local2Utc
+from generator.src.utils.Utils import LoadSlashCommandUsage, Local2Utc, logExecutionTime
 from generator.src.utils.RefreshVsanNannyList import GetNannyList
 
 buglistLine = "Bug list: https://via.vmw.com/UKKDDr"
 BotSorryReply = '''Sorry, I can't get the information now since some error hit when querying the resource.
 Please refer to the source page - https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster for more details.'''
 
+@logExecutionTime
 def _GetDutyInfoByDay(day):
    df = GetNannyList()
-   logger.debug("Get Nanny List: {}".format(df.head()))
    dutyDf = df[df['week'] <= day]
    if dutyDf.empty:
       raise Exception(f"{day.strftime('%Y-%m-%d')} is before `Vsan-nanny Duty Roster` first begin day.")
@@ -40,6 +40,7 @@ def _GenerateOneWeek(dutyInfo):
    message += "{0} <@{1}>\n".format(dutyInfo['GlobalFullName'], dutyInfo['GlobalUserName'])
    return message
 
+@logExecutionTime
 def GetVsanNannyOfOneDay(oneDay):
    try:
       dutyInfo = _GetDutyInfoByDay(oneDay)
@@ -50,6 +51,7 @@ def GetVsanNannyOfOneDay(oneDay):
       message = BotSorryReply
    return message
 
+@logExecutionTime
 def GetVsanNannyBetweenDayRange(startDay, endDay):
    weekMessages = []
    errorMessage = ''

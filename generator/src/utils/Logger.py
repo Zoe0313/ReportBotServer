@@ -22,13 +22,14 @@ def getUTCTime(sec, what):
 
 logging.Formatter.converter = getUTCTime
 
-def createLogger():
-   logger = logging.getLogger('mylogger')
+def createLogger(filename):
+   logger = logging.getLogger(filename)
    logger.setLevel(logging.DEBUG)
-   handler = logging.handlers.TimedRotatingFileHandler(os.path.join(dirPath, 'slackbot-generator.log'),
+   handler = logging.handlers.TimedRotatingFileHandler(os.path.join(dirPath, filename),
                                                        when='midnight', interval=1, backupCount=7)
    handler.setFormatter(logging.Formatter(fmt=LOG_FORMAT, datefmt=DATE_FORMAT))
    logger.addHandler(handler)
    return logger
 
-logger = createLogger()
+logger = createLogger(filename='slackbot-generator.log')
+PerfLogger = createLogger(filename='slackbot-generator-perf.log')
