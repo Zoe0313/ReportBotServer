@@ -65,6 +65,7 @@ class BugzillaSpider(object):
                            '.': 0.5, '/': 1.5, ':': 0.5, ';': 1, '<': 2, '=': 2.5, '>': 2, '?': 1.5, '@': 3, '[': 1,
                            '\\': 2, ']': 1, '^': 2, '_': 2, '`': 1, '{': 1, '|': 0.5, '}': 1, '~': 2.5}
 
+   @logExecutionTime
    def loginSystem(self):
       result = self.session.post(self.loginUrl, data={"Bugzilla_login": SERVICE_ACCOUNT,
                                                       "Bugzilla_password": SERVICE_PASSWORD})
@@ -132,6 +133,7 @@ class BugzillaSpider(object):
          dfDict[tableTitle], isTranspose, ver, hor = self.regularizeTable(partDf)
       return dfDict, isTranspose, axis2param.get(multiAxis, ''), ver, hor
 
+   @logExecutionTime
    @noIntervalPolling
    def readCsvFile(self, csvFile):
       df = pd.read_csv(csvFile)
@@ -150,6 +152,7 @@ class BugzillaSpider(object):
          dfDict = {'single': df}
       return dfDict
 
+   @logExecutionTime
    @noIntervalPolling
    def downloadCsvFile(self, downloadUrl):
       today = datetime.datetime.today().strftime("%Y%m%d")
@@ -271,6 +274,7 @@ class BugzillaSpider(object):
          message.append(lineFormatter.format(*tableRowList))
       return message
 
+   @logExecutionTime
    def getBuglistReport(self, html):
       isNoContent = False
       bugCountInfos = html.xpath('//*[@id="buglistHeader"]/div/div[2]/h3[1]/text()')
@@ -356,6 +360,7 @@ class BugzillaSpider(object):
             logger.info("CSV file {0}'s content is empty.".format(csvFile))
       raise Exception('View list as CSV occur unexpected error.')
 
+   @logExecutionTime
    def getTabularReport(self, html):
       buttonName = html.xpath('//*[@id="reportContainer"]/p/a[2]/text()')
       if not (len(buttonName) > 0 and buttonName[0] == "Export CSV"):
@@ -377,14 +382,17 @@ class BugzillaSpider(object):
       return message, isNoContent
 
    @logExecutionTime
-   def getReport(self):
-      self.loginSystem()
-
+   def parseHtml(self):
       self.longUrl = short2long(self.buglistUrl) if "via.vmw.com" in self.buglistUrl else self.buglistUrl
       res = self.session.get(self.buglistUrl)
       content = res.content.decode(errors='ignore')
       html = etree.HTML(content)
+      return html
 
+   @logExecutionTime
+   def getReport(self):
+      self.loginSystem()
+      html = self.parseHtml()
       if "/buglist.cgi" in self.longUrl:  # query buglist
          message, isNoContent = self.getBuglistReport(html)
          return transformReport(messages=message, isNoContent=isNoContent, enableSplitReport=False)

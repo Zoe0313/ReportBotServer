@@ -36,6 +36,7 @@ class PerforceSpider(object):
                 datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d %H:%M"),
                 datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d %H:%M"))
 
+   @logExecutionTime
    def loginSystem(self):
       os.environ['P4CONFIG'] = ""
       os.environ['P4USER'] = SERVICE_ACCOUNT
@@ -134,6 +135,7 @@ class PerforceSpider(object):
       message.append('```')
       return message
 
+   @logExecutionTime
    def getRecords(self):
       formatStr = "//depot/{}/...@{}"
       branchStr = " ".join([formatStr.format(branch, self.checkTime) for branch in self.branchList])
@@ -164,6 +166,7 @@ class PerforceSpider(object):
                   result = result.append(detail, ignore_index=True)
       return result
 
+   @logExecutionTime
    def getDetail(self, queryCln):
       cmd = '{0} describe -s {1}'.format(self.p4Path, queryCln)
       stdout, stderr, returncode = runCmd(cmd)
@@ -198,6 +201,7 @@ class PerforceSpider(object):
       return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime, 'PR': ",".join(set(bugIDs)),
               'approved': 'with' if isCheckinApproved else 'without', 'summary': summary}
 
+   @logExecutionTime
    def CheckCheckinApproved(self, PRs):
       isCheckinApproved = False
       for bugId in PRs:

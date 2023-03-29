@@ -32,6 +32,7 @@ class BugzillaAssigneeSpider(object):
       self.session.headers.update({'Authorization': 'Basic {0}'.format(str(btAccountInfo, 'utf-8')),
                                    'Host': 'bugzilla-rest.eng.vmware.com'})
 
+   @logExecutionTime
    @noIntervalPolling
    def getBugInfoByAssignee(self, user):
       res = self.session.get(self.assigneeQueryUrl.format(user))
@@ -40,6 +41,7 @@ class BugzillaAssigneeSpider(object):
          return res.json().get('message', '')
       return bugInfos
 
+   @logExecutionTime
    @noIntervalPolling
    def getBugInfoById(self, bugId):
       res = self.session.get(self.bugIdQueryUrl.format(bugId))
@@ -73,6 +75,7 @@ class BugzillaAssigneeSpider(object):
          message.append("No bugs assigned to selected members. :coffee:")
       return transformReport(messages=message, isNoContent=isNoContent)
 
+   @logExecutionTime
    def getRecords(self, assigneeMaxLength=20, summaryMaxLength=80):
       pattern = re.compile(r'fix_by_product:(.*), fix_by_version:(.*), fix_by_phase:(.*)', re.M | re.I)
       self.columnDict['Summary'] = summaryMaxLength

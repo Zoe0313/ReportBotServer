@@ -8,13 +8,14 @@ Utils.py
 '''
 import json
 import os
+import traceback
 import pytz
 import subprocess
 import time
 import functools
 import datetime
 from urllib import parse
-from generator.src.utils.Logger import logger
+from generator.src.utils.Logger import logger, PerfLogger
 
 # In order to add some mention user names, we set this value less than 4000.
 MAX_CHAR_LENGTH_IN_ONE_REPORT = 3900
@@ -38,8 +39,11 @@ def logExecutionTime(func):
       startTime = time.perf_counter()
       res = func(*args, **kwargs)
       endTime = time.perf_counter()
-      output = '{} took {:.3f}s'.format(func.__name__, endTime - startTime)
-      logger.info(output)
+      result = traceback.extract_stack()
+      callerFile = str(result[-2]).split(', ')[0].lstrip('<FrameSummary file ').split('/')[-1]
+      callerLineNo = str(result[-2]).split(', ')[1].split(' in ')[0].replace('line ', '')
+      output = '{}[:{}] - {} took {:.3f}s'.format(callerFile, callerLineNo, func.__name__, endTime - startTime)
+      PerfLogger.info(output)
       return res
    return wrapper
 
@@ -133,6 +137,7 @@ def transformReport(messages, isNoContent=False, isContentInCodeBlock=False, ena
    reports = [parse.quote(report) for report in reports]
    return json.dumps({'messages': reports, 'isEmpty': isNoContent})
 
+@logExecutionTime
 def LoadSlashCommandUsage(fileName):
    if not fileName:
       return ''

@@ -17,7 +17,7 @@ import datetime
 import requests
 import pandas as pd
 from lxml import etree
-from generator.src.utils.Utils import memorize
+from generator.src.utils.Utils import logExecutionTime
 from generator.src.utils.Logger import logger
 
 projectPath = os.path.abspath(__file__).split("/generator")[0]
@@ -48,6 +48,7 @@ def GetPageID():
             res.status_code, res.content.decode()))
    return pageID
 
+@logExecutionTime
 def RefreshList():
    '''Get vSAN Nanny table and save in CSV file'''
    pageID = GetPageID()
@@ -79,7 +80,7 @@ def RefreshList():
       raise Exception('Failed to get vSAN Nanny table by pageId {0}: code={1}, content={2}'.format(
          pageID, res.status_code, res.content.decode()))
 
-@memorize
+@logExecutionTime
 def GetNannyList(filePath=csvFile):
    df = pd.read_csv(filePath)
    df['week'] = df['WeekBegins'].apply(lambda x: datetime.datetime.strptime(x, '%m/%d/%Y'))
