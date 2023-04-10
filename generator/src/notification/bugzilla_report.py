@@ -6,6 +6,8 @@
 Module docstring.  
 bugzilla_report.py
 '''
+from generator.src.utils.Logger import PerfLogger
+PerfLogger.info('import PerfLogger')
 import os
 import re
 import uuid
@@ -13,12 +15,16 @@ import datetime
 import requests
 from urllib import parse
 from lxml import etree
-import pandas as pd
 import math
+import argparse
+PerfLogger.info('import external python packages')
+import pandas as pd
+PerfLogger.info('import pandas as pd')
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, BUGZILLA_DETAIL_URL
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport, transformReport
 from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, short2long
 from generator.src.utils.Logger import logger
+PerfLogger.info('import customized parameters, functions')
 
 DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -45,6 +51,7 @@ axis2param = {
 SUMMARY_MAX_LENGTH = 57
 
 class BugzillaSpider(object):
+   @logExecutionTime
    def __init__(self, args):
       self.loginUrl = "https://bugzilla.eng.vmware.com/"
       self.foreUrl = "https://bugzilla.eng.vmware.com/{}"
@@ -404,7 +411,7 @@ class BugzillaSpider(object):
          raise Exception(f"Unsupported bugzilla url: {self.buglistUrl}, long url: {self.longUrl}")
 
 
-import argparse
+@logExecutionTime
 def parseArgs():
    parser = argparse.ArgumentParser(description='Generate bugzilla report')
    parser.add_argument('--title', type=str, required=True, help='Title of bugzilla report')
