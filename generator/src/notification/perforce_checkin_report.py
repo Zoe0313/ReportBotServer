@@ -6,21 +6,28 @@
 Module docstring.
 perforce_checkin_report.py
 '''
-
+from generator.src.utils.Logger import PerfLogger
+PerfLogger.info('import PerfLogger')
 import os
 import re
 import time
 import datetime
 import requests
-import pandas as pd
 from urllib import parse
+import argparse
+PerfLogger.info('import external python packages')
+import pandas as pd
+PerfLogger.info('import pandas as pd')
 from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport, transformReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
    BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, JIRA_BROWSE_URL, BUGZILLA_BASE
+PerfLogger.info('import customized parameters, functions')
+
 SUMMARY_MAX_LENGTH = 80
 
 class PerforceSpider(object):
+   @logExecutionTime
    def __init__(self, args):
       self.p4Path = '/build/apps/bin/p4 -u {}'.format(SERVICE_ACCOUNT)
       self.title = parse.unquote(args.title).strip('"')
@@ -221,7 +228,7 @@ class PerforceSpider(object):
             logger.error('Query bugzilla API error: {0}'.format(e))
       return isCheckinApproved
 
-import argparse
+@logExecutionTime
 def parseArgs():
    parser = argparse.ArgumentParser(description='Generate perforce report')
    parser.add_argument('--title', type=str, required=True, help='Title of perforce report')

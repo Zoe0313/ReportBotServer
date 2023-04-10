@@ -11,14 +11,18 @@ https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster
 
 Refresh vsan-nanny.csv cache file on Monday 9:30am.
 '''
-
+from generator.src.utils.Logger import PerfLogger
+PerfLogger.info('import PerfLogger')
 import os
 import datetime
 import requests
-import pandas as pd
 from lxml import etree
+PerfLogger.info('import external python packages')
+import pandas as pd
+PerfLogger.info('import pandas as pd')
 from generator.src.utils.Utils import logExecutionTime
 from generator.src.utils.Logger import logger
+PerfLogger.info('import customized parameters, functions')
 
 projectPath = os.path.abspath(__file__).split("/generator")[0]
 persistDir = os.path.join(projectPath, "persist/config")

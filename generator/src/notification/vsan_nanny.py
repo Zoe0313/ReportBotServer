@@ -9,12 +9,15 @@ vsan_nanny.py
 https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster
 All Global timezone assignee
 '''
-
+from generator.src.utils.Logger import PerfLogger
+PerfLogger.info('import PerfLogger')
 import datetime
 import argparse
+PerfLogger.info('import external python packages')
 from generator.src.utils.Logger import logger
 from generator.src.utils.Utils import LoadSlashCommandUsage, Local2Utc, logExecutionTime
 from generator.src.utils.RefreshVsanNannyList import GetNannyList
+PerfLogger.info('import customized parameters, functions')
 
 buglistLine = "Bug list: https://via.vmw.com/UKKDDr"
 BotSorryReply = '''Sorry, I can't get the information now since some error hit when querying the resource.
