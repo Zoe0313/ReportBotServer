@@ -18,7 +18,7 @@ from urllib import parse
 from generator.src.utils.Logger import logger, PerfLogger
 
 # In order to add some mention user names, we set this value less than 4000.
-MAX_CHAR_LENGTH_IN_ONE_REPORT = 3900
+MAX_CHAR_LENGTH_IN_ONE_REPORT = 3700
 # Cache for slash command usages
 slashCmdUsagesCache = {}
 

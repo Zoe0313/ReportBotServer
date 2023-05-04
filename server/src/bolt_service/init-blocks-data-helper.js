@@ -186,6 +186,19 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
                      value: branch
                   }))
          }
+         if (perforceSpecConfig === 'perforceCheckIn') {
+            const isNeedCheckinApproved = reportSpecConfig[perforceSpecConfig]
+               ?.needCheckinApproved || 'Yes'
+            const needCheckinApprovedBlock = FindBlockById(blocks,
+               `reportSpecConfig.${perforceSpecConfig}.needCheckinApproved`)
+            const needCheckinApprovedOption = needCheckinApprovedBlock.element.options
+               .find(option => option.value === isNeedCheckinApproved)
+            if (needCheckinApprovedOption != null) {
+               needCheckinApprovedBlock.element.initial_option = needCheckinApprovedOption
+            } else {
+               needCheckinApprovedBlock.element.initial_option = isNeedCheckinApproved
+            }
+         }
          if (isInit) {
             const teams = await TeamGroup.find({
                code: { $in: reportSpecConfig[perforceSpecConfig].teams }
@@ -302,6 +315,8 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
             .find(option => option.value === isSkipEmptyReport)
          if (skipEmptyReportOption != null) {
             skipEmptyReportBlock.element.initial_option = skipEmptyReportOption
+         } else {
+            skipEmptyReportBlock.element.initial_option = isSkipEmptyReport
          }
       } else {
          const blockIndex = blocks.findIndex(block => block.block_id === 'skipEmptyReport')

@@ -30,8 +30,46 @@
 		},
 		{
 			"type": "input",
+			"block_id": "reportSpecConfig.perforceCheckIn.needCheckinApproved",
+			"label": {
+				"type": "plain_text",
+				"text": "Do you need checkin approved info?"
+			},
+			"hint": {
+            	"type": "plain_text",
+            	"text": "If choose Yes, report will be split by `With Approval` and `Without Approval`."
+         	},
+			"element": {
+				"type": "static_select",
+				"action_id": "action_need_checkin_approved",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Need checkin approved info or not"
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Yes",
+							"emoji": true
+						},
+						"value": "Yes"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "No",
+							"emoji": true
+						},
+						"value": "No"
+					}
+				]
+			}
+		},
+		{
+			"type": "input",
 			"block_id": "reportSpecConfig.perforceCheckIn.teams",
-         "optional": true,
+            "optional": true,
 			"label": {
 				"type": "plain_text",
 				"text": "Team group"
