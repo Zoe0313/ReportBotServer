@@ -32,7 +32,7 @@ const REPEAT_TYPE_ENUM = ['not_repeat', 'hourly', 'daily', 'weekly', 'monthly', 
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-4]):([0-5][0-9])(:[0-5][0-9])?$/
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
-const SKIP_EMPTY_REPORT_ENUM = ['Yes', 'No']
+const YES_OR_NO_ENUM = ['Yes', 'No']
 
 const PerforceCheckInMembersFilterSchema = new mongoose.Schema({
    members: {
@@ -88,7 +88,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
             this.reportType === 'perforce_checkin' ||
             this.reportType === 'bugzilla_by_assignee'
       },
-      enum: SKIP_EMPTY_REPORT_ENUM
+      enum: YES_OR_NO_ENUM
    },
    reportSpecConfig: {
       bugzillaLink: {
@@ -162,6 +162,13 @@ const ReportConfigurationSchema = new mongoose.Schema({
          },
          teams: {
             type: [String]
+         },
+         needCheckinApproved: {
+            type: String,
+            required: function(v) {
+               return this.reportType === 'perforce_checkin'
+            },
+            enum: YES_OR_NO_ENUM
          },
          branches: {
             type: [String],

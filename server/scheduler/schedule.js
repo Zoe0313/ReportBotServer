@@ -209,6 +209,7 @@ const ContentEvaluate = async (report) => {
             --title '${reportTitle}' \
             --branches '${report.reportSpecConfig.perforceCheckIn.branches.join(',')}' \
             --users '${report.reportSpecConfig.perforceCheckIn.flattenMembers.join(',')}' \
+            --needCheckinApproved '${report.reportSpecConfig.perforceCheckIn.needCheckinApproved}' \
             --startTime ${startTime.getTime() / 1000} \
             --endTime ${endTime.getTime() / 1000}`
          logger.debug(`execute the perforce checkin report generator: ${command}`)

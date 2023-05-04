@@ -6,8 +6,6 @@
 Module docstring.
 perforce_checkin_report.py
 '''
-from generator.src.utils.Logger import PerfLogger
-PerfLogger.info('import PerfLogger')
 import os
 import re
 import time
@@ -15,16 +13,16 @@ import datetime
 import requests
 from urllib import parse
 import argparse
-PerfLogger.info('import external python packages')
-import pandas as pd
-PerfLogger.info('import pandas as pd')
 from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport, transformReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
-   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, JIRA_BROWSE_URL, BUGZILLA_BASE
-PerfLogger.info('import customized parameters, functions')
+   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, JIRA_BROWSE_URL, BUGZILLA_BASE, REVIEWBOARD_REQUEST_URL
+from generator.src.utils.Logger import PerfLogger
+PerfLogger.info('import python packages and customized parameters, functions')
 
-SUMMARY_MAX_LENGTH = 80
+ReviewIDPattern = re.compile(REVIEWBOARD_REQUEST_URL.format("(\d{7,})"), re.I)
+SUMMARY_MAX_LENGTH = 60
+INVAILD_ID = '--'
 
 class PerforceSpider(object):
    @logExecutionTime
@@ -38,13 +36,14 @@ class PerforceSpider(object):
       endTime = datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d:%H:%M:%S")
       self.checkTime = "{0},{1}".format(startTime, endTime)
       self.userList = args.users.split(",")
+      self.isNeedCheckinApproved = (args.needCheckinApproved == 'Yes')
       self.showTitle = '*Title: {0}*\nBranch: {1}\nCheckin Time(PST): {2} --- {3}\n'.\
          format(self.title, " & ".join(self.branchList),
                 datetime.datetime.fromtimestamp(args.startTime, tz=utc7).strftime("%Y/%m/%d %H:%M"),
                 datetime.datetime.fromtimestamp(args.endTime, tz=utc7).strftime("%Y/%m/%d %H:%M"))
 
    @logExecutionTime
-   def loginSystem(self):
+   def LoginSystem(self):
       os.environ['P4CONFIG'] = ""
       os.environ['P4USER'] = SERVICE_ACCOUNT
       cmdStr = "echo '{0}' | {1} login".format(SERVICE_PASSWORD, self.p4Path)
@@ -60,90 +59,102 @@ class PerforceSpider(object):
       return isLogin
 
    @logExecutionTime
-   def getReport(self):
-      if not self.loginSystem():
+   def GetReport(self):
+      if not self.LoginSystem():
          raise Exception("Because of `{0}`, p4 login failed.".format("Perforce internal error"))
       # get data from p4 change commands
-      result = self.getRecords()
+      result = self.GetRecords()
       # generate report
       message = []
-      isNoContent = (result.empty is True)
-      if not result.empty:
-         result = result.sort_values(by=['assignee', 'CLN', 'checkinTime'], ascending=True)
-         withApprovedMessage = self.GenerateTabluaReport(result[result['approved'] == 'with'])
-         if len(withApprovedMessage) > 0:
-            withApprovedReports = splitOverlengthReport(messages=withApprovedMessage, isContentInCodeBlock=True,
-                                                        enablePagination=True)
-            withApprovedReports[0] = self.showTitle + ':arrow_down: *With Approval*\n' + withApprovedReports[0]
-            message.extend(withApprovedReports)
-         withoutApprovedMessage = self.GenerateTabluaReport(result[result['approved'] == 'without'])
-         if len(withoutApprovedMessage) > 0:
-            withoutApprovedReports = splitOverlengthReport(messages=withoutApprovedMessage, isContentInCodeBlock=True,
+      isNoContent = (len(result) == 0)
+      if len(result) > 0:
+         result = sorted(result, key=lambda data: (data['assignee'], data['CLN'], data['checkinTime']))
+         if self.isNeedCheckinApproved:
+            # With Approval
+            withApprovedResult = list(filter(lambda data: data['approved'] == 'with', result))
+            withApprovedMessage = self.GenerateTabularReport(withApprovedResult)
+            if len(withApprovedMessage) > 0:
+               withApprovedReports = splitOverlengthReport(messages=withApprovedMessage, isContentInCodeBlock=True,
                                                            enablePagination=True)
-            withoutApprovedReports[0] = ':arrow_down: *`Without Approval`*\n' + withoutApprovedReports[0]
-            if len(message) == 0:
-               withoutApprovedReports[0] = self.showTitle + withoutApprovedReports[0]
-            message.extend(withoutApprovedReports)
+               withApprovedReports[0] = self.showTitle + ':arrow_down: *With Approval*\n' + withApprovedReports[0]
+               message.extend(withApprovedReports)
+            # Without Approval
+            withoutApprovedResult = list(filter(lambda data: data['approved'] == 'without', result))
+            withoutApprovedMessage = self.GenerateTabularReport(withoutApprovedResult)
+            if len(withoutApprovedMessage) > 0:
+               withoutApprovedReports = splitOverlengthReport(messages=withoutApprovedMessage, isContentInCodeBlock=True,
+                                                              enablePagination=True)
+               withoutApprovedReports[0] = ':arrow_down: *`Without Approval`*\n' + withoutApprovedReports[0]
+               if len(message) == 0:
+                  withoutApprovedReports[0] = self.showTitle + withoutApprovedReports[0]
+               message.extend(withoutApprovedReports)
+         else:
+            allMessage = self.GenerateTabularReport(result)
+            allReports = splitOverlengthReport(messages=allMessage, isContentInCodeBlock=True, enablePagination=True)
+            allReports[0] = self.showTitle + allReports[0]
+            message.extend(allReports)
       else:
          message.append(self.showTitle + 'No Changes.')
       return transformReport(messages=message, isNoContent=isNoContent, enableSplitReport=False)
 
-   def GenerateTabluaReport(self, result):
+   def GenerateTabularReport(self, checkinDatas):
       message = []
-      if result.empty:
+      if len(checkinDatas) == 0:
          return message
-      assignees = set(result['assignee'].values.tolist())
-      userNameColumnLength = max([len(user) for user in assignees] + [len("User")])
-      # calculate bug number column width
-      bugIDColumnLength = len("Bug Number")
-      for strPR in result['PR'].values:
-         bugNumberLen = len(strPR)
-         if bugNumberLen > bugIDColumnLength:
-            bugIDs = strPR.split(",")
-            if len(bugIDs) > 2:
-               bugNumberLen = len(','.join(bugIDs[:2]) + '...')
-            bugIDColumnLength = bugNumberLen
-      columnLength = {"User": userNameColumnLength, "CLN": 8, "Time": 11, "PR": bugIDColumnLength}
-      headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
-                        (columnLength["User"], columnLength["CLN"], columnLength["Time"], columnLength["PR"])
-      message.append("```" + headerFormatter.format("User", "CLN", "Time", "Bug Number", "Summary"))
+      # New column order: User  Bug Link  CLN  Time  Review URL  Summary
+      UserColumnLength = max(max([len(data['assignee']) for data in checkinDatas]), len("User"))
+      BugNumberColumnLength = max(max([len(data['bugIDs']) for data in checkinDatas]), len("Bug Link"))
+      ReviewURLColumnLength = max(max([len(data['reviewIDs']) for data in checkinDatas]), len("Review URL"))
+      columnLength = {"User": UserColumnLength, "Bug Link": BugNumberColumnLength, "CLN": 8,
+                      "Time": 11, "Review URL": ReviewURLColumnLength, "Summary": 0}
+      headerFormatter = "{:>%ds}  {:<%ds}  {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                        (columnLength["User"], columnLength["Bug Link"], columnLength["CLN"],
+                         columnLength["Time"], columnLength["Review URL"])
+      message.append('```' + headerFormatter.format("User", "Bug Link", "CLN", "Time", "Review URL", "Summary"))
       userName = ''
-      for _, data in result.iterrows():
+      for data in checkinDatas:
          user = data['assignee']
          cln = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(data['CLN']), data['CLN'])
-         bugNumbers = data['PR']
-         bugIDColumnLength = columnLength["PR"]
-         if len(bugNumbers) > 0:
-            bugLinks = []
-            bugIDs = bugNumbers.split(",")
-            for bugId in bugIDs[:2]:
-               if '-' in bugId:
-                  bugLink = JIRA_BROWSE_URL.format(bugId)
-               else:
-                  bugLink = BUGZILLA_DETAIL_URL + bugId
-               bugLinks.append("<{0}|{1}>".format(bugLink, bugId))
-            bugNumbers = ",".join(bugLinks)
-            unformattedPrStr = data['PR']
-            if len(bugIDs) > 2:
-               bugNumbers += "..."
-               unformattedPrStr = ",".join(bugIDs[:2]) + "..."
+         checkinTime = data['checkinTime']
+         summary = data['summary']
+         # calculate bug link column with, add bugzilla or jira link
+         displayBugNumber = INVAILD_ID
+         BugNumberColumnLength = columnLength["Bug Link"]
+         if len(data['bugIDs']) > 0 and len(data['bugIDs'].split(",")) > 0:
+            bugNumbers = data['bugIDs'].split(",")
+            BugNumberLinks = []
+            PRs = list(filter(lambda bugNumber: "-" not in bugNumber, bugNumbers))
+            if len(PRs) > 0:
+               BugNumberLinks += ["<%s|%s>" % (BUGZILLA_DETAIL_URL + PR, PR) for PR in PRs]
+            jiraIDs = list(filter(lambda bugNumber: "-" in bugNumber, bugNumbers))
+            if len(jiraIDs) > 0:
+               BugNumberLinks += ["<%s|%s>" % (JIRA_BROWSE_URL.format(jiraID), jiraID) for jiraID in jiraIDs]
+            displayBugNumber = ",".join(BugNumberLinks)
             # pr column length = formatted_PR_length + original_column_length - unformatted_PR_length
-            bugIDColumnLength = len(bugNumbers) + columnLength["PR"] - len(unformattedPrStr)
+            BugNumberColumnLength = len(displayBugNumber) + columnLength["Bug Link"] - len(data['bugIDs'])
+         # calculate review url column width, add review board link
+         displayReviewURL = INVAILD_ID
+         ReviewURLColumnLength = columnLength["Review URL"]
+         if len(data['reviewIDs']) > 0 and len(data['reviewIDs'].split(",")) > 0:
+            reviewIDs = data['reviewIDs'].split(",")
+            ReviewURLs = ["<%s|%s>" % (REVIEWBOARD_REQUEST_URL.format(reviewID), reviewID) for reviewID in reviewIDs]
+            displayReviewURL = ",".join(ReviewURLs)
+            ReviewURLColumnLength = len(displayReviewURL) + columnLength["Review URL"] - len(data['reviewIDs'])
          if userName == user:
-            bodyFormatter = " " * columnLength["User"] + "    {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
-                            (columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
-            message.append(bodyFormatter.format(cln, data['checkinTime'], bugNumbers, data['summary']))
+            bodyFormatter = " " * columnLength["User"] + "  {:<%ds}  {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                            (BugNumberColumnLength, columnLength["CLN"], columnLength["Time"], ReviewURLColumnLength)
+            message.append(bodyFormatter.format(displayBugNumber, cln, checkinTime, displayReviewURL, summary))
          else:
-            headerFormatter = "{:>%ds} -- {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
-                              (columnLength["User"], columnLength["CLN"], columnLength["Time"], bugIDColumnLength)
-            message.append(headerFormatter.format(data['assignee'], cln, data['checkinTime'], bugNumbers,
-                                                  data['summary']))
+            headerFormatter = "{:>%ds}  {:<%ds}  {:<%ds}  {:<%ds}  {:<%ds}  {}" % \
+                              (columnLength["User"], BugNumberColumnLength, columnLength["CLN"], columnLength["Time"],
+                               ReviewURLColumnLength)
+            message.append(headerFormatter.format(user, displayBugNumber, cln, checkinTime, displayReviewURL, summary))
             userName = user
       message.append('```')
       return message
 
    @logExecutionTime
-   def getRecords(self):
+   def GetRecords(self):
       formatStr = "//depot/{}/...@{}"
       branchStr = " ".join([formatStr.format(branch, self.checkTime) for branch in self.branchList])
       if len(self.userList) == 1:
@@ -153,11 +164,11 @@ class PerforceSpider(object):
          cmd = '{0} changes -s submitted {1} | /bin/grep -v "CBOT"'.format(self.p4Path, branchStr)
       logger.info(cmd)
 
-      result = pd.DataFrame()
+      checkinDatas = []
       stdout, stderr, returncode = runCmd(cmd)
       if returncode != 0:
          logger.debug("p4 changes stderr: {0}, returncode: {1}".format(stderr, returncode))
-         return result
+         return checkinDatas
 
       stdout = stdout.decode('utf-8')
       recordList = stdout.split('\n')
@@ -168,13 +179,13 @@ class PerforceSpider(object):
             cln = matchObj.group(1)
             user = matchObj.group(3).split('@')[0]
             if user in self.userList:
-               detail = self.getDetail(cln)
+               detail = self.GetDetail(cln)
                if detail:
-                  result = result.append(detail, ignore_index=True)
-      return result
+                  checkinDatas.append(detail)
+      return checkinDatas
 
    @logExecutionTime
-   def getDetail(self, queryCln):
+   def GetDetail(self, queryCln):
       cmd = '{0} describe -s {1}'.format(self.p4Path, queryCln)
       stdout, stderr, returncode = runCmd(cmd)
       if returncode != 0:
@@ -193,20 +204,25 @@ class PerforceSpider(object):
       summary = recordList[2].strip()
       #  please avoid lines longer than 80 chars.
       summary = summary if len(summary) < SUMMARY_MAX_LENGTH else summary[:SUMMARY_MAX_LENGTH - 3] + '...'
-      bugIDs = []
+      bugIDs, reviewIDs = [], []
       isCheckinApproved = False
       for record in recordList:
-         if "Bug Number:" in record:
+         record = record.lstrip()
+         if record.startswith("Bug Number:"):
             bugNumberStr = record.split("Bug Number:")[1].replace(' ', '').upper()
             bugIDs = [bugNumber.strip() for bugNumber in bugNumberStr.split(',') if len(bugNumber.strip()) > 0]
-            PRs = [bugId for bugId in bugIDs if '-' not in bugId]  # jira bug number must with '-'
-            if len(PRs) > 0:
+            jiraIDs = set([bugId for bugId in bugIDs if '-' in bugId])  # jira bug number must with '-'
+            PRs = set([bugId for bugId in bugIDs if '-' not in bugId])
+            bugIDs = (list(PRs) + list(jiraIDs))[:2]
+            if len(PRs) > 0 and self.isNeedCheckinApproved:
                # PR with keyword `CheckinApproved` or not
                if self.CheckCheckinApproved(PRs):
                   isCheckinApproved = True
-            break
-      return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime, 'PR': ",".join(set(bugIDs)),
-              'approved': 'with' if isCheckinApproved else 'without', 'summary': summary}
+         elif record.startswith("Review URL:"):
+            reviewIDs = list(set(ReviewIDPattern.findall(record)))[:2]
+      return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime,
+              'approved': 'with' if isCheckinApproved else 'without', 'summary': summary,
+              'bugIDs': ",".join(bugIDs), 'reviewIDs': ",".join(reviewIDs)}
 
    @logExecutionTime
    def CheckCheckinApproved(self, PRs):
@@ -236,11 +252,12 @@ def parseArgs():
    parser.add_argument('--startTime', type=float, required=True, help='Check start time')
    parser.add_argument('--endTime', type=float, required=True, help='Check end time')
    parser.add_argument('--users', type=str, required=True, help='Users of perforce report')
+   parser.add_argument('--needCheckinApproved', type=str, required=True, help='Need checkin approved or not')
    return parser.parse_args()
 
 if __name__ == '__main__':
    args = parseArgs()
    spider = PerforceSpider(args)
-   ret = spider.getReport()
+   ret = spider.GetReport()
    print(ret)
    logger.info(ret)

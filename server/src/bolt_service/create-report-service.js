@@ -136,7 +136,9 @@ export function RegisterCreateReportServiceHandler(app) {
                      branches: inputObj.reportSpecConfig.perforceCheckIn?.branches
                         ?.map(option => option.value),
                      teams: inputObj.reportSpecConfig.perforceCheckIn?.teams
-                        ?.map(option => option.value)
+                        ?.map(option => option.value),
+                     needCheckinApproved: inputObj.reportSpecConfig.perforceCheckIn
+                        ?.needCheckinApproved || 'Yes'
                   },
                   perforceReviewCheck: {
                      branches: inputObj.reportSpecConfig.perforceReviewCheck?.branches
