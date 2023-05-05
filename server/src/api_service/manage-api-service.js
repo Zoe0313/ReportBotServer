@@ -52,19 +52,25 @@ function RegisterApiRouters(router, client) {
       logger.debug(`API /metrics ${performance.now() - t0} cost`)
    })
 
-   router.get('/api/v1/team_members/vsan', async (ctx, next) => {
+   router.get('/api/v1/team_members/:teamCode', async (ctx, next) => {
       const t0 = performance.now()
+      const teamCode = ctx.params.teamCode
       try {
-         const team = await TeamGroup.findOne({ code: 'vsan' })
+         if (teamCode == null || teamCode === '') {
+            ctx.response.status = 400
+            ctx.response.body = { result: false, message: 'Bad request: team code not given.' }
+            return
+         }
+         const team = await TeamGroup.findOne({ code: teamCode })
          ctx.response.status = 200
          ctx.response.body = team.members
       } catch (e) {
-         const errorMsg = `Failed to get members of vsan team.`
+         const errorMsg = `Failed to get members of ${teamCode} team.`
          logger.error(errorMsg)
          ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
       }
-      logger.debug(`API /team_members/vsan ${performance.now() - t0} cost`)
+      logger.debug(`API /team_members/${teamCode} ${performance.now() - t0} cost`)
    })
 
    router.get('/api/v1/team_members/:managerName/:filterType', async (ctx, next) => {

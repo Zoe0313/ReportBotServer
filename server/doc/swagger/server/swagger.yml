@@ -152,16 +152,16 @@ paths:
           description: Unauthorized
         '500':
           description: Internal Server Error
-  /api/v1/team_members/vsan:
+  /api/v1/team_members/{teamCode}:
     get:
       security:
         - bearerAuth: []
       tags:
         - public
-      summary: fetch the latest vSAN team members
+      summary: fetch the latest specific team members
       operationId: getMessage
       description: >
-         This API can be used to get the latest vSAN team member list.
+         This API can be used to get the latest specific team member list.
 
          Please request a bearer token on vSANSlackbot APP for posting Slack
          message. Pass the bearer token in header.
@@ -169,6 +169,18 @@ paths:
         - application/json
       produces:
         - application/json
+      parameters:
+        - name: teamCode
+          in: path
+          required: true
+          type: string
+          description: the team's code
+          example: >
+            <br>`vsan` is vSAN Team's code.<br>
+            `vsan-zdom` is vSAN zDOM Team's code.<br>
+            `vsan-fs` is vSAN VDFS Team's code.<br>
+            `vsan-clom` is vSAN CLOM Team's code.<br>
+            `vsan-health` is vSAN Health Team's code.
       responses:
         '200':
           description: OK
