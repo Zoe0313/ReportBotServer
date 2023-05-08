@@ -209,7 +209,9 @@ class PerforceSpider(object):
       for record in recordList:
          record = record.lstrip()
          if record.startswith("Bug Number:"):
-            bugNumberStr = record.split("Bug Number:")[1].replace(' ', '').upper()
+            bugNumberStr = record.split("Bug Number:")[1].strip().upper()
+            # replace non-capital letter and number and '-' symbols with ','
+            bugNumberStr = re.sub(r"[^A-Z0-9-]", ",", bugNumberStr)
             bugIDs = [bugNumber.strip() for bugNumber in bugNumberStr.split(',') if len(bugNumber.strip()) > 0]
             jiraIDs = set([bugId for bugId in bugIDs if '-' in bugId])  # jira bug number must with '-'
             PRs = set([bugId for bugId in bugIDs if '-' not in bugId])
