@@ -39,6 +39,7 @@ export function RegisterReportHistoryServiceHandler(app) {
    const ListReportHistories = async (isUpdate, ts, ack, body, client) => {
       logger.info('display or update list, ts ' + ts)
       const state = await GetState(ts)
+      logger.info(`history state: ${JSON.stringify(state)}`)
       const user = body.user?.id
       if (user == null) {
          throw new Error('User is none in body, can not list the reports.')
@@ -237,7 +238,7 @@ export function RegisterReportHistoryServiceHandler(app) {
    app.action('action_filter_by_conversation', async ({ ack, body, client }) => {
       TryAndHandleError({ ack, body, client }, async() => {
          await ListReportHistories(true, body.message?.ts, ack, body, client)
-      }, 'Failed to change filter of converstaion.')
+      }, 'Failed to change filter of conversation.')
    })
 
    app.action('action_filter_by_start_date', async ({ ack, body, client }) => {

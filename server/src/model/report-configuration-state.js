@@ -5,7 +5,8 @@ const ReportConfigurationStateSchema = new mongoose.Schema({
    page: { type: Number, required: true },
    count: { type: Number },
    channel: { type: String },
-   selectedId: { type: String }
+   selectedId: { type: String },
+   filterBlockId: { type: Number, required: true }
 }, { timestamps: true })
 
 ReportConfigurationStateSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 7 })
