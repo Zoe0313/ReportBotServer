@@ -20,7 +20,8 @@ import {
 import { UpdateModal } from './create-report-service.js'
 import cloneDeep from 'lodash/cloneDeep.js'
 import mongoose from 'mongoose'
-// import { performance } from 'perf_hooks'
+import { matchSorter } from 'match-sorter'
+import { performance } from 'perf_hooks'
 
 const LIMIT = 5
 
@@ -40,6 +41,7 @@ async function GetState(ts) {
          page: 1,
          count: null,
          channel: null,
+         filterBlockId: 1, // dynamic block id to implement clear filters
          selectedId: null
       })
       await state.save()
@@ -64,6 +66,8 @@ export function RegisterManageReportServiceHandler(app) {
          throw new Error('User is none in body, can not list the reports.')
       }
       const tz = await GetUserTz(user)
+      const t0 = performance.now()
+
       let offset = (state.page - 1) * LIMIT
       const filter = {
          $and: [
@@ -73,6 +77,25 @@ export function RegisterManageReportServiceHandler(app) {
       }
       if (!process.env.ADMIN_USER_ID.includes(user)) {
          filter.creator = user
+      } else {
+         const filterTitles = body?.state?.values['block_report_filter_title' + state.filterBlockId]
+            ?.action_report_filter_by_title?.selected_options.map(selectedOption => {
+               return selectedOption.value
+            })
+         const filterConversation = body?.state?.values['block_report_filter_basic' +
+            state.filterBlockId]?.action_report_filter_by_conversation?.selected_conversation
+         const filterCreator = body?.state?.values['block_report_filter_basic' +
+            state.filterBlockId]?.action_report_filter_by_creator?.selected_user
+         if (Array.isArray(filterTitles) && filterTitles.length > 0) {
+            filter.title = { $in: filterTitles }
+         }
+         if (filterConversation) {
+            filter.conversations = filterConversation
+         }
+         if (filterCreator) {
+            filter.creator = filterCreator
+         }
+         logger.info(JSON.stringify(filter))
       }
       const count = await ReportConfiguration.countDocuments(filter)
       if (offset >= count) {
@@ -85,6 +108,13 @@ export function RegisterManageReportServiceHandler(app) {
             updatedAt: -1
          })
 
+      // list filter
+      let listFilter = []
+      if (process.env.ADMIN_USER_ID.includes(user)) {
+         listFilter = LoadBlocks('report/list-filter')
+         listFilter[1].block_id = 'block_report_filter_title' + state.filterBlockId.toString()
+         listFilter[2].block_id = 'block_report_filter_basic' + state.filterBlockId.toString()
+      }
       // list header
       const listHeader = LoadBlocks('report/list-header')
       listHeader[0].text.text = `There are ${count} notifications in your account.`
@@ -174,7 +204,8 @@ export function RegisterManageReportServiceHandler(app) {
       } else {
          listPagination = []
       }
-      const blocks = listHeader.concat(listItems).concat(listItemDetail).concat(listPagination)
+      const blocks = listHeader.concat(listFilter).concat(listItems)
+         .concat(listItemDetail).concat(listPagination)
       if (ack) {
          await ack()
       }
@@ -186,6 +217,7 @@ export function RegisterManageReportServiceHandler(app) {
             text: 'Manage all reports',
             blocks
          })
+         logger.debug(`${performance.now() - t0} cost`)
       } else {
          const response = await client.chat.postMessage({
             channel: user,
@@ -550,5 +582,75 @@ export function RegisterManageReportServiceHandler(app) {
                throw new Error('unknow action for action_report_more_actions')
          }
       }, `Failed to ${actionText[action]}.`)
+   })
+
+   app.action('action_report_clear_filters', async ({ ack, body, client }) => {
+      const ts = body.message.ts
+
+      TryAndHandleError({ ack, body, client }, async() => {
+         const state = await GetState(ts)
+         state.filterBlockId += 1
+         await SaveState(state)
+         await ListReports(true, ts, ack, body, client)
+         await client.chat.postMessage({
+            channel: body.user.id,
+            thread_ts: ts,
+            blocks: [],
+            text: `Clear all filters successful.`
+         })
+      }, 'Failed to clear filters of notification list.')
+   })
+
+   app.action('action_report_filter_by_title', async ({ ack, body, client }) => {
+      TryAndHandleError({ ack, body, client }, async() => {
+         await ListReports(true, body.message?.ts, ack, body, client)
+      }, 'Failed to change filter of report title.')
+   })
+
+   app.action('action_report_filter_by_conversation', async ({ ack, body, client }) => {
+      TryAndHandleError({ ack, body, client }, async() => {
+         await ListReports(true, body.message?.ts, ack, body, client)
+      }, 'Failed to change filter of report conversation.')
+   })
+
+   app.action('action_report_filter_by_creator', async ({ ack, body, client }) => {
+      TryAndHandleError({ ack, body, client }, async() => {
+         await ListReports(true, body.message?.ts, ack, body, client)
+      }, 'Failed to change filter of report creator.')
+   })
+
+   app.options('action_report_filter_by_title', async ({ ack, options }) => {
+      const keyword = options.value
+      logger.info(`keyword: ${keyword}, get all notification titles in db.`)
+      const t0 = performance.now()
+      const filter = {
+         $and: [
+            { status: { $ne: REPORT_STATUS.CREATED } },
+            { status: { $ne: REPORT_STATUS.REMOVED } }
+         ]
+      }
+      const allTitles = [...new Set((await ReportConfiguration.find(filter,
+         { title: 1, _id: 0 })).map(report => {
+         return report.title
+      }).flat())]
+      logger.debug(`get titles in db cost ${performance.now() - t0}`)
+      if (allTitles != null && allTitles.length > 0) {
+         const sortedTitlesWithLimit = matchSorter(allTitles, keyword).slice(0, 10)
+         logger.debug(`sort titles cost ${performance.now() - t0}`)
+         logger.info(`0 - 10 titles stored are ${sortedTitlesWithLimit}`)
+         const options = sortedTitlesWithLimit.map(title => ({
+            text: {
+               type: 'plain_text',
+               text: title
+            },
+            value: title
+         }))
+         await ack({
+            options: options
+         })
+         logger.debug(`ack titles cost ${performance.now() - t0}`)
+      } else {
+         await ack()
+      }
    })
 }

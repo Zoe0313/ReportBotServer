@@ -1,0 +1,67 @@
+{
+   "blocks": [
+      {
+         "type": "section",
+         "text": {
+            "type": "mrkdwn",
+            "text": "Filter notification by conditions"
+         },
+         "accessory": {
+            "type": "button",
+            "text": {
+               "type": "plain_text",
+               "text": "Clear Filters"
+            },
+            "action_id": "action_report_clear_filters"
+         }
+      },
+      {
+         "type": "input",
+         "block_id": "block_report_filter_title",
+         "label": {
+            "type": "plain_text",
+            "text": "Search notification title"
+         },
+         "element": {
+            "action_id": "action_report_filter_by_title",
+            "min_query_length": 1,
+            "type": "multi_external_select",
+            "placeholder": {
+               "type": "plain_text",
+               "text": "Top 10 matched titles will be displayed."
+            }
+         }
+      },
+      {
+         "block_id": "block_report_filter_basic",
+         "type": "actions",
+         "elements": [
+            {
+               "type": "conversations_select",
+               "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select a conversation",
+                  "emoji": true
+               },
+               "filter": {
+                  "exclude_external_shared_channels": true,
+                  "exclude_bot_users": true
+               },
+               "action_id": "action_report_filter_by_conversation"
+            },
+            {
+               "type": "users_select",
+               "placeholder": {
+                  "type": "plain_text",
+                  "text": "Select a creator",
+                  "emoji": true
+               },
+               "action_id": "action_report_filter_by_creator"
+            }
+         ]
+      },
+      {
+         "type": "divider"
+      }
+   ]
+}
