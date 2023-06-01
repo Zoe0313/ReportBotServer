@@ -63,7 +63,7 @@
 			"block_id": "reportSpecConfig.text",
 			"hint": {
 				"type": "plain_text",
-				"text": "@this-nanny means the current nanny.\n@next-nanny means the next nanny."
+				"text": "@this-nanny means the current nanny.\n@next-nanny means the next nanny.\nnext-nanny-full-name means next nanny real name without mention him(her)."
 			},
 			"element": {
 				"type": "plain_text_input",

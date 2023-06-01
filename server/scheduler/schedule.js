@@ -10,6 +10,7 @@ import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
 import {
    GetConversationsName, GetUsersName, VerifyBotInChannel
 } from '../common/slack-helper.js'
+import { FindUserInfoByName } from '../src/model/user-info.js'
 import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
@@ -249,6 +250,12 @@ const ContentEvaluate = async (report) => {
          stdout = report.reportSpecConfig.text
             .replace('@this-nanny', `<@${thisTimeNanny}>`)
             .replace('@next-nanny', `<@${nextTimeNanny}>`)
+         // Mention the name of next week nanny instead of cc the person
+         if (report.reportSpecConfig.text.includes('next-nanny-full-name')) {
+            const nextTimeUsers = await GetUsersName([nextTimeNanny])
+            const nextTimeNannyInfo = await FindUserInfoByName(nextTimeUsers[0])
+            stdout = stdout.replace('next-nanny-full-name', nextTimeNannyInfo?.fullName || `<@${nextTimeNanny}>`)
+         }
          break
       }
       // case 'svs':
