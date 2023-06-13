@@ -270,6 +270,10 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
       //    break
       case 'nanny_reminder':
          if (isInit) {
+            if (reportSpecConfig?.nannyCode?.length > 0) {
+               FindBlockById(blocks, 'reportSpecConfig.nannyCode')
+                  .element.initial_value = reportSpecConfig.nannyCode
+            }
             if (reportSpecConfig?.nannyAssignee?.length > 0) {
                FindBlockById(blocks, 'reportSpecConfig.nannyAssignee')
                   .element.initial_conversations = reportSpecConfig.nannyAssignee

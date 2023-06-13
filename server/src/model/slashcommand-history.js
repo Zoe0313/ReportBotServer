@@ -3,7 +3,9 @@ import mongoose from 'mongoose'
 const SLASH_COMMAND_HISTORY_STATUS = {
    SUCCEED: 'SUCCEED',
    FAILED: 'FAILED',
-   TIMEOUT: 'TIMEOUT'
+   TIMEOUT: 'TIMEOUT',
+   PENDING: 'PENDING',
+   USER_ERROR: 'USER_ERROR'
 }
 
 const SlashCommandHistorySchema = new mongoose.Schema({

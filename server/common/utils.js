@@ -3,12 +3,12 @@ import logger from './logger.js'
 import mergeWith from 'lodash/mergeWith.js'
 import { exec } from 'child_process'
 
-export function FormatDate(date) {
+export function FormatDate(date, formatStr) {
    if (date == null || date === '') {
       return ''
    }
    try {
-      return moment(date).format('YYYY-MM-DD')
+      return moment(date).format(formatStr || 'YYYY-MM-DD')
    } catch (e) {
       logger.warn(e)
       return ''
@@ -98,5 +98,18 @@ export function FormatDateWithTz(date, tz) {
    } catch (e) {
       logger.warn(e)
       return ''
+   }
+}
+
+export function Local2Utc(dateStr, tz) {
+   if (dateStr == null) {
+      return null
+   }
+   try {
+      // 2021-01-01 08:00 => 2021-01-01 08:00 Asia/Shanghai
+      return moment.tz(dateStr, tz || 'Asia/Shanghai').utc().toDate()
+   } catch (e) {
+      logger.warn(e)
+      return null
    }
 }

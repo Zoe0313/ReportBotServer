@@ -16,6 +16,7 @@ import { WebClient } from '@slack/web-api'
 import path from 'path'
 import cronParser from 'cron-parser'
 import { GenerateNannyRoster } from '../src/bolt_service/init-blocks-data-helper.js'
+import { LoadNannyList } from '../src/slashcommand/nanny-generator.js'
 // check timezone
 import moment from 'moment-timezone'
 
@@ -565,6 +566,7 @@ const UpdateVSANNanny = async () => {
 const RegisterVSANNannyScheduler = function () {
    const job = schedule.scheduleJob('30 1 * * 1', async function () {
       await UpdateVSANNanny()
+      LoadNannyList()
    })
    return job
 }

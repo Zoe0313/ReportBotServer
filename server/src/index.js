@@ -35,6 +35,8 @@ ConnectMongoDatabase(async () => {
       updatePerforceInfoJob.invoke()
       updateTeamGroupJob.invoke()
       updateVSANNannyJob.invoke()
+   } else {
+      updateVSANNannyJob.invoke()// cache vsan-nanny.csv
    }
 })
 
