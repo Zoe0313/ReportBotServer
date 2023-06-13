@@ -134,7 +134,6 @@ export function LoadNannyList() {
          return null
       }).filter(nanny => { return nanny != null })
       nannys.shift()
-      nannys.pop()
       vSANNannyCache = nannys
       logger.debug(`Refresh vSAN-Nanny list: ${vSANNannyCache.length}`)
    } catch (e) {
