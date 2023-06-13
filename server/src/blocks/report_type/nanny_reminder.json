@@ -1,11 +1,32 @@
 {
 	"blocks": [
 		{
+           "type": "input",
+           "block_id": "reportSpecConfig.nannyCode",
+		   "label": {
+              "type": "plain_text",
+              "text": ":four: Input a code for nanny",
+              "emoji": true
+           },
+		   "hint": {
+			   "type": "plain_text",
+			   "text": "This code will be used in slash command /whois-nanny [code]. E.g. If you execute '/whois-nanny vsanfs', bot will tell you the vSAN FS nanny info."
+		   },
+           "element": {
+			  "type": "plain_text_input",
+              "placeholder": {
+                 "text": "E.g. vsanfs for vSANFS nanny",
+                 "type": "plain_text"
+              },
+              "action_id": "action_input_nanny_code"
+           }
+		},
+		{
 			"type": "input",
 			"block_id": "reportSpecConfig.nannyAssignee",
 			"label": {
 				"type": "plain_text",
-				"text": ":four: Select nanny assignee(s) from the list"
+				"text": ":five: Select nanny assignee(s) from the list"
 			},
 			"hint": {
 				"type": "plain_text",
@@ -76,7 +97,7 @@
 			},
 			"label": {
 				"type": "plain_text",
-				"text": ":five: Plain text message",
+				"text": ":six: Plain text message",
 				"emoji": true
 			}
 		}

@@ -253,6 +253,12 @@ const ReportConfigurationSchema = new mongoose.Schema({
             message: 'The number of bugzilla assignee should be greater than 0 and less than 50.'
          }
       },
+      nannyCode: {
+         type: String,
+         required: function(v) {
+            return this.reportType === 'nanny_reminder'
+         }
+      },
       nannyAssignee: {
          type: [String],
          required: function(v) {
