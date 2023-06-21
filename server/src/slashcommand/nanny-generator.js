@@ -58,6 +58,10 @@ const GenerateNannyReply = async (payload, tz) => {
       throw new Error(`Command failed: ${command}, argument is empty.`)
    }
    const nannyCode = param.split(' ')[0].toLowerCase()
+   if (nannyCode === 'vsan') {
+      stdout = await GenerateVSANNannyReply(param, command, tz)
+      return stdout
+   }
    const report = await GetReportByNannyCode(nannyCode)
    const nannyAssignees = report?.reportSpecConfig?.nannyAssignee || []
    if (nannyAssignees.length > 0) {
@@ -88,6 +92,7 @@ const GenerateNannyReply = async (payload, tz) => {
             if (startDayWithTZ >= endDayWithTZ) {
                throw new Error(`Command failed: ${command}, end day should be greater than start day.`)
             }
+            stdout += `From ${startDay} to ${endDay} ${nannyCode} nanny duty roster:` + '\n'
             let startMonDate = GetMondayDate(startDayWithTZ)
             const satDate = new Date(startMonDate.getFullYear(), startMonDate.getMonth(),
                startMonDate.getDate())
@@ -96,8 +101,7 @@ const GenerateNannyReply = async (payload, tz) => {
             while (startMonDate <= endDayWithTZ) {
                const monDateStr = FormatDate(startMonDate)
                const satDateStr = FormatDate(satDate)
-               stdout += `<@${nannyAssignees[nannyIndex]}> is ${nannyCode} nanny ` +
-                  `from ${monDateStr} to ${satDateStr}.` + '\n'
+               stdout += `<@${nannyAssignees[nannyIndex]}> ${monDateStr} - ${satDateStr}` + '\n'
                startMonDate = new Date(startMonDate.setDate(startMonDate.getDate() + 7))
                satDate.setDate(satDate.getDate() + 7)
                nannyIndex += 1
@@ -243,46 +247,44 @@ const GetVSANNannyById = (vmwareId, today) => {
    return message
 }
 
-const GenerateVSANNannyReply = async (payload, tz) => {
+const GenerateVSANNannyReply = async (param, command, tz) => {
    let stdout = ''
-   let param = payload?.text || 'now'
-   param = param.trim()
-   param = param.replace(/ +/g, ' ')
-   const command = payload.command
-   if (param === 'now') {
-      const today = Local2Utc(FormatDate(new Date()), tz)
-      stdout = GetVSANNannyOfOneDay(today)
-   } else {
-      const days = param.split(' ')
-      switch (days.length) {
-         case 1: {
-            const inputStr = days[0]
-            if (IsValidDate(inputStr)) { // whois-vsan-nanny <YYYY-MM-DD>
-               const oneDay = Local2Utc(days[0], tz)
-               stdout = GetVSANNannyOfOneDay(oneDay)
-            } else { // whois-vsan-nanny vmwareId
-               const today = Local2Utc(FormatDate(new Date()), tz)
-               stdout = GetVSANNannyById(inputStr, today)
-            }
-            break
-         }
-         case 2: {
-            if (!IsValidDate(days[0]) || !IsValidDate(days[1])) {
-               throw new Error(`Command failed: ${command}, input is not a date.`)
-            }
-            const startDay = Local2Utc(days[0], tz)
-            const endDay = Local2Utc(days[1], tz)
-            if (startDay >= endDay) {
-               throw new Error(`Command failed: ${command}, end day should be greater than start day.`)
-            }
-            stdout = GetVSANNannyBetweenDayRange(startDay, endDay)
-            break
-         }
-         default:
-            throw new Error(`Command failed: ${command}, not support more than two days.`)
+   switch (param.split(' ').length) {
+      case 1: { // whois-nanny vsan
+         const today = Local2Utc(FormatDate(new Date()), tz)
+         stdout = GetVSANNannyOfOneDay(today)
+         break
       }
+      case 2: {
+         const inputStr = param.split(' ')[1]
+         if (IsValidDate(inputStr)) { // whois-nanny vsan <YYYY-MM-DD>
+            const oneDay = Local2Utc(inputStr, tz)
+            stdout = GetVSANNannyOfOneDay(oneDay)
+         } else { // whois-nanny vsan vmwareId
+            const today = Local2Utc(FormatDate(new Date()), tz)
+            stdout = GetVSANNannyById(inputStr, today)
+         }
+         break
+      }
+      case 3: {
+         const day1 = param.split(' ')[1]
+         const day2 = param.split(' ')[2]
+         if (!IsValidDate(day1) || !IsValidDate(day2)) {
+            throw new Error(`Command failed: ${command}, input is not a date.`)
+         }
+         const startDay = Local2Utc(day1, tz)
+         const endDay = Local2Utc(day2, tz)
+         if (startDay >= endDay) {
+            throw new Error(`Command failed: ${command}, end day should be greater than start day.`)
+         }
+         stdout = `From ${day1} to ${day2} vsan nanny duty roster:` + '\n'
+         stdout += GetVSANNannyBetweenDayRange(startDay, endDay)
+         break
+      }
+      default:
+         throw new Error(`Command failed: ${command}, not support more than two days.`)
    }
    return stdout
 }
 
-export { GenerateNannyReply, GenerateVSANNannyReply }
+export { GenerateNannyReply }

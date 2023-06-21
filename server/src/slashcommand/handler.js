@@ -7,18 +7,14 @@ import {
 import {
    SLASH_COMMAND_HISTORY_STATUS, SlashCommandHistory
 } from '../model/slashcommand-history.js'
-import {
-   GenerateNannyReply, GenerateVSANNannyReply
-} from './nanny-generator.js'
+import { GenerateNannyReply } from './nanny-generator.js'
 
 const ContentEvaluate = async (payload) => {
    // execute the different slash command response generator
    // Get user's time zone
    const tz = await GetUserTz(payload.user_id)
    let stdout = ''
-   if (payload.command === '/whois-vsan-nanny' || payload.command === '/whois-vsan-nanny-test') {
-      stdout = await GenerateVSANNannyReply(payload, tz)
-   } else if (payload.command === '/whois-nanny' || payload.command === '/whois-nanny-test') {
+   if (payload.command === '/whois-nanny' || payload.command === '/test-nanny') {
       stdout = await GenerateNannyReply(payload, tz)
    } else {
       throw new Error(`slash command ${payload.command} not supported.`)
