@@ -5,7 +5,7 @@ import {
    ParseDateWithTz, FormatDate, Local2Utc
 } from '../../common/utils.js'
 import { ReportConfiguration } from '../model/report-configuration.js'
-
+import { FindUserInfoByName } from '../model/user-info.js'
 const BuglistLine = 'Bug list: https://via.vmw.com/UKKDDr'
 const BotSorryReply = `Sorry, I can't get the information now since some error hit when querying the resource.\nPlease refer to the source page - https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster for more details.`
 let vSANNannyCache = []
@@ -71,14 +71,35 @@ const GenerateNannyReply = async (payload, tz) => {
             break
          }
          case 2: {
-            const startDay = param.split(' ')[1]
-            if (!IsValidDate(startDay)) {
-               throw new Error(`Command failed: ${command}, input is not a date.`)
+            const inputStr = param.split(' ')[1]
+            if (IsValidDate(inputStr)) { // whois-nanny <nanny code> <YYYY-MM-DD>
+               const startDayWithTZ = ParseDateWithTz(inputStr, tz)
+               const startMonDate = GetMondayDate(startDayWithTZ)
+               const nannyIndex = GetNannyIndexByDay(nannyAssignees, startMonDate)
+               stdout = `<@${nannyAssignees[nannyIndex]}> is ${nannyCode} nanny at ${inputStr}.`
+            } else { // whois-nanny <nanny code> vmwareId
+               const userInfo = await FindUserInfoByName(inputStr)
+               if (userInfo == null) {
+                  throw new Error(`Command failed: ${command}, vmwareId ${inputStr} is not found.`)
+               }
+               const slackId = userInfo.slackId
+               const nannyIndex = nannyAssignees.indexOf(slackId)
+               if (nannyIndex === 0) {
+                  stdout = `<@${slackId}> is ${nannyCode} nanny this week.`
+               } else if (nannyIndex > 0) {
+                  const thisMondayDate = GetMondayDate(ParseDateWithTz(FormatDate(new Date()), tz))
+                  const diffWeekSeconds = nannyIndex * (24 * 3600 * 1000 * 7)
+                  const oneMondayDate = new Date(thisMondayDate.getTime() + diffWeekSeconds)
+                  const oneSaturdayDate = new Date(oneMondayDate.getFullYear(),
+                     oneMondayDate.getMonth(), oneMondayDate.getDate())
+                  oneSaturdayDate.setDate(oneSaturdayDate.getDate() + 6)
+                  const monDateStr = FormatDate(oneMondayDate)
+                  const satDateStr = FormatDate(oneSaturdayDate)
+                  stdout = `<@${slackId}> will be ${nannyCode} nanny from ${monDateStr} to ${satDateStr}.`
+               } else {
+                  stdout = `<@${slackId}> is not in ${nannyCode} nanny list.`
+               }
             }
-            const startDayWithTZ = ParseDateWithTz(startDay, tz)
-            const startMonDate = GetMondayDate(startDayWithTZ)
-            const nannyIndex = GetNannyIndexByDay(nannyAssignees, startMonDate)
-            stdout = `<@${nannyAssignees[nannyIndex]}> is ${nannyCode} nanny at ${startDay}.`
             break
          }
          case 3: {
