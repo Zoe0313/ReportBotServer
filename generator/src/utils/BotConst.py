@@ -28,6 +28,7 @@ BUGZILLA_BY_ASSIGNEE = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/query?l
 # service account 'svc.vsan-er' is used to login bugzilla and perforce system
 SERVICE_ACCOUNT = os.environ.get('SERVICE_ACCOUNT')
 SERVICE_PASSWORD = os.environ.get('SERVICE_PASSWORD')
+SERVICE_BASIC_TOKEN = os.environ.get('SERVICE_BASIC_TOKEN')
 
 # content type
 CONTENT_TYPE_JSON_UTF = "application/json;charset=utf-8"

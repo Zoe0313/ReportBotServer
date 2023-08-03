@@ -417,6 +417,11 @@ export function RegisterManageReportServiceHandler(app) {
          }
          const inputObj = TransformInputValuesToObj(view.state.values)
          logger.info(`inputObj: ${JSON.stringify(inputObj)}`)
+         const baseFields = inputObj.reportSpecConfig.jira?.basefields
+            ?.map(option => option.value) || []
+         const customFields = inputObj.reportSpecConfig.jira?.customfields
+            ?.split(',')?.map(v => v.trim()) || []
+         const jiraFields = Array.from(new Set(baseFields.concat(customFields)))
          const nannyRoster = await GenerateNannyRoster(inputObj, false, tz)
          const report = Merge(oldReport, Merge(inputObj, {
             mentionUsers: inputObj.mentionUsers || [],
@@ -437,7 +442,10 @@ export function RegisterManageReportServiceHandler(app) {
                   teams: inputObj.reportSpecConfig.perforceReviewCheck?.teams
                      ?.map(option => option.value)
                },
-               nannyRoster: nannyRoster
+               nannyRoster: nannyRoster,
+               jira: {
+                  fields: jiraFields
+               }
             },
             repeatConfig: {
                tz,

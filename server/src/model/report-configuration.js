@@ -25,7 +25,8 @@ const REPORT_TYPE_ENUM = [
    'customized',
    'bugzilla_by_assignee',
    'perforce_review_check',
-   'nanny_reminder'
+   'nanny_reminder',
+   'jira_list'
 ]
 const REPEAT_TYPE_ENUM = ['not_repeat', 'hourly', 'daily', 'weekly', 'monthly', 'cron_expression']
 
@@ -86,7 +87,8 @@ const ReportConfigurationSchema = new mongoose.Schema({
       required: function(v) {
          return this.reportType === 'bugzilla' ||
             this.reportType === 'perforce_checkin' ||
-            this.reportType === 'bugzilla_by_assignee'
+            this.reportType === 'bugzilla_by_assignee' ||
+            this.reportType === 'jira_list'
       },
       enum: YES_OR_NO_ENUM
    },
@@ -278,6 +280,65 @@ const ReportConfigurationSchema = new mongoose.Schema({
          type: String,
          required: function(v) {
             return this.reportType === 'nanny_reminder'
+         }
+      },
+      jira: {
+         jql: {
+            type: String,
+            required: function(v) {
+               return this.reportType === 'jira_list'
+            },
+            validate: {
+               validator: async function(queryStr) {
+                  if (queryStr == null) {
+                     return true
+                  }
+                  try {
+                     const fields = this.reportSpecConfig.jira.fields
+                     logger.debug(`input fields=${fields}`)
+                     const res = await axios({
+                        method: 'post',
+                        url: 'https://jira.eng.vmware.com/rest/api/2/search',
+                        headers: {
+                           Authorization: `Basic ${process.env.SERVICE_BASIC_TOKEN}`
+                        },
+                        data: {
+                           jql: queryStr,
+                           startAt: 0,
+                           maxResults: 1,
+                           fields: fields.length === 0 ? ['id', 'key'] : fields
+                        }
+                     })
+                     if (res.status === 200) {
+                        if (fields.length > 0 && res.data?.total > 0) {
+                           const issueFields = res.data?.issues[0]?.fields
+                           if (issueFields != null && typeof issueFields !== 'undefined') {
+                              const notFoundFields = fields.filter(field => {
+                                 return !Object.prototype.hasOwnProperty.call(issueFields, field)
+                              })
+                              if (notFoundFields.length > 0) {
+                                 throw new Error(`not found fields "${notFoundFields.toString()}"`)
+                              }
+                           } else {
+                              throw new Error(`not found fields "${fields.toString()}"`)
+                           }
+                        }
+                        return true
+                     }
+                  } catch (e) {
+                     logger.warn(e)
+                     throw new Error(`Failed to parse the JQL because ${e.message}. ` +
+                        'Please check your JQL in https://jira.eng.vmware.com/issues?jql=' +
+                        ' or adjust your custom fields.')
+                  }
+               }
+            }
+         },
+         fields: {
+            type: [String],
+            required: function(v) {
+               return this.reportType === 'jira_list'
+            }
          }
       }
    },

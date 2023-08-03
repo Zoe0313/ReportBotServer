@@ -34,6 +34,16 @@ const MEMBERS_FILTER_HINT = {
    all_reporters: 'selected users and all direct & indirect reporters of selected users'
 }
 
+const JIRA_BASE_FIELD = [
+   'issuetype',
+   'status',
+   'assignee',
+   'summary',
+   'priority',
+   'labels',
+   'project'
+]
+
 function InitRecurrenceSettingValue(report, blocks, options, tz) {
    const isNew = options?.isNew
    if (report.repeatConfig?.startDate != null) {
@@ -290,6 +300,33 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
             previewNannyRosterBlock.elements[0].text = 'Preview nanny duty roster'
          }
          break
+      case 'jira_list':
+         if (isInit && reportSpecConfig?.jira?.jql?.length > 0) {
+            FindBlockById(blocks, 'reportSpecConfig.jira.jql')
+               .element.initial_value = reportSpecConfig.jira.jql
+         }
+         let baseFields = []
+         let customFields = []
+         if (typeof reportSpecConfig?.jira === 'undefined') {
+            // New Notification: default add JIRA Fields: Type, Status, Assignee, Summary
+            baseFields = JIRA_BASE_FIELD.slice(0, 4)
+         } else if (isInit && reportSpecConfig?.jira?.fields?.length > 0) {
+            baseFields = reportSpecConfig?.jira?.fields?.filter(
+               field => JIRA_BASE_FIELD.includes(field))
+            customFields = reportSpecConfig?.jira?.fields?.filter(
+               field => !JIRA_BASE_FIELD.includes(field))
+         }
+         if (baseFields.length > 0) {
+            const baseFieldsBlock = FindBlockById(blocks, 'reportSpecConfig.jira.basefields')
+            const fieldBaseOptions = baseFieldsBlock.element.options.filter(
+               option => baseFields.includes(option.value))
+            baseFieldsBlock.element.initial_options = fieldBaseOptions
+         }
+         if (customFields.length > 0) {
+            FindBlockById(blocks, 'reportSpecConfig.jira.customfields')
+               .element.initial_value = customFields.join(', ')
+         }
+         break
       default:
          throw new Error(`report type ${report.reportType} is not supported`)
    }
@@ -312,7 +349,7 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
          FindBlockById(blocks, 'mentionGroups').element.initial_options = report.mentionGroups
       }
       if (report.reportType === 'bugzilla' || report.reportType === 'bugzilla_by_assignee' ||
-         report.reportType === 'perforce_checkin') {
+         report.reportType === 'perforce_checkin' || report.reportType === 'jira_list') {
          const isSkipEmptyReport = report.skipEmptyReport || 'No'
          const skipEmptyReportBlock = FindBlockById(blocks, 'skipEmptyReport')
          const skipEmptyReportOption = skipEmptyReportBlock.element.options
