@@ -123,6 +123,11 @@ export function RegisterCreateReportServiceHandler(app) {
          const user = body.user.id
          const tz = await GetUserTz(user)
          const inputObj = TransformInputValuesToObj(view.state.values)
+         const baseFields = inputObj.reportSpecConfig.jira?.basefields
+            ?.map(option => option.value) || []
+         const customFields = inputObj.reportSpecConfig.jira?.customfields
+            ?.split(',')?.map(v => v.trim()) || []
+         const jiraFields = Array.from(new Set(baseFields.concat(customFields)))
          const nannyRoster = await GenerateNannyRoster(inputObj, false, tz)
          const report = new ReportConfiguration(
             Merge(inputObj, {
@@ -146,7 +151,10 @@ export function RegisterCreateReportServiceHandler(app) {
                      teams: inputObj.reportSpecConfig.perforceReviewCheck?.teams
                         ?.map(option => option.value)
                   },
-                  nannyRoster: nannyRoster
+                  nannyRoster: nannyRoster,
+                  jira: {
+                     fields: jiraFields
+                  }
                },
                repeatConfig: {
                   tz,

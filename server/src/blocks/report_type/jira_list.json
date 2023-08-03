@@ -1,0 +1,116 @@
+{
+	"blocks": [
+		{
+			"type": "input",
+			"block_id": "reportSpecConfig.jira.jql",
+			"element": {
+				"type": "plain_text_input",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "JIRA query"
+				},
+				"action_id": "action_report_link"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":four: Input your search criteria",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Hint: refer to <https://jira.eng.vmware.com/issues?jql=|input basic or advanced searching JQL>."
+			}
+		},
+		{
+			"type": "input",
+			"optional": true,
+			"block_id": "reportSpecConfig.jira.basefields",
+			"label": {
+				"type": "plain_text",
+				"text": ":five: Add JIRA fields to report more details"
+			},
+			"element": {
+				"type": "checkboxes",
+				"options": [
+					{
+						"text": {
+							"type": "mrkdwn",
+							"text": "Type"
+						},
+						"value": "issuetype"
+					},
+					{
+						"text": {
+							"type": "mrkdwn",
+							"text": "Status"
+						},
+						"value": "status"
+					},
+					{
+						"text": {
+							"type": "mrkdwn",
+							"text": "Assignee"
+						},
+						"value": "assignee"
+					},
+					{
+						"text": {
+							"type": "mrkdwn",
+							"text": "Summary"
+						},
+						"value": "summary"
+					},
+					{
+						"text": {
+							"type": "mrkdwn",
+							"text": "Priority"
+						},
+						"value": "priority"
+					},
+					{
+						"text": {
+							"type": "mrkdwn",
+							"text": "Labels"
+						},
+						"value": "labels"
+					},
+					{
+						"text": {
+							"type": "mrkdwn",
+							"text": "Project"
+						},
+						"value": "project"
+					}
+				],
+				"action_id": "action_select_jira_field"
+			}
+		},
+		{
+			"type": "input",
+			"optional": true,
+			"block_id": "reportSpecConfig.jira.customfields",
+			"element": {
+				"type": "plain_text_input",
+				"placeholder": {
+					"text": "E.g. duedate, updated, reporter",
+					"type": "plain_text"
+				},
+				"action_id": "action_input_other_field"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Input the custom field names"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Hint: Jira ID will be shown by default."
+			}
+		}
+	]
+}

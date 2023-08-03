@@ -259,6 +259,16 @@ const ContentEvaluate = async (report) => {
          }
          break
       }
+      case 'jira_list': {
+         scriptPath = projectRootPath + '/generator/src/notification/jira_list_report.py'
+         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
+         `--title '${reportTitle}' ` +
+         `--jql '${escape(report.reportSpecConfig.jira.jql)}' ` +
+         `--fields '${report.reportSpecConfig.jira.fields.join(',')}'`
+         logger.debug(`execute the jira report generator: ${command}`)
+         stdout = await ExecCommand(command, timeout)
+         break
+      }
       // case 'svs':
       // case 'fastsvs':
       // case 'customized':
