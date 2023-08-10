@@ -170,6 +170,7 @@ class PerforceSpider(object):
          logger.debug("p4 changes stderr: {0}, returncode: {1}".format(stderr, returncode))
          return checkinDatas
 
+      deduplicatedCLN = set()
       stdout = stdout.decode('utf-8')
       recordList = stdout.split('\n')
       logger.debug(f"Record count: {len(recordList)}")
@@ -177,6 +178,9 @@ class PerforceSpider(object):
          if record:
             matchObj = re.match(r"Change (.*) on (.*) by (.*) '(.*)'", record, re.M | re.I)
             cln = matchObj.group(1)
+            if cln in deduplicatedCLN:
+               continue
+            deduplicatedCLN.add(cln)
             user = matchObj.group(3).split('@')[0]
             if user in self.userList:
                detail = self.GetDetail(cln)
