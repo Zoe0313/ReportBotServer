@@ -178,14 +178,13 @@ class PerforceSpider(object):
          if record:
             matchObj = re.match(r"Change (.*) on (.*) by (.*) '(.*)'", record, re.M | re.I)
             cln = matchObj.group(1)
-            if cln in deduplicatedCLN:
-               continue
-            deduplicatedCLN.add(cln)
             user = matchObj.group(3).split('@')[0]
             if user in self.userList:
-               detail = self.GetDetail(cln)
-               if detail:
-                  checkinDatas.append(detail)
+               deduplicatedCLN.add(cln)
+      for cln in deduplicatedCLN:
+         detail = self.GetDetail(cln)
+         if detail:
+            checkinDatas.append(detail)
       return checkinDatas
 
    @logExecutionTime
