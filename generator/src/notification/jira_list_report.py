@@ -205,8 +205,7 @@ class JiraReport(object):
          messages.append("No issues currently.")
          reports = ["\n".join(messages)]
       else:
-         jiraLink = "https://jira.eng.vmware.com/browse/{0}?jql={1}"\
-            .format(issues[0]['key'], parse.quote(self.jql))
+         jiraLink = "https://jira.eng.vmware.com/issues/?jql={0}".format(parse.quote(self.jql))
          bugCountStr = "One issue found" if 1 == self.totalSize else "{0} issue found".format(self.totalSize)
          if self.totalSize > MAX_TOTAL_RESULT_SIZE:
             bugCountStr += ". This report only show first {0} IDs. Please view more on <{1}|Jira Page>." \
