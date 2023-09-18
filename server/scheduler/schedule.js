@@ -260,11 +260,13 @@ const ContentEvaluate = async (report) => {
          break
       }
       case 'jira_list': {
+         const assignees = await GetUsersName([report.creator])
          scriptPath = projectRootPath + '/generator/src/notification/jira_list_report.py'
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
          `--title '${reportTitle}' ` +
          `--jql '${escape(report.reportSpecConfig.jira.jql)}' ` +
-         `--fields '${report.reportSpecConfig.jira.fields.join(',')}'`
+         `--fields '${report.reportSpecConfig.jira.fields.join(',')}' ` +
+         `--creator '${assignees[0]}'`
          logger.debug(`execute the jira report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
          break
