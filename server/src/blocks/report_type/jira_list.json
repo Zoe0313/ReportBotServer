@@ -21,7 +21,7 @@
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "Hint: refer to <https://jira.eng.vmware.com/issues?jql=|input basic or advanced searching JQL>."
+				"text": "Hint: refer to <https://jira.eng.vmware.com/issues/?jql=|input basic or advanced searching JQL>.\ne.g. `lastViewed`, `lastLogin` and other keywords with personal operation history are not supported."
 			}
 		},
 		{

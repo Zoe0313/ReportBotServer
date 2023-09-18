@@ -63,6 +63,7 @@ class JiraReport(object):
       self.jql = parse.unquote(args.jql)
       fields = args.fields.split(',') if len(args.fields) > 0 else []
       self.fields = ["id", "key"] + fields
+      self.creator = args.creator
       logger.debug('user define jql: {}'.format(self.jql))
       logger.debug('user define fields: {}'.format(fields))
       self.session = requests.session()
@@ -93,14 +94,16 @@ class JiraReport(object):
          ]
       }
       '''
-      requestData = {'jql': self.jql, 'startAt': startAt, 'fields': self.fields}
+      jql = self.jql.replace('currentUser()', self.creator)
+      logger.debug('startAt={}'.format(startAt))
+      requestData = {'jql': jql, 'startAt': startAt, 'fields': self.fields}
       response = self.session.post(url=JIRA_SEARCH_API, data=json.dumps(requestData))
       if response.status_code == 200:
          datas = response.json()
          startAt, maxResults, total, issues = datas['startAt'], datas['maxResults'], datas['total'], datas['issues']
          return startAt, maxResults, total, issues
       errorMessage = response.json().get('errorMessages', 'not found')
-      raise Exception('Search issues by jql "{}" occur error: {}'.format(self.jql, errorMessage))
+      raise Exception('Search issues by jql "{}" occur error: {}'.format(jql, errorMessage))
 
    def GetAllIssues(self):
       logger.debug('Search jira list fields: {}'.format(self.fields))
@@ -108,10 +111,12 @@ class JiraReport(object):
       startAt, maxResults, total, issues = self.SearchIssues()
       issueList.extend(issues)
       self.totalSize = total
-      total = MAX_TOTAL_RESULT_SIZE if total > MAX_TOTAL_RESULT_SIZE else total
-      while startAt + maxResults <= total:
-         startAt, maxResults, total, issues = self.SearchIssues(startAt=startAt + maxResults)
+      total = min(MAX_TOTAL_RESULT_SIZE, total)
+      while len(issueList) < total:
+         startAt, maxResults, _, issues = self.SearchIssues(startAt=startAt + maxResults)
          issueList.extend(issues)
+      issueList = issueList[:MAX_TOTAL_RESULT_SIZE]
+      logger.debug('issue count={}'.format(len(issueList)))
       details: list[dict[str, str]] = []
       for issue in issueList:
          detail = {}
@@ -223,6 +228,7 @@ def parseArgs():
    parser.add_argument('--title', type=str, required=True, help='Title of jira report')
    parser.add_argument('--jql', type=str, required=True, help='short link of bugzilla')
    parser.add_argument('--fields', type=str, required=True, help='display issue details')
+   parser.add_argument('--creator', type=str, required=True, help='use to replace currentUser() in jql')
    return parser.parse_args()
 
 if __name__ == "__main__":
