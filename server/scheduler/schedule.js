@@ -16,7 +16,9 @@ import { WebClient } from '@slack/web-api'
 import path from 'path'
 import cronParser from 'cron-parser'
 import { GenerateNannyRoster } from '../src/bolt_service/init-blocks-data-helper.js'
-import { LoadNannyList } from '../src/slashcommand/nanny-generator.js'
+import {
+   LoadNannyList, AddNannyCode, RemoveNannyCode
+} from '../src/slashcommand/nanny-generator.js'
 // check timezone
 import moment from 'moment-timezone'
 
@@ -349,7 +351,7 @@ const ScheduleOption = function (repeatConfig) {
    return scheduleOption
 }
 
-const UnregisterScheduler = function (id) {
+const UnregisterScheduler = async function (id) {
    if (id == null) {
       throw new Error('scheduler id is null, can not unregister scheduler')
    }
@@ -363,8 +365,13 @@ const UnregisterScheduler = function (id) {
    }
    delete scheduleJobStore[id.toString()]
 
-   // unregister update nanny roster scheduler job
-   UnregisterUpdateNannyScheduler(id)
+   const report = await ReportConfiguration.findById(id)
+   if (report != null && report.reportType === 'nanny_reminder') {
+      // unregister update nanny roster scheduler job
+      UnregisterUpdateNannyScheduler(id)
+      // remove the nanny code of disabled/removed report
+      RemoveNannyCode(id)
+   }
 }
 
 const RegisterScheduler = function (report) {
@@ -377,6 +384,9 @@ const RegisterScheduler = function (report) {
       logger.info(`cancel previous schedule job ${id} of ${report.title}`)
       job.cancel()
    }
+
+   // Add/Update the nanny code of created/enabled nanny report
+   AddNannyCode(report)
 
    if (report.status !== REPORT_STATUS.ENABLED) {
       logger.info(`this report ${id} is ${report.status}, not enabled, skip the register.`)

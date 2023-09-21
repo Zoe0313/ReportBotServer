@@ -9,6 +9,7 @@ import { FindUserInfoByName } from '../model/user-info.js'
 const BuglistLine = 'Bug list: https://via.vmw.com/UKKDDr'
 const BotSorryReply = `Sorry, I can't get the information now since some error hit when querying the resource.\nPlease refer to the source page - https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster for more details.`
 let vSANNannyCache = []
+const NannyCodeCache = {}
 
 const IsValidDate = (dateStr) => {
    const dateReg = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -16,7 +17,11 @@ const IsValidDate = (dateStr) => {
 }
 
 async function GetReportByNannyCode(nannyCode) {
-   const report = await ReportConfiguration.findOne({ 'reportSpecConfig.nannyCode': nannyCode })
+   const filter = {
+      status: { $in: ['CREATED', 'ENABLED', 'DRAFT'] },
+      'reportSpecConfig.nannyCode': nannyCode
+   }
+   const report = await ReportConfiguration.findOne(filter)
    if (report == null) {
       throw new Error(`Command failed: ${nannyCode} nanny not found.`)
    }
@@ -308,4 +313,17 @@ const GenerateVSANNannyReply = async (param, command, tz) => {
    return stdout
 }
 
-export { GenerateNannyReply }
+export function AddNannyCode(report) {
+   if (report.reportType === 'nanny_reminder' &&
+       (report.status === 'ENABLED' || report.status === 'CREATED')) {
+      NannyCodeCache[report._id] = report.reportSpecConfig.nannyCode
+      logger.debug('Add nanny code, current cache is ' + JSON.stringify(NannyCodeCache))
+   }
+}
+
+export function RemoveNannyCode(id) {
+   delete NannyCodeCache[id.toString()]
+   logger.debug('Remove nanny code, current cache is ' + JSON.stringify(NannyCodeCache))
+}
+
+export { GenerateNannyReply, NannyCodeCache }

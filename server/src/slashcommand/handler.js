@@ -7,7 +7,7 @@ import {
 import {
    SLASH_COMMAND_HISTORY_STATUS, SlashCommandHistory
 } from '../model/slashcommand-history.js'
-import { GenerateNannyReply } from './nanny-generator.js'
+import { GenerateNannyReply, NannyCodeCache } from './nanny-generator.js'
 
 const ContentEvaluate = async (payload) => {
    // execute the different slash command response generator
@@ -63,7 +63,13 @@ const ErrorHandler = async (client, ack, payload, error) => {
    } else if (error.message.startsWith('Command failed:')) {
       try {
          slashCommandHistory.status = SLASH_COMMAND_HISTORY_STATUS.USER_ERROR
-         const usage = LoadSlashCommandUsage(payload.command.replace('/', ''))
+         let usage = LoadSlashCommandUsage(payload.command.replace('/', ''))
+         if (payload.command === '/whois-nanny' || payload.command === '/test-nanny') {
+            const nannyCodeArray = Object.entries(NannyCodeCache).map(([k, v]) => {
+               return '- ' + v
+            })
+            usage += nannyCodeArray.join('\n')
+         }
          // post ephemeral command usage messages to channel by response url
          await axios.post(payload.response_url, {
             text: '```USAGE:\n' + `${usage}` + '```'
