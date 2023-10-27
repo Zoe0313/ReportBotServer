@@ -25,7 +25,7 @@ RUN pip install rbtools
 RUN pip install python-dotenv
 
 # set perforce environment
-ENV P4PORT perforce.eng.vmware.com:1666
+ENV P4PORT ssl:perforce.eng.vmware.com:1666
 
 WORKDIR slackbot
 

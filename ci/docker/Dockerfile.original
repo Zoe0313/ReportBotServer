@@ -18,9 +18,11 @@ RUN pip install --upgrade google-auth
 RUN pip install python-dateutil
 RUN pip install lxml
 RUN pip install pandas
+RUN pip install rbtools
+RUN pip install python-dotenv
 
 # set perforce environment
-ENV P4PORT perforce.eng.vmware.com:1666
+ENV P4PORT ssl:perforce.eng.vmware.com:1666
 
 # set work directory
 RUN mkdir -p ~/slackbot/

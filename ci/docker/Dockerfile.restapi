@@ -6,7 +6,7 @@ RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 ENV TZ=Asia/Shanghai
 
 # set perforce environment
-ENV P4PORT perforce.eng.vmware.com:1666
+ENV P4PORT ssl:perforce.eng.vmware.com:1666
 
 WORKDIR slackbot
 
