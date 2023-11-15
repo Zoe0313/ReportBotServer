@@ -268,6 +268,7 @@ const ContentEvaluate = async (report) => {
          `--title '${reportTitle}' ` +
          `--jql '${escape(report.reportSpecConfig.jira.jql)}' ` +
          `--fields '${report.reportSpecConfig.jira.fields.join(',')}' ` +
+         `--groupby '${report.reportSpecConfig.jira.groupby}' ` +
          `--creator '${assignees[0]}'`
          logger.debug(`execute the jira report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)

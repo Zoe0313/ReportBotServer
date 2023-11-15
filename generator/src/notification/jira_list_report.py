@@ -25,8 +25,11 @@ jira_report.py
    "customfield_10051" is Bugzilla ID, used in "Bugzilla ID" is not empty
    "customfield_12852" is Bugzilla Status, used in "Bugzilla ID" is not empty, customfield_12852.value
 '''
-
+import os
+import re
 import argparse
+import itertools
+from collections import defaultdict
 from typing import Dict, Union, Any
 import requests
 import json
@@ -35,7 +38,12 @@ from generator.src.utils.BotConst import SERVICE_BASIC_TOKEN, CONTENT_TYPE_JSON,
    BUGZILLA_DETAIL_URL, JIRA_BROWSE_URL
 from generator.src.utils.Logger import logger
 from generator.src.utils.Utils import splitOverlengthReport, transformReport
+from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile
 
+DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/jira")
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+JIRA_PAGE_URL = 'https://jira.eng.vmware.com/issues/?jql='
 JIRA_SEARCH_API = 'https://jira.eng.vmware.com/rest/api/2/search'
 JIRA_ISSUE_API = 'https://jira.eng.vmware.com/rest/api/2/issue/'
 SUMMARY_MAX_LENGTH = 60
@@ -62,10 +70,16 @@ class JiraReport(object):
       self.title = parse.unquote(args.title)
       self.jql = parse.unquote(args.jql)
       fields = args.fields.split(',') if len(args.fields) > 0 else []
-      self.fields = ["id", "key"] + fields
+      self.groupbyField = args.groupby
+      self.fields = ["id", "key"]
+      if self.groupbyField == 'none':
+         self.fields = ["id", "key"] + fields
+      elif self.groupbyField not in self.fields:
+         self.fields.append(self.groupbyField)
       self.creator = args.creator
       logger.debug('user define jql: {}'.format(self.jql))
       logger.debug('user define fields: {}'.format(fields))
+      logger.debug('user define group by field: {}'.format(self.groupbyField))
       self.session = requests.session()
       self.session.headers = {'Authorization': f'Basic {SERVICE_BASIC_TOKEN}',
                               'Content-Type': CONTENT_TYPE_JSON}
@@ -111,11 +125,13 @@ class JiraReport(object):
       startAt, maxResults, total, issues = self.SearchIssues()
       issueList.extend(issues)
       self.totalSize = total
-      total = min(MAX_TOTAL_RESULT_SIZE, total)
+      if self.groupbyField == 'none':
+         total = min(MAX_TOTAL_RESULT_SIZE, total)
       while len(issueList) < total:
          startAt, maxResults, _, issues = self.SearchIssues(startAt=startAt + maxResults)
          issueList.extend(issues)
-      issueList = issueList[:MAX_TOTAL_RESULT_SIZE]
+      if self.groupbyField == 'none':
+         issueList = issueList[:MAX_TOTAL_RESULT_SIZE]
       logger.debug('issue count={}'.format(len(issueList)))
       details: list[dict[str, str]] = []
       for issue in issueList:
@@ -202,6 +218,53 @@ class JiraReport(object):
       messages.append("```")
       return messages
 
+   def GetJiraTable(self, issues):
+      # Issues grouped by the specified field
+      groupbyDict = defaultdict(list)
+      for key, group in itertools.groupby(issues, lambda x: x[self.groupbyField]):
+         groupbyDict[key].extend(list(group))
+      urlTailDict = {}
+      numberDict = {}
+      urlTailDict[self.jql] = JIRA_PAGE_URL + parse.quote(self.jql)
+      numberDict['Total'] = len(issues)
+      if self.groupbyField.lower() == 'priority':  # Order by priority asc
+         index_map = {}
+         index = 0
+         for key in groupbyDict.keys():
+            result = re.findall("P[0-9]", key)
+            if len(result) > 0:
+               index_map[key] = result[0]
+            else:
+               index_map[key] = "Q{}".format(index)
+               index += 1
+         orderedKeys = sorted(groupbyDict, key=lambda k: index_map[k], reverse=False)
+      else:  # Order by count desc
+         orderedKeys = sorted(groupbyDict, key=lambda k: len(groupbyDict[k]), reverse=True)
+      for key in orderedKeys:
+         groupbyJql = self.jql + ' AND {0} = "{1}"'.format(self.groupbyField, key)
+         urlTailDict[groupbyJql] = JIRA_PAGE_URL + parse.quote(groupbyJql)
+         numberDict[key] = len(groupbyDict[key])
+      # Shorten long jira link by via api
+      shortUrlDict = getShortUrlsFromCacheFile(fileDir=DOWNLOAD_DIR, fileKey=self.jql,
+                                               urlTailDict=urlTailDict)
+      # Generate simple table report
+      messages = []
+      fieldDisplayName = DisplayFields.get(self.groupbyField)
+      messages.append('Count         {0}'.format(fieldDisplayName))
+      messages.append('---------------------------')
+      for indexName, jql in zip(numberDict, urlTailDict):
+         count = numberDict[indexName]
+         shortUrl = shortUrlDict[jql]
+         resultLine = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
+         resultLine += '             '
+         if count < 100:
+            resultLine += '  '
+         if count < 10:
+            resultLine += '  '
+         resultLine += indexName
+         messages.append(resultLine)
+      return messages
+
    def GetReport(self):
       issues = self.GetAllIssues()
       is_empty = (self.totalSize == 0)
@@ -209,8 +272,12 @@ class JiraReport(object):
       if is_empty:
          messages.append("No issues currently.")
          reports = ["\n".join(messages)]
+      elif self.groupbyField != 'none':
+         table = self.GetJiraTable(issues)
+         messages.extend(table)
+         reports = splitOverlengthReport(messages, isContentInCodeBlock=False, enablePagination=False)
       else:
-         jiraLink = "https://jira.eng.vmware.com/issues/?jql={0}".format(parse.quote(self.jql))
+         jiraLink = JIRA_PAGE_URL + parse.quote(self.jql)
          bugCountStr = "One issue found" if 1 == self.totalSize else "{0} issue found".format(self.totalSize)
          if self.totalSize > MAX_TOTAL_RESULT_SIZE:
             bugCountStr += ". This report only show first {0} IDs. Please view more on <{1}|Jira Page>." \
@@ -227,7 +294,8 @@ def parseArgs():
    parser = argparse.ArgumentParser(description='Generate jira report')
    parser.add_argument('--title', type=str, required=True, help='Title of jira report')
    parser.add_argument('--jql', type=str, required=True, help='short link of bugzilla')
-   parser.add_argument('--fields', type=str, required=True, help='display issue details')
+   parser.add_argument('--fields', type=str, required=True, help='display issue list which column named by fields')
+   parser.add_argument('--groupby', type=str, required=True, help='display issue table group by the field')
    parser.add_argument('--creator', type=str, required=True, help='use to replace currentUser() in jql')
    return parser.parse_args()
 

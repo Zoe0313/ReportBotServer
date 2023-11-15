@@ -339,6 +339,12 @@ const ReportConfigurationSchema = new mongoose.Schema({
             required: function(v) {
                return this.reportType === 'jira_list'
             }
+         },
+         groupby: {
+            type: String,
+            required: function(v) {
+               return this.reportType === 'jira_list'
+            }
          }
       }
    },
