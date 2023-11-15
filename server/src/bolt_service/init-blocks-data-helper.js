@@ -305,6 +305,15 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
             FindBlockById(blocks, 'reportSpecConfig.jira.jql')
                .element.initial_value = reportSpecConfig.jira.jql
          }
+         // select a specific field to show issue grouped by it
+         const groupbyFieldBlock = FindBlockById(blocks, 'reportSpecConfig.jira.groupby')
+         const groupby = reportSpecConfig?.jira?.groupby || 'none'
+         const groupbyFieldOption = groupbyFieldBlock.element.options
+            .find(option => option.value === groupby)
+         if (groupbyFieldOption != null) {
+            groupbyFieldBlock.element.initial_option = groupbyFieldOption
+         }
+         // select fields to report more details by list
          let baseFields = []
          let customFields = []
          if (typeof reportSpecConfig?.jira === 'undefined') {

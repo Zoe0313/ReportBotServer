@@ -26,11 +26,65 @@
 		},
 		{
 			"type": "input",
+			"block_id": "reportSpecConfig.jira.groupby",
+			"label": {
+				"type": "plain_text",
+				"text": ":five: Select a field to grouped by"
+			},
+			"dispatch_action": true,
+			"element": {
+				"type": "static_select",
+				"action_id": "action_select_jira_groupby_field",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Groupby Field"
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "None"
+						},
+						"value": "none"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Type"
+						},
+						"value": "issuetype"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Status"
+						},
+						"value": "status"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Assignee"
+						},
+						"value": "assignee"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Priority"
+						},
+						"value": "priority"
+					}
+				]
+			}
+		},
+		{
+			"type": "input",
 			"optional": true,
 			"block_id": "reportSpecConfig.jira.basefields",
 			"label": {
 				"type": "plain_text",
-				"text": ":five: Add JIRA fields to report more details"
+				"text": "Or select fields to report more details by list"
 			},
 			"element": {
 				"type": "checkboxes",
