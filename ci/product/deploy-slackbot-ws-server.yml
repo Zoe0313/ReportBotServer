@@ -37,6 +37,10 @@ spec:
           mountPath: /build/apps
         - name: toolchain-volume
           mountPath: /build/toolchain
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1002
+        fsGroup: 1002
       volumes:
         - name: slackbot-nfs
           nfs:

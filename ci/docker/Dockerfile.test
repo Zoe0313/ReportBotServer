@@ -33,6 +33,13 @@ WORKDIR slackbot
 
 # COPY . .
 
+RUN useradd svc.vsan-er
+RUN groupadd mts
+RUN usermod -d /slackbot svc.vsan-er
+RUN usermod -g mts svc.vsan-er
+RUN chown svc.vsan-er:mts -R /slackbot
+USER svc.vsan-er
+
 WORKDIR server
 
 RUN npm install
