@@ -13,7 +13,7 @@
         "space-before-function-paren": ["off"],
         "no-case-declarations": ["off"],
         "no-unused-vars": ["warn"],
-        "max-len": ["error", { "code": 100, "ignoreTemplateLiterals": true, "ignoreRegExpLiterals": true }],
+        "max-len": ["error", { "code": 100, "ignoreTemplateLiterals": true, "ignoreRegExpLiterals": true, "ignoreComments": true }],
         "eqeqeq": ["error", "smart"],
         "quotes": ["error", "single", { "allowTemplateLiterals": true }],
         "indent": ["error", 3, { "SwitchCase": 1 }]

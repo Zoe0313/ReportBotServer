@@ -12,15 +12,15 @@ spec:
     metadata:
       labels:
         app: slackbot-websocket-server-stage
-        environment: product
+        environment: stage
     spec:
       containers:
       - name: slackbot-websocket-server-stage
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/slackbot-websocket-server-stage:1.1
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/slackbot/stage/slackbot-websocket-server:2.0
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
-          value: slack-bot
+          value: slackbot
         - name: MONGO_PORT
           value: "27017"
         resources:
@@ -37,6 +37,9 @@ spec:
           mountPath: /build/apps
         - name: toolchain-volume
           mountPath: /build/toolchain
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10002
       volumes:
         - name: slackbot-nfs
           nfs:

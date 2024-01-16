@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: slackbot-websocket-server
-        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/slackbot-websocket-server:release-now
+        image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/slackbot-websocket-server:release-vdp
         imagePullPolicy: Always
         env:
         - name: MONGO_DB
@@ -38,9 +38,8 @@ spec:
         - name: toolchain-volume
           mountPath: /build/toolchain
       securityContext:
-        runAsUser: 1001
-        runAsGroup: 1002
-        fsGroup: 1002
+        runAsUser: 10001
+        runAsGroup: 10002
       volumes:
         - name: slackbot-nfs
           nfs:
