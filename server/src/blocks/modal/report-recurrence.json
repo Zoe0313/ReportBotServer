@@ -1,87 +1,87 @@
 {
-   "blocks": [
-      {
-         "type": "divider"
-      },
-      {
-         "type": "header",
-         "text": {
-            "type": "plain_text",
-            "text": "Step 2: Set up the recurrence"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "repeatConfig.repeatType",
-         "label": {
-            "type": "plain_text",
-            "text": ":repeat: Recurrence",
-            "emoji": true
-         },
-         "hint": {
-             "type": "plain_text",
-             "text": "\"Do not repeat\" option is not recommended for nanny reminder reports as it disables the rolling of nanny duty."
-         },
-         "dispatch_action": true,
-         "element": {
-            "type": "static_select",
-            "action_id": "action_repeat_type",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Recurrence type",
-               "emoji": true
-            },
-            "options": [
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Do not repeat",
-                     "emoji": true
-                  },
-                  "value": "not_repeat"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat hourly",
-                     "emoji": true
-                  },
-                  "value": "hourly"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat daily",
-                     "emoji": true
-                  },
-                  "value": "daily"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat weekly",
-                     "emoji": true
-                  },
-                  "value": "weekly"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Repeat monthly",
-                     "emoji": true
-                  },
-                  "value": "monthly"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Cron Expression",
-                     "emoji": true
-                  },
-                  "value": "cron_expression"
-               }
-            ]
-         }
-      }
-   ]
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Step 2: Set up the recurrence"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "repeatConfig.repeatType",
+			"label": {
+				"type": "plain_text",
+				"text": ":repeat: Recurrence",
+				"emoji": true
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "\"Do not repeat\" option is not recommended for nanny reminder reports as it disables the rolling of nanny duty."
+			},
+			"dispatch_action": true,
+			"element": {
+				"type": "static_select",
+				"action_id": "action_repeat_type",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Recurrence type",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Do not repeat",
+							"emoji": true
+						},
+						"value": "not_repeat"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Repeat hourly",
+							"emoji": true
+						},
+						"value": "hourly"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Repeat daily",
+							"emoji": true
+						},
+						"value": "daily"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Repeat weekly",
+							"emoji": true
+						},
+						"value": "weekly"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Repeat monthly",
+							"emoji": true
+						},
+						"value": "monthly"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Cron Expression",
+							"emoji": true
+						},
+						"value": "cron_expression"
+					}
+				]
+			}
+		}
+	]
 }

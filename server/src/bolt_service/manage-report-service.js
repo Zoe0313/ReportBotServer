@@ -427,6 +427,7 @@ export function RegisterManageReportServiceHandler(app) {
             mentionUsers: inputObj.mentionUsers || [],
             mentionGroups: inputObj.mentionGroups || [],
             skipEmptyReport: inputObj.skipEmptyReport || 'No',
+            webhooks: inputObj.webhooks?.split(',') || [],
             reportSpecConfig: {
                perforceCheckIn: {
                   branches: inputObj.reportSpecConfig.perforceCheckIn?.branches

@@ -27,7 +27,7 @@ RUN pip install python-dotenv
 # set perforce environment
 ENV P4PORT ssl:perforce.eng.vmware.com:1666
 
-RUN npm install -g nodemon
+# RUN npm install -g nodemon
 
 WORKDIR slackbot
 

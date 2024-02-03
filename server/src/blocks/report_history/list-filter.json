@@ -1,82 +1,82 @@
 {
-   "blocks": [
-      {
-         "type": "section",
-         "text": {
-            "type": "mrkdwn",
-            "text": "Filter notification history by conditions"
-         },
-         "accessory": {
-            "type": "button",
-            "text": {
-               "type": "plain_text",
-               "text": "Clear Filters"
-            },
-            "action_id": "action_clear_filters"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "block_history_filter_title",
-         "label": {
-            "type": "plain_text",
-            "text": "Search notification title"
-         },
-         "element": {
-            "action_id": "action_filter_by_title",
-            "min_query_length": 1,
-            "type": "multi_external_select",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Top 10 matched titles will be displayed."
-            }
-         }
-      },
-      {
-         "block_id": "block_history_filter_basic",
-         "type": "actions",
-         "elements": [
-            {
-               "type": "conversations_select",
-               "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select conversation",
-                  "emoji": true
-               },
-               "filter": {
-                  "exclude_external_shared_channels": true,
-                  "exclude_bot_users": true
-               },
-               "action_id": "action_filter_by_conversation"
-            }
-         ]
-      },
-      {
-         "block_id": "block_history_filter_date",
-         "type": "actions",
-         "elements": [
-            {
-               "type": "datepicker",
-               "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select start sent time",
-                  "emoji": true
-               },
-               "action_id": "action_filter_by_start_date"
-            },
-            {
-               "type": "datepicker",
-               "placeholder": {
-                  "type": "plain_text",
-                  "text": "Select end sent time",
-                  "emoji": true
-               },
-               "action_id": "action_filter_by_end_date"
-            }
-         ]
-      },
-      {
-         "type": "divider"
-      }
-   ]
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Filter notification history by conditions"
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": "Clear Filters"
+				},
+				"action_id": "action_clear_filters"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "block_history_filter_title",
+			"label": {
+				"type": "plain_text",
+				"text": "Search notification title"
+			},
+			"element": {
+				"action_id": "action_filter_by_title",
+				"min_query_length": 1,
+				"type": "multi_external_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Top 10 matched titles will be displayed."
+				}
+			}
+		},
+		{
+			"block_id": "block_history_filter_basic",
+			"type": "actions",
+			"elements": [
+				{
+					"type": "conversations_select",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select conversation",
+						"emoji": true
+					},
+					"filter": {
+						"exclude_external_shared_channels": true,
+						"exclude_bot_users": true
+					},
+					"action_id": "action_filter_by_conversation"
+				}
+			]
+		},
+		{
+			"block_id": "block_history_filter_date",
+			"type": "actions",
+			"elements": [
+				{
+					"type": "datepicker",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select start sent time",
+						"emoji": true
+					},
+					"action_id": "action_filter_by_start_date"
+				},
+				{
+					"type": "datepicker",
+					"placeholder": {
+						"type": "plain_text",
+						"text": "Select end sent time",
+						"emoji": true
+					},
+					"action_id": "action_filter_by_end_date"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		}
+	]
 }

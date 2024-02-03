@@ -1,35 +1,35 @@
 {
-   "blocks": [
-      {
-         "type": "header",
-         "text": {
-            "type": "plain_text",
-            "text": "Cron expression setting"
-         }
-      },
-      {
-         "block_id": "repeatConfig.cronExpression",
-         "type": "input",
-         "element": {
-            "type": "plain_text_input",
-            "action_id": "action_cron_expression",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "E.g. 30 14 * * 2, it means 14:30PM on every Tueday"
-            }
-         },
-         "label": {
-            "type": "plain_text",
-            "text": "Enter the crontab expression",
-            "emoji": true
-         }
-      },
-      {
-         "type": "section",
-         "text": {
-            "type": "mrkdwn",
-            "text": "<https://crontab.guru.com/|Quick and simple editor for cron schedule expressions>"
-         }
-      }
-   ]
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Cron expression setting"
+			}
+		},
+		{
+			"block_id": "repeatConfig.cronExpression",
+			"type": "input",
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "action_cron_expression",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "E.g. 30 14 * * 2, it means 14:30PM on every Tueday"
+				}
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Enter the crontab expression",
+				"emoji": true
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "<https://crontab.guru.com/|Quick and simple editor for cron schedule expressions>"
+			}
+		}
+	]
 }

@@ -347,6 +347,7 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
    const oldAdvancedOptionBlock = FindBlockById(view?.blocks || [], 'advancedOptions')
    const isAdvancedOptionInitOpen =
       report.mentionUsers?.length > 0 || report.mentionGroups?.length > 0 ||
+      report.webhooks?.length > 0 ||
       (report.skipEmptyReport === 'Yes' && (report.reportType === 'bugzilla' ||
       report.reportType === 'bugzilla_by_assignee' || report.reportType === 'perforce_checkin'))
 
@@ -356,6 +357,14 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
       }
       if (report.mentionGroups?.length > 0) {
          FindBlockById(blocks, 'mentionGroups').element.initial_options = report.mentionGroups
+      }
+      if (report.webhooks?.length > 0) {
+         if (Array.isArray(report.webhooks)) {
+            logger.info(report.webhooks)
+            FindBlockById(blocks, 'webhooks').element.initial_value = report.webhooks.join(',')
+         } else if (typeof (report.webhooks) === 'string') {
+            FindBlockById(blocks, 'webhooks').element.initial_value = report.webhooks
+         }
       }
       if (report.reportType === 'bugzilla' || report.reportType === 'bugzilla_by_assignee' ||
          report.reportType === 'perforce_checkin' || report.reportType === 'jira_list') {

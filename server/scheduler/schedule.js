@@ -60,6 +60,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       const sendConversations = Array.from(new Set(report.conversations?.concat(
          adminChannelIDs || []) || []))
       logger.debug(`Send conversations: ${sendConversations}`)
+
       reportHistory = new ReportHistory({
          reportConfigId: report._id,
          title: report.title,
@@ -88,7 +89,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
          return
       }
       // post reports to slack channels
-      const results = await Promise.all(
+      const slackResults = await Promise.all(
          sendConversations.map(conversation => {
             return AsyncForEach(messages, async message => {
                return await client.chat.postMessage({
@@ -102,11 +103,42 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
             })
          })
       )
+
+      const sendWebhooks = Array.from(report.webhooks || [])
+      if (sendWebhooks.length > 0) {
+         logger.debug(`Send with the webhooks ${sendWebhooks}`)
+         const webhookResults = await Promise.all(
+            sendWebhooks.map(webhook => {
+               return AsyncForEach(messages, async message => {
+                  const appMessage = { text: message }
+                  const messageHeaders = {
+                     'Content-Type': 'application/json; charset=UTF-8'
+                  }
+                  return await fetch(webhook, {
+                     method: 'POST',
+                     headers: messageHeaders,
+                     body: JSON.stringify(appMessage)
+                  }).catch((e) => {
+                     logger.error(`failed to post message to webhook ${webhook}` +
+                         `since error: ${JSON.stringify(e)}`)
+                     const errorMessage = `Failed to send the report for webhook ${webhook}` +
+                        ` as the ${JSON.stringify(e)} error`
+                     client.chat.postMessage({
+                        channel: process.env.ISSUE_CHANNEL_ID,
+                        text: errorMessage
+                     })
+                     return null
+                  })
+               })
+            })
+         )
+         logger.debug(`Webhook results ${webhookResults}`)
+      }
       // update status and content of report history
       reportHistory.sentTime = new Date()
 
       const tsMap = Object.fromEntries(
-         results.filter(result => {
+         slackResults.filter(result => {
             return result != null
          }).map(result => {
             return [result.channel, result.ts]

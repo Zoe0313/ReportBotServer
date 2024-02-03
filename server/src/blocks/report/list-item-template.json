@@ -1,21 +1,21 @@
 {
-   "blocks": [
-      {
-         "type": "section",
-         "text": {
-            "type": "mrkdwn",
-            "text": "*View notification detail*\n"
-         },
-         "accessory": {
-            "type": "button",
-            "text": {
-               "type": "plain_text",
-               "emoji": true,
-               "text": "view"
-            },
-            "value": "1",
-            "action_id": "action_choose_report_item"
-         }
-      }
-   ]
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*View notification detail*\n"
+			},
+			"accessory": {
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"emoji": true,
+					"text": "view"
+				},
+				"value": "1",
+				"action_id": "action_choose_report_item"
+			}
+		}
+	]
 }

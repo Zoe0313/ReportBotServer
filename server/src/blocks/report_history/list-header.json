@@ -1,21 +1,21 @@
 {
-   "blocks": [
-      {
-         "type": "header",
-         "text": {
-            "type": "plain_text",
-            "text": "There are *10 notification send histories* in your account."
-         }
-      },
-      {
-         "type": "section",
-         "text": {
-            "type": "mrkdwn",
-            "text": "(Only the latest 500 histories are displayed.)"
-         }
-      },
-      {
-         "type": "divider"
-      }
-   ]
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "There are *10 notification send histories* in your account."
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "(Only the latest 500 histories are displayed.)"
+			}
+		},
+		{
+			"type": "divider"
+		}
+	]
 }

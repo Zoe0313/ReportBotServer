@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 import logger from './logger.js'
 
 async function ConnectMongoDatabase(openFn) {
-   const mongodbUri = `mongodb://${process.env.MONGO_ACCOUNT}:${process.env.MONGO_PASSWORD}@` +
+   const mongodbUri = `mongodb://${process.env.MONGO_ACCOUNT === '' ? '' : process.env.MONGO_ACCOUNT + ':' + process.env.MONGO_PASSWORD + '@'}` +
       `${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`
    mongoose.connect(mongodbUri,
       { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true }
