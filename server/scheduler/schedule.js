@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'
+import axios from 'axios'
 import schedule from 'node-schedule'
 import { ReportHistory, REPORT_HISTORY_STATUS } from '../src/model/report-history.js'
 import {
@@ -114,11 +115,15 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
                   const messageHeaders = {
                      'Content-Type': 'application/json; charset=UTF-8'
                   }
-                  return await fetch(webhook, {
-                     method: 'POST',
-                     headers: messageHeaders,
-                     body: JSON.stringify(appMessage)
-                  }).catch((e) => {
+                  try {
+                     const response = await axios.post(
+                        webhook,
+                        JSON.stringify(appMessage),
+                        { headers: messageHeaders }
+                     )
+                     logger.debug(JSON.stringify(response.data))
+                     return response.data
+                  } catch (e) {
                      logger.error(`failed to post message to webhook ${webhook}` +
                          `since error: ${JSON.stringify(e)}`)
                      const errorMessage = `Failed to send the report for webhook ${webhook}` +
@@ -128,11 +133,10 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
                         text: errorMessage
                      })
                      return null
-                  })
+                  }
                })
             })
          )
-         logger.debug(`Webhook results ${webhookResults}`)
       }
       // update status and content of report history
       reportHistory.sentTime = new Date()

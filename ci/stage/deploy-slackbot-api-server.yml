@@ -37,7 +37,7 @@ metadata:
     app: slackbot-api-server-stage
 spec:
   rules:
-    - host: slackbot.ara.decc.vmware.com
+    - host: slackbot.vdp.oc.vmware.com
       http:
         paths:
         - path: /
