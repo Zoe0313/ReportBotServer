@@ -92,6 +92,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
       },
       enum: YES_OR_NO_ENUM
    },
+   webhooks: [String],
    reportSpecConfig: {
       bugzillaLink: {
          type: String,
@@ -486,7 +487,7 @@ const GetDirectReporters = async (members) => {
             }
          }
       }
-      return axios.post('https://ldap-data.ara.decc.vmware.com/ldap/_search', body)
+      return axios.post('https://ldap-data.vdp.oc.vmware.com/ldap/_search', body)
          .then(res => {
             // avoid someone report to himself in case causing endless loop
             return res.data.hits?.hits?.map(hit => hit._source.username)

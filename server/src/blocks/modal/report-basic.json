@@ -1,130 +1,134 @@
 {
-   "blocks": [
-      {
-         "type": "divider"
-      },
-      {
-         "type": "header",
-         "text": {
-            "type": "plain_text",
-            "text": "Step 1: Configuration for your new notification :relaxed:"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "reportType",
-         "label": {
-            "type": "plain_text",
-            "text": ":one: Select notification type"
-         },
-         "dispatch_action": true,
-         "element": {
-            "type": "static_select",
-            "action_id": "action_report_type",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Notification type",
-               "emoji": true
-            },
-            "options": [
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Bugzilla report",
-                     "emoji": true
-                  },
-                  "value": "bugzilla"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Bugzilla report by assignee",
-                     "emoji": true
-                  },
-                  "value": "bugzilla_by_assignee"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Perforce branch checkin report",
-                     "emoji": true
-                  },
-                  "value": "perforce_checkin"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "JIRA list report",
-                     "emoji": true
-                  },
-                  "value": "jira_list"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Perforce review check report",
-                     "emoji": true
-                  },
-                  "value": "perforce_review_check"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Nanny reminder",
-                     "emoji": true
-                  },
-                  "value": "nanny_reminder"
-               },
-               {
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Plain text",
-                     "emoji": true
-                  },
-                  "value": "text"
-               }
-            ]
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "conversations",
-         "label": {
-            "type": "plain_text",
-            "text": ":two: Select multiple channels or direct messages to be sent"
-         },
-         "element": {
-            "type": "multi_conversations_select",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Conversations (public channel, private channel or direct message)",
-               "emoji": true
-            },
-            "filter": {
-               "include": ["im", "private", "public", "mpim"],
-               "exclude_external_shared_channels": true,
-               "exclude_bot_users": true
-            },
-            "action_id": "action_conversation"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "title",
-
-         "element": {
-            "type": "plain_text_input",
-            "placeholder": {
-               "text": "E.g. vSAN product bugs report",
-               "type": "plain_text"
-            },
-            "action_id": "action_title"
-         },
-         "label": {
-            "type": "plain_text",
-            "text": ":three: Input a title for new notification",
-            "emoji": true
-         }
-      }
-   ]
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Step 1: Configuration for your new notification :relaxed:"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "reportType",
+			"label": {
+				"type": "plain_text",
+				"text": ":one: Select notification type"
+			},
+			"dispatch_action": true,
+			"element": {
+				"type": "static_select",
+				"action_id": "action_report_type",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Notification type",
+					"emoji": true
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Bugzilla report",
+							"emoji": true
+						},
+						"value": "bugzilla"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Bugzilla report by assignee",
+							"emoji": true
+						},
+						"value": "bugzilla_by_assignee"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Perforce branch checkin report",
+							"emoji": true
+						},
+						"value": "perforce_checkin"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "JIRA list report",
+							"emoji": true
+						},
+						"value": "jira_list"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Perforce review check report",
+							"emoji": true
+						},
+						"value": "perforce_review_check"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Nanny reminder",
+							"emoji": true
+						},
+						"value": "nanny_reminder"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Plain text",
+							"emoji": true
+						},
+						"value": "text"
+					}
+				]
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "conversations",
+			"label": {
+				"type": "plain_text",
+				"text": ":two: Select multiple channels or direct messages to be sent"
+			},
+			"element": {
+				"type": "multi_conversations_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Conversations (public channel, private channel or direct message)",
+					"emoji": true
+				},
+				"filter": {
+					"include": [
+						"im",
+						"private",
+						"public",
+						"mpim"
+					],
+					"exclude_external_shared_channels": true,
+					"exclude_bot_users": true
+				},
+				"action_id": "action_conversation"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "title",
+			"element": {
+				"type": "plain_text_input",
+				"placeholder": {
+					"text": "E.g. vSAN product bugs report",
+					"type": "plain_text"
+				},
+				"action_id": "action_title"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":three: Input a title for new notification",
+				"emoji": true
+			}
+		}
+	]
 }

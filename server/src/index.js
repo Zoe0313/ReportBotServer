@@ -29,14 +29,14 @@ ConnectMongoDatabase(async () => {
    logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)
    const updateTeamGroupJob = RegisterTeamGroupScheduler()
    logger.info(`next invocation of team group members update is ${updateTeamGroupJob.nextInvocation()}`)
-   const updateVSANNannyJob = RegisterVSANNannyScheduler()
-   logger.info(`next invocation of vSAN nanny list update is ${updateVSANNannyJob.nextInvocation()}`)
+   // const updateVSANNannyJob = RegisterVSANNannyScheduler()
+   // logger.info(`next invocation of vSAN nanny list update is ${updateVSANNannyJob.nextInvocation()}`)
    if (process.env.NODE_ENV !== 'development') {
       updatePerforceInfoJob.invoke()
       updateTeamGroupJob.invoke()
-      updateVSANNannyJob.invoke()
+      // updateVSANNannyJob.invoke()
    } else {
-      updateVSANNannyJob.invoke()// cache vsan-nanny.csv
+      // updateVSANNannyJob.invoke()// cache vsan-nanny.csv
    }
 })
 

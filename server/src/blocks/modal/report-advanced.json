@@ -1,11 +1,11 @@
 {
-   "blocks": [
-      {
-         "type": "divider"
-      },
-      {
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
 			"type": "section",
-         "block_id":"advancedOptions",
+			"block_id": "advancedOptions",
 			"text": {
 				"type": "mrkdwn",
 				"text": "*Click the button to open advanced options*"
@@ -18,33 +18,33 @@
 					"emoji": true
 				},
 				"value": "open",
-            "style": "primary",
+				"style": "primary",
 				"action_id": "action_advanced_options"
 			}
 		},
-      {
-         "type": "input",
-         "block_id": "mentionUsers",
-         "optional": true,
-         "element": {
-            "type": "multi_users_select",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Users to be mentioned",
-               "emoji": true
-            },
-            "action_id": "action_report_users"
-         },
-         "label": {
-            "type": "plain_text",
-            "text": "Select users you want to mention in the selected channels",
-            "emoji": true
-         }
-      },
+		{
+			"type": "input",
+			"block_id": "mentionUsers",
+			"optional": true,
+			"element": {
+				"type": "multi_users_select",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Users to be mentioned",
+					"emoji": true
+				},
+				"action_id": "action_report_users"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": "Select users you want to mention in the selected channels",
+				"emoji": true
+			}
+		},
 		{
 			"type": "input",
 			"block_id": "mentionGroups",
-         "optional": true,
+			"optional": true,
 			"label": {
 				"type": "plain_text",
 				"text": "Team groups to be mentioned"
@@ -59,41 +59,58 @@
 					"emoji": true
 				}
 			}
-	  },
-	  {
-		 "type": "input",
-		 "block_id": "skipEmptyReport",
-		 "label": {
-		    "type": "plain_text",
-			"text": "Skip report if no bug/change found"
-		 },
-		 "dispatch_action": true,
-		 "element": {
-			"type": "static_select",
-			"action_id": "action_skip_empty_report",
-			"placeholder": {
-			   "type": "plain_text",
-			   "text": "If choose Yes, you won’t receive report when no bug/change."
+		},
+		{
+			"type": "input",
+			"block_id": "skipEmptyReport",
+			"label": {
+				"type": "plain_text",
+				"text": "Skip report if no bug/change found"
 			},
-			"options": [
-			   {
-				  "text": {
-				     "type": "plain_text",
-					 "text": "Yes",
-					 "emoji": true
-				  },
-				  "value": "Yes"
-			   },
-			   {
-				  "text": {
-					 "type": "plain_text",
-					 "text": "No",
-					 "emoji": true
-				  },
-				  "value": "No"
-			   }
-			]
-		 }
-	  }
-   ]
+			"dispatch_action": true,
+			"element": {
+				"type": "static_select",
+				"action_id": "action_skip_empty_report",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "If choose Yes, you won’t receive report when no bug/change."
+				},
+				"options": [
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "Yes",
+							"emoji": true
+						},
+						"value": "Yes"
+					},
+					{
+						"text": {
+							"type": "plain_text",
+							"text": "No",
+							"emoji": true
+						},
+						"value": "No"
+					}
+				]
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "webhooks",
+			"optional": true,
+			"label": {
+				"type": "plain_text",
+				"text": "Input webhook url for external report"
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "Please use format: webhook1, webhook2"
+			},
+			"element": {
+				"type": "plain_text_input",
+				"action_id": "plain_text_input-action"
+			}
+		}
+	]
 }

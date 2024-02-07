@@ -1,16 +1,16 @@
 {
-   "blocks": [
-      {
-         "type": "divider"
-      },
-      {
-         "type": "section",
-         "block_id": "block_list_detail_title",
-         "text": {
-            "type": "mrkdwn",
-            "text": "*Title*"
-         },
-         "accessory": {
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"block_id": "block_list_detail_title",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Title*"
+			},
+			"accessory": {
 				"type": "overflow",
 				"options": [
 					{
@@ -29,161 +29,161 @@
 						},
 						"value": "cancel_next"
 					}
-            ],
-            "action_id": "action_report_more_actions"
-         }
-      },
-      {
-         "type": "section",
-         "fields": [
-            {
-               "type": "mrkdwn",
-               "text": "*Nofitication Type: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Status: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Conversation: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Mention Users/Groups: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Start Date: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*End Date: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Recurrence: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Next Sending Time: *\n"
-            }
-         ]
-      },
-      {
-         "type": "actions",
-         "block_id": "block_list_detail_actions",
-         "elements": [
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "emoji": true,
-                  "text": "Edit"
-               },
-               "style": "primary",
-               "value": "edit",
-               "action_id": "action_edit_report"
-            },
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "emoji": true,
-                  "text": "Remove"
-               },
-               "style": "danger",
-               "value": "remove",
-               "action_id": "action_remove_report"
-            },
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "emoji": true,
-                  "text": ":white_check_mark: Enable"
-               },
-               "value": "ENABLED",
-               "action_id": "action_change_report_status",
-               "confirm": {
-                  "title": {
-                     "type": "plain_text",
-                     "text": "Enable notification"
-                  },
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Are you sure enable this notification? If you enable it, the notification will be sent at the recurrence setting."
-                  },
-                  "confirm": {
-                     "type": "plain_text",
-                     "text": "Confirm"
-                  },
-                  "deny": {
-                     "type": "plain_text",
-                     "text": "Close"
-                  }
-               }
-            },
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "emoji": true,
-                  "text": ":black_square_for_stop: Disable"
-               },
-               "value": "DISABLED",
-               "action_id": "action_change_report_status",
-               "confirm": {
-                  "title": {
-                     "type": "plain_text",
-                     "text": "Disable notification"
-                  },
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Are you sure disable this notification? If you disable it, this notification will not be sent."
-                  },
-                  "confirm": {
-                     "type": "plain_text",
-                     "text": "Confirm"
-                  },
-                  "deny": {
-                     "type": "plain_text",
-                     "text": "Close"
-                  }
-               }
-            },
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "text": "Send Notification to Me Now",
-                  "emoji": true
-               },
-               "value": "invoke_to_me_now",
-               "action_id": "action_invoke_to_me_now",
-               "confirm": {
-                  "title": {
-                     "type": "plain_text",
-                     "text": "Send the notification to me immediately"
-                  },
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Are you sure send this notification to you for test? It will not be sent to the channels."
-                  },
-                  "confirm": {
-                     "type": "plain_text",
-                     "text": "Confirm"
-                  },
-                  "deny": {
-                     "type": "plain_text",
-                     "text": "Close"
-                  }
-               }
-            }
-         ]
-      },
-      {
-         "type": "divider"
-      }
-   ]
+				],
+				"action_id": "action_report_more_actions"
+			}
+		},
+		{
+			"type": "section",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Nofitication Type: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Status: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Conversation: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Mention Users/Groups: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Start Date: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*End Date: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Recurrence: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Next Sending Time: *\n"
+				}
+			]
+		},
+		{
+			"type": "actions",
+			"block_id": "block_list_detail_actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": "Edit"
+					},
+					"style": "primary",
+					"value": "edit",
+					"action_id": "action_edit_report"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": "Remove"
+					},
+					"style": "danger",
+					"value": "remove",
+					"action_id": "action_remove_report"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": ":white_check_mark: Enable"
+					},
+					"value": "ENABLED",
+					"action_id": "action_change_report_status",
+					"confirm": {
+						"title": {
+							"type": "plain_text",
+							"text": "Enable notification"
+						},
+						"text": {
+							"type": "plain_text",
+							"text": "Are you sure enable this notification? If you enable it, the notification will be sent at the recurrence setting."
+						},
+						"confirm": {
+							"type": "plain_text",
+							"text": "Confirm"
+						},
+						"deny": {
+							"type": "plain_text",
+							"text": "Close"
+						}
+					}
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": ":black_square_for_stop: Disable"
+					},
+					"value": "DISABLED",
+					"action_id": "action_change_report_status",
+					"confirm": {
+						"title": {
+							"type": "plain_text",
+							"text": "Disable notification"
+						},
+						"text": {
+							"type": "plain_text",
+							"text": "Are you sure disable this notification? If you disable it, this notification will not be sent."
+						},
+						"confirm": {
+							"type": "plain_text",
+							"text": "Confirm"
+						},
+						"deny": {
+							"type": "plain_text",
+							"text": "Close"
+						}
+					}
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Send Notification to Me Now",
+						"emoji": true
+					},
+					"value": "invoke_to_me_now",
+					"action_id": "action_invoke_to_me_now",
+					"confirm": {
+						"title": {
+							"type": "plain_text",
+							"text": "Send the notification to me immediately"
+						},
+						"text": {
+							"type": "plain_text",
+							"text": "Are you sure send this notification to you for test? It will not be sent to the channels."
+						},
+						"confirm": {
+							"type": "plain_text",
+							"text": "Confirm"
+						},
+						"deny": {
+							"type": "plain_text",
+							"text": "Close"
+						}
+					}
+				}
+			]
+		},
+		{
+			"type": "divider"
+		}
+	]
 }

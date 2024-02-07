@@ -1,52 +1,52 @@
 {
-   "blocks": [
-      {
-         "type": "divider"
-      },
-      {
-         "type": "header",
-         "text": {
-            "type": "plain_text",
-            "text": "Step 3: Set up the effective time"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "repeatConfig.startDate",
-         "optional": true,
-         "label": {
-            "type": "plain_text",
-            "text": ":arrow_forward: Start date",
-            "emoji": true
-         },
-         "element": {
-            "type": "datepicker",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Select a date",
-               "emoji": true
-            },
-            "action_id": "action_start_date"
-         }
-      },
-      {
-         "type": "input",
-         "block_id": "repeatConfig.endDate",
-         "optional": true,
-         "label": {
-            "type": "plain_text",
-            "text": ":black_square_for_stop: End date",
-            "emoji": true
-         },
-         "element": {
-            "type": "datepicker",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "Select a date",
-               "emoji": true
-            },
-            "action_id": "action_end_date"
-         }
-      }
-   ]
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Step 3: Set up the effective time"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "repeatConfig.startDate",
+			"optional": true,
+			"label": {
+				"type": "plain_text",
+				"text": ":arrow_forward: Start date",
+				"emoji": true
+			},
+			"element": {
+				"type": "datepicker",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select a date",
+					"emoji": true
+				},
+				"action_id": "action_start_date"
+			}
+		},
+		{
+			"type": "input",
+			"block_id": "repeatConfig.endDate",
+			"optional": true,
+			"label": {
+				"type": "plain_text",
+				"text": ":black_square_for_stop: End date",
+				"emoji": true
+			},
+			"element": {
+				"type": "datepicker",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "Select a date",
+					"emoji": true
+				},
+				"action_id": "action_end_date"
+			}
+		}
+	]
 }

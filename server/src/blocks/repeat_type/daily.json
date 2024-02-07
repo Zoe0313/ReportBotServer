@@ -1,34 +1,34 @@
 {
-   "blocks": [
-      {
-         "type": "header",
-         "text": {
-            "type": "plain_text",
-            "text": "Daily notification additional setting"
-         }
-      },
-      {
-         "block_id": "repeatConfig.time",
-         "type": "input",
-         "label": {
-            "type": "plain_text",
-            "text": ":clock2: Send the notification every:",
-            "emoji": true
-         },
-         "hint": {
-            "type": "plain_text",
-            "text": "You can choose a time or input a specific time directly, e.g. 14:25"
-         },
-         "element": {
-            "type": "timepicker",
-            "initial_time": "08:00",
-            "placeholder": {
-               "type": "plain_text",
-               "text": "time setting",
-               "emoji": true
-            },
-            "action_id": "action_time"
-         }
-      }
-   ]
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "Daily notification additional setting"
+			}
+		},
+		{
+			"block_id": "repeatConfig.time",
+			"type": "input",
+			"label": {
+				"type": "plain_text",
+				"text": ":clock2: Send the notification every:",
+				"emoji": true
+			},
+			"hint": {
+				"type": "plain_text",
+				"text": "You can choose a time or input a specific time directly, e.g. 14:25"
+			},
+			"element": {
+				"type": "timepicker",
+				"initial_time": "08:00",
+				"placeholder": {
+					"type": "plain_text",
+					"text": "time setting",
+					"emoji": true
+				},
+				"action_id": "action_time"
+			}
+		}
+	]
 }

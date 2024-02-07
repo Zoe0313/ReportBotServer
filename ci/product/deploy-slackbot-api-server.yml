@@ -1,53 +1,3 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: slackbot-api-server
-  labels:
-    app.name: slackbot-api-server
-  annotations:
-    service.beta.kubernetes.io/decc-load-balancer-hostname: slackbot.vela.decc.vmware.com
-    service.beta.kubernetes.io/decc-load-balancer-https-backend-ports: "443"
-    service.beta.kubernetes.io/decc-load-balancer-https-redirection-ports: "80:443"
-spec:
-  type: LoadBalancer
-  selector:
-    app.name: slackbot-api-server
-  ports:
-  - protocol: TCP
-    port: 443
-    targetPort: 443
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: slackbot-api-server-80
-spec:
-  selector:
-    app.name: slackbot-api-server
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 443
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: slackbot-api-server
-  labels:
-    app: slackbot-api-server
-spec:
-  rules:
-    - host: slackbot.vela.decc.vmware.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: slackbot-api-server
-              port:
-                number: 443
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -78,10 +28,10 @@ spec:
             - name: MONGO_PORT
               value: "27017"
             - name: PORT
-              value: "443"
+              value: "4433"
           imagePullPolicy: Always
           ports:
-            - containerPort: 443
+            - containerPort: 4433
           volumeMounts:
           - name: slackbot-nfs
             mountPath: /slackbot/persist
@@ -92,6 +42,10 @@ spec:
             limits:
               memory: "500Mi"
               cpu: "200m"
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10002
+        fsGroup: 10002
       volumes:
         - name: slackbot-nfs
           nfs:
@@ -100,3 +54,37 @@ spec:
       dnsConfig:
         searches:
           - eng.vmware.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slackbot-api-server
+  labels:
+    app.name: slackbot-api-server
+spec:
+  selector:
+    app.name: slackbot-api-server
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 4433
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: slackbot-api-server
+  annotations:
+    kubernetes.io/ingress.class: "vdp-contour-int"
+spec:
+  virtualhost:
+    # the original host is slackbot.vela.decc.vmware.com
+    # Domain vdp.oc.vmware.com only works for Production!
+    fqdn: slackbot.vdp.oc.vmware.com
+    tls:
+      secretName: infra-system/vdp-int-domain-tls
+  routes:
+    - conditions:
+        - prefix: /
+      services:
+        - name: slackbot-api-server
+          port: 443

@@ -28,8 +28,8 @@ spec:
             memory: "200Mi"
             cpu: "100m"
           limits:
-            memory: "500Mi"
-            cpu: "200m"
+            memory: "1000Mi"
+            cpu: "400m"
         volumeMounts:
         - name: slackbot-nfs
           mountPath: /slackbot/persist
@@ -37,6 +37,9 @@ spec:
           mountPath: /build/apps
         - name: toolchain-volume
           mountPath: /build/toolchain
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10002
       volumes:
         - name: slackbot-nfs
           nfs:

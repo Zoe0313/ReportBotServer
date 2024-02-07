@@ -1,83 +1,83 @@
 {
-   "blocks": [
-      {
-         "type": "divider"
-      },
-      {
-         "type": "section",
-         "block_id": "block_report_history_details",
-         "fields": [
-            {
-               "type": "mrkdwn",
-               "text": "*Title: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Status: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Notification Type: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Sent Time: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Conversation: *\n"
-            },
-            {
-               "type": "mrkdwn",
-               "text": "*Mention Users: *\n"
-            }
-         ]
-      },
-      {
-         "type": "section",
-         "block_id": "block_report_history_content",
-         "text": {
-            "type": "mrkdwn",
-            "text": "*Content: *\n"
-         }
-      },
-      {
-         "type": "actions",
-         "block_id": "block_report_history_actions",
-         "elements": [
-            {
-               "type": "button",
-               "text": {
-                  "type": "plain_text",
-                  "emoji": true,
-                  "text": "Delete"
-               },
-               "style": "danger",
-               "value": "DELETE",
-               "action_id": "action_delete_report_message",
-               "confirm": {
-                  "title": {
-                     "type": "plain_text",
-                     "text": "Delete report message"
-                  },
-                  "text": {
-                     "type": "plain_text",
-                     "text": "Are you sure delete this notification message sent in the slack conversations? If you delete, you will not see this notification message in that conversations."
-                  },
-                  "confirm": {
-                     "type": "plain_text",
-                     "text": "Confirm"
-                  },
-                  "deny": {
-                     "type": "plain_text",
-                     "text": "Close"
-                  }
-               }
-            }
-         ]
-      },
-      {
-         "type": "divider"
-      }
-   ]
+	"blocks": [
+		{
+			"type": "divider"
+		},
+		{
+			"type": "section",
+			"block_id": "block_report_history_details",
+			"fields": [
+				{
+					"type": "mrkdwn",
+					"text": "*Title: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Status: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Notification Type: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Sent Time: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Conversation: *\n"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "*Mention Users: *\n"
+				}
+			]
+		},
+		{
+			"type": "section",
+			"block_id": "block_report_history_content",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*Content: *\n"
+			}
+		},
+		{
+			"type": "actions",
+			"block_id": "block_report_history_actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": "Delete"
+					},
+					"style": "danger",
+					"value": "DELETE",
+					"action_id": "action_delete_report_message",
+					"confirm": {
+						"title": {
+							"type": "plain_text",
+							"text": "Delete report message"
+						},
+						"text": {
+							"type": "plain_text",
+							"text": "Are you sure delete this notification message sent in the slack conversations? If you delete, you will not see this notification message in that conversations."
+						},
+						"confirm": {
+							"type": "plain_text",
+							"text": "Confirm"
+						},
+						"deny": {
+							"type": "plain_text",
+							"text": "Close"
+						}
+					}
+				}
+			]
+		},
+		{
+			"type": "divider"
+		}
+	]
 }
