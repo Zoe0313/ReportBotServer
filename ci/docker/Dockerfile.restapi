@@ -12,8 +12,10 @@ WORKDIR slackbot
 
 COPY . .
 
-RUN useradd svc.vsan-er
-RUN groupadd mts
+# Non-root application running on VDP cluster.
+# Add uid and gid.
+RUN useradd -u 10001 svc.vsan-er
+RUN groupadd -g 10002 mts
 RUN usermod -d /slackbot svc.vsan-er
 RUN usermod -g mts svc.vsan-er
 RUN chown svc.vsan-er:mts -R /slackbot
@@ -23,6 +25,6 @@ WORKDIR server
 
 RUN npm install && cp .env.product .env
 
-EXPOSE 443
+EXPOSE 4433
 
 CMD [ "npm", "run", "start:api:prod" ]

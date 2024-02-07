@@ -28,10 +28,10 @@ spec:
             - name: MONGO_PORT
               value: "27017"
             - name: PORT
-              value: "443"
+              value: "4433"
           imagePullPolicy: Always
           ports:
-            - containerPort: 443
+            - containerPort: 4433
           volumeMounts:
           - name: slackbot-nfs
             mountPath: /slackbot/persist
@@ -43,9 +43,9 @@ spec:
               memory: "500Mi"
               cpu: "200m"
       securityContext:
-        runAsUser: 1001
-        runAsGroup: 1002
-        fsGroup: 1002
+        runAsUser: 10001
+        runAsGroup: 10002
+        fsGroup: 10002
       volumes:
         - name: slackbot-nfs
           nfs:
@@ -66,8 +66,8 @@ spec:
     app.name: slackbot-api-server
   ports:
   - protocol: TCP
-    port: 80
-    targetPort: 443
+    port: 443
+    targetPort: 4433
 ---
 apiVersion: projectcontour.io/v1
 kind: HTTPProxy
@@ -78,8 +78,8 @@ metadata:
 spec:
   virtualhost:
     # the original host is slackbot.vela.decc.vmware.com
-    # vdp-prd.oc.vmware.com only works for Production!
-    fqdn: slackbot-api-server.vdp-prd.oc.vmware.com
+    # Domain vdp.oc.vmware.com only works for Production!
+    fqdn: slackbot.vdp.oc.vmware.com
     tls:
       secretName: infra-system/vdp-int-domain-tls
   routes:
@@ -87,4 +87,4 @@ spec:
         - prefix: /
       services:
         - name: slackbot-api-server
-          port: 80
+          port: 443

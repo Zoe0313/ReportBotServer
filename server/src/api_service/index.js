@@ -49,4 +49,4 @@ const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
 console.log(swaggerPath)
 app.use(mount('/api/v1/', serve(swaggerPath)))
 
-http.createServer(serverCallback).listen(process.env.API_PORT || 443)
+http.createServer(serverCallback).listen(process.env.API_PORT || 4433)
