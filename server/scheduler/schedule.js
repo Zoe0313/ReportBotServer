@@ -9,7 +9,8 @@ import { UpdateP4Branches } from '../src/model/perforce-info.js'
 import { UpdateTeamGroup } from '../src/model/team-group.js'
 import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
 import {
-   GetConversationsName, GetUsersName, VerifyBotInChannel
+   GetConversationsName, GetUsersName, VerifyBotInChannel,
+   VMwareId2GoogleChatUserId
 } from '../common/slack-helper.js'
 import { FindUserInfoByName } from '../src/model/user-info.js'
 import logger from '../common/logger.js'
@@ -77,13 +78,13 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
 
       // 10 mins timeout
       const messageInfo = await ContentEvaluate(report)
-      const messages = messageInfo.messages
+      const slackMessages = messageInfo.slackMessages
       logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messageInfo)}`)
 
       const isSkipEmptyReport = report.skipEmptyReport
       if (isSkipEmptyReport === 'Yes' && messageInfo.isEmpty === true) {
          logger.info(`The option of skip empty report is ${isSkipEmptyReport} `)
-         reportHistory.content = JSON.stringify(messages[0])
+         reportHistory.content = JSON.stringify(slackMessages[0])
          reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
          reportHistory.sentTime = new Date()
          await reportHistory.save()
@@ -92,7 +93,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       // post reports to slack channels
       const slackResults = await Promise.all(
          sendConversations.map(conversation => {
-            return AsyncForEach(messages, async message => {
+            return AsyncForEach(slackMessages, async message => {
                return await client.chat.postMessage({
                   channel: conversation,
                   text: message
@@ -108,23 +109,25 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       const sendWebhooks = Array.from(report.webhooks || [])
       if (sendWebhooks.length > 0) {
          logger.debug(`Send with the webhooks ${sendWebhooks}`)
+         const googleMessages = messageInfo.googleMessages
          const webhookResults = await Promise.all(
             sendWebhooks.map(webhook => {
-               return AsyncForEach(messages, async message => {
+               return AsyncForEach(googleMessages, async message => {
                   const appMessage = { text: message }
                   const messageHeaders = {
                      'Content-Type': 'application/json; charset=UTF-8'
                   }
+                  const webhookWithId = webhook + messageInfo.webhookUserIds
                   try {
                      const response = await axios.post(
-                        webhook,
+                        webhookWithId,
                         JSON.stringify(appMessage),
                         { headers: messageHeaders }
                      )
                      logger.debug(JSON.stringify(response.data))
                      return response.data
                   } catch (e) {
-                     logger.error(`failed to post message to webhook ${webhook}` +
+                     logger.error(`failed to post message to webhook ${webhookWithId}` +
                          `since error: ${JSON.stringify(e)}`)
                      const errorMessage = `Failed to send the report for webhook ${webhook}` +
                         ` as the ${JSON.stringify(e)} error`
@@ -153,7 +156,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
          throw new Error('Sent notification to all conversations failed.')
       }
       reportHistory.tsMap = tsMap
-      reportHistory.content = JSON.stringify(messages[0])
+      reportHistory.content = JSON.stringify(slackMessages[0])
       reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
       await reportHistory.save()
    } catch (e) {
@@ -225,6 +228,7 @@ const ContentEvaluate = async (report) => {
    let timeout = 10 * 60 * 1000
    let scriptPath = ''
    let stdout = ''
+   let stdoutGoogle = ''
    let command = ''
    const reportTitle = report.title.replace(/'/g, '%27')
    switch (report.reportType) {
@@ -235,10 +239,12 @@ const ContentEvaluate = async (report) => {
             `--url '${report.reportSpecConfig.bugzillaLink}'`
          logger.debug(`execute the bugzilla report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
+         stdoutGoogle = stdout
          break
       }
       case 'text': {
          stdout = report.reportSpecConfig.text
+         stdoutGoogle = stdout
          break
       }
       case 'perforce_checkin': {
@@ -254,6 +260,7 @@ const ContentEvaluate = async (report) => {
             --endTime ${endTime.getTime() / 1000}`
          logger.debug(`execute the perforce checkin report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
+         stdoutGoogle = stdout
          break
       }
       case 'perforce_review_check': {
@@ -270,6 +277,7 @@ const ContentEvaluate = async (report) => {
             --endTime ${endTime.getTime() / 1000}`
          logger.debug(`execute the perforce review check report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
+         stdoutGoogle = stdout
          break
       }
       case 'bugzilla_by_assignee': {
@@ -280,20 +288,33 @@ const ContentEvaluate = async (report) => {
          `--users '${assignees.join(',')}'`
          logger.debug(`execute the bugzilla by assignee report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
+         stdoutGoogle = stdout
          break
       }
       case 'nanny_reminder': {
          const assignees = report.reportSpecConfig.nannyAssignee
          const thisTimeNanny = assignees[0]
          const nextTimeNanny = assignees[1]
+         // Mention nanny in Slack by <@slack member ID>
          stdout = report.reportSpecConfig.text
             .replace('@this-nanny', `<@${thisTimeNanny}>`)
             .replace('@next-nanny', `<@${nextTimeNanny}>`)
+         // Mention nanny in Google Chat by <users/user ID>
+         const vmwareIDs = await GetUsersName(assignees)
+         const thisTimeNannyUserId = VMwareId2GoogleChatUserId(vmwareIDs[0])
+         const nextTimeNannyUserId = VMwareId2GoogleChatUserId(vmwareIDs[1])
+         stdoutGoogle = report.reportSpecConfig.text
+            .replace('@this-nanny', `<users/${thisTimeNannyUserId}>`)
+            .replace('@next-nanny', `<users/${nextTimeNannyUserId}>`)
          // Mention the name of next week nanny instead of cc the person
          if (report.reportSpecConfig.text.includes('next-nanny-full-name')) {
             const nextTimeUsers = await GetUsersName([nextTimeNanny])
             const nextTimeNannyInfo = await FindUserInfoByName(nextTimeUsers[0])
-            stdout = stdout.replace('next-nanny-full-name', nextTimeNannyInfo?.fullName || `<@${nextTimeNanny}>`)
+            if (nextTimeNannyInfo?.fullName != null) {
+               stdout = stdout.replace('next-nanny-full-name', nextTimeNannyInfo?.fullName)
+               stdoutGoogle = stdoutGoogle.replace('next-nanny-full-name',
+                  nextTimeNannyInfo?.fullName)
+            }
          }
          break
       }
@@ -308,6 +329,7 @@ const ContentEvaluate = async (report) => {
          `--creator '${assignees[0]}'`
          logger.debug(`execute the jira report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
+         stdoutGoogle = stdout
          break
       }
       // case 'svs':
@@ -318,31 +340,61 @@ const ContentEvaluate = async (report) => {
    }
    let mentionUserNames = ''
    const mentionUsers = report.mentionUsers?.concat(
-      report.mentionGroups?.map(group => group.value) || []) || []
-   logger.debug(`mentionusers: ${mentionUsers}`)
+      report.mentionGroups?.map(group => group.value) || []) || [] // mix with mention groups
+   logger.debug(`mention users: ${mentionUsers}`)
    if (mentionUsers != null && mentionUsers.length > 0) {
       mentionUserNames = '\n' + (await GetConversationsName(mentionUsers))
+   }
+   let mentionUserIds = '' // shown by google chat format: <users/user ID>
+   let webhookUserIds = '' // used in google chat webhook
+   if (report.mentionUsers != null && report.mentionUsers.length > 0) { // need to mention user in message
+      const vmwareIds = await GetUsersName(report.mentionUsers)
+      const googleUserIds = vmwareIds.map(vmwareId => {
+         return VMwareId2GoogleChatUserId(vmwareId)
+      }).filter(value => value.length > 0)
+      mentionUserIds = '\n' + googleUserIds.map(userId => {
+         return `<users/${userId}>`
+      }).join(', ')
+      webhookUserIds = '&id=' + googleUserIds.join(',')
    }
    // If the report type is text or nanny_reminder, we return the report content by array directly.
    if (report.reportType === 'text' || report.reportType === 'nanny_reminder') {
       stdout += mentionUserNames
-      return { messages: [stdout], isEmpty: false }
+      stdoutGoogle += mentionUserIds
+      return {
+         slackMessages: [stdout],
+         googleMessages: [stdoutGoogle],
+         isEmpty: false,
+         webhookUserIds: webhookUserIds
+      }
    }
    try {
       const output = JSON.parse(stdout)
       // Here output's format is {“messages”: [“……“, “……“], “isEmpty”: False}
       if (typeof output === 'object' && Array.isArray(output.messages)) {
          const messages = output.messages?.map(message => unescape(message)) || []
+         const googleMessages = messages.slice()
          if (messages.length > 0) {
             messages[messages.length - 1] += mentionUserNames
+            googleMessages[googleMessages.length - 1] += mentionUserIds
          }
-         return { messages: messages, isEmpty: output.isEmpty }
+         return {
+            slackMessages: messages,
+            googleMessages: googleMessages,
+            isEmpty: output.isEmpty,
+            webhookUserIds: webhookUserIds
+         }
       }
    } catch (e) {
       logger.error(`failed to JSON.parse(stdout):`)
       logger.error(e)
    }
-   return { messages: [stdout], isEmpty: false }
+   return {
+      slackMessages: [stdout],
+      googleMessages: [stdout],
+      isEmpty: false,
+      webhookUserIds: webhookUserIds
+   }
 }
 
 const ScheduleOption = function (repeatConfig) {
@@ -585,7 +637,7 @@ const RegisterUpdateNannyScheduler = function (report) {
          repeatConfig.time = '00:00'
          break
       case 'weekly':
-         repeatConfig.dayOfWeek = 1
+         repeatConfig.dayOfWeek = [1] // the type of dayOfWeek is a array of number, not number.
          repeatConfig.time = '00:00'
          break
       case 'monthly':

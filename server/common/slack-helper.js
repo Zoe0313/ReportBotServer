@@ -11,6 +11,7 @@ let slackClient = null
 const userTzCache = {}
 const blocksCache = {}
 const slashCmdUsagesCache = {}
+let vSANUserIdCache = {}
 
 export function InitSlackClient(client) {
    slackClient = client
@@ -300,4 +301,20 @@ export function LoadSlashCommandUsage(name) {
       slashCmdUsagesCache[name] = usage
       return usage
    }
+}
+
+export function VMwareId2GoogleChatUserId(vmwareId) {
+   if (vmwareId.endsWith('null') || vmwareId.endsWith('undefined')) {
+      return ''
+   }
+   if (vSANUserIdCache[vmwareId] == null) {
+      const idFile = path.join(path.resolve(), '..') + `/persist/config/google-user-id.json`
+      vSANUserIdCache = JSON.parse(fs.readFileSync(idFile))
+   }
+   try {
+      return vSANUserIdCache[vmwareId].gid
+   } catch (e) {
+      logger.error(`Failed to get gid by vmwareId ${vmwareId} due to ${JSON.stringify(e)}`)
+   }
+   return ''
 }
