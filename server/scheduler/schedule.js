@@ -540,7 +540,7 @@ const InvokeNow = async function (id, sendToUserId) {
       if (sendToUserId) {
          const report = await ReportConfiguration.findById(id)
          const messageInfo = await ContentEvaluate(report)
-         const messages = messageInfo.messages
+         const messages = messageInfo.slackMessages
          logger.debug(`send notification to me now: ${JSON.stringify(messageInfo)}`)
          AsyncForEach(messages, async message => {
             await client.chat.postMessage({
