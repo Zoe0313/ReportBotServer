@@ -110,7 +110,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       if (sendWebhooks.length > 0) {
          logger.debug(`Send with the webhooks ${sendWebhooks}`)
          const googleMessages = messageInfo.googleMessages
-         const webhookResults = await Promise.all(
+         await Promise.all(
             sendWebhooks.map(webhook => {
                return AsyncForEach(googleMessages, async message => {
                   const appMessage = { text: message }
@@ -155,6 +155,28 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       if (tsMap.size === 0) {
          throw new Error('Sent notification to all conversations failed.')
       }
+      if (report.reportType === 'bugzilla') {
+         try {
+            await axios({
+               method: 'get', url: 'https://via.vmw.com/'
+            })
+         } catch (e) {
+            logger.error(`Via link is unstable. Error: ${JSON.stringify(e)}`)
+            const threadMessage = '<' + `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
+            for (const channel in tsMap) {
+               const threadTs = tsMap[channel]
+               await client.chat.postMessage({
+                  channel: channel,
+                  thread_ts: threadTs,
+                  text: threadMessage
+               }).catch((e) => {
+                  logger.error(`failed to post message to thread ${threadTs}` +
+                     `since error: ${JSON.stringify(e)}`)
+               })
+            }
+         }
+      }
+
       reportHistory.tsMap = tsMap
       reportHistory.content = JSON.stringify(slackMessages[0])
       reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
