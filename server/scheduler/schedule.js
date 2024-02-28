@@ -173,7 +173,8 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
             })
          } catch (e) {
             logger.error(`Via link is unstable. Error: ${JSON.stringify(e)}`)
-            const threadMessage = '<' + `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
+            const threadMessage = 'via short link service is in maintenance, please use the <' +
+               `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
             // send thread message in Slack
             for (const channel in tsMap) {
                const threadTs = tsMap[channel]
