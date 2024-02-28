@@ -88,3 +88,5 @@ spec:
       services:
         - name: slackbot-api-server
           port: 443
+      timeoutPolicy:
+        response: 480s
