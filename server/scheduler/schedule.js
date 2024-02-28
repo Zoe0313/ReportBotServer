@@ -105,18 +105,26 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
             })
          })
       )
-
+      const tsMap = Object.fromEntries(
+         slackResults.filter(result => {
+            return result != null
+         }).map(result => {
+            return [result.channel, result.ts]
+         })
+      )
+      logger.info(`the tsMap of Slack is ${JSON.stringify(tsMap)}`)
+      let tsGChatMap = null
+      const messageHeaders = {
+         'Content-Type': 'application/json; charset=UTF-8'
+      }
       const sendWebhooks = Array.from(report.webhooks || [])
       if (sendWebhooks.length > 0) {
          logger.debug(`Send with the webhooks ${sendWebhooks}`)
          const googleMessages = messageInfo.googleMessages
-         await Promise.all(
+         const webhookResults = await Promise.all(
             sendWebhooks.map(webhook => {
                return AsyncForEach(googleMessages, async message => {
                   const appMessage = { text: message }
-                  const messageHeaders = {
-                     'Content-Type': 'application/json; charset=UTF-8'
-                  }
                   const webhookWithId = webhook + messageInfo.webhookUserIds
                   try {
                      const response = await axios.post(
@@ -125,7 +133,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
                         { headers: messageHeaders }
                      )
                      logger.debug(JSON.stringify(response.data))
-                     return response.data
+                     return { webhook, result: response.data }
                   } catch (e) {
                      logger.error(`failed to post message to webhook ${webhookWithId}` +
                          `since error: ${JSON.stringify(e)}`)
@@ -140,20 +148,23 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
                })
             })
          )
+         tsGChatMap = Object.fromEntries(
+            webhookResults.filter(data => {
+               return data.result != null
+            }).map(data => {
+               return [data.webhook, data.result.thread.name]
+            })
+         )
+         logger.info(`the tsMap of gChat is ${JSON.stringify(tsGChatMap)}`)
       }
       // update status and content of report history
       reportHistory.sentTime = new Date()
 
-      const tsMap = Object.fromEntries(
-         slackResults.filter(result => {
-            return result != null
-         }).map(result => {
-            return [result.channel, result.ts]
-         })
-      )
-      logger.info(`the tsMap of ${reportHistory._id} is ${JSON.stringify(tsMap)}`)
       if (tsMap.size === 0) {
          throw new Error('Sent notification to all conversations failed.')
+      }
+      if (sendWebhooks.length > 0 && tsGChatMap.size === 0) {
+         throw new Error('Sent notification to all spaces failed.')
       }
       if (report.reportType === 'bugzilla') {
          try {
@@ -163,6 +174,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
          } catch (e) {
             logger.error(`Via link is unstable. Error: ${JSON.stringify(e)}`)
             const threadMessage = '<' + `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
+            // send thread message in Slack
             for (const channel in tsMap) {
                const threadTs = tsMap[channel]
                await client.chat.postMessage({
@@ -170,9 +182,26 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
                   thread_ts: threadTs,
                   text: threadMessage
                }).catch((e) => {
-                  logger.error(`failed to post message to thread ${threadTs}` +
+                  logger.error(`failed to post message to Slack thread ${threadTs}` +
                      `since error: ${JSON.stringify(e)}`)
                })
+            }
+            // send thread message in Google Chat
+            for (const webhook in tsGChatMap) {
+               const threadName = tsGChatMap[webhook]
+               const appMessage = { text: threadMessage, thread: { name: threadName } }
+               const webhookWithOpt = webhook +
+                  '&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD'
+               try {
+                  await axios.post(
+                     webhookWithOpt,
+                     JSON.stringify(appMessage),
+                     { headers: messageHeaders }
+                  )
+               } catch (e) {
+                  logger.error(`failed to post message to Space thread ${threadName}` +
+                     `since error: ${JSON.stringify(e)}`)
+               }
             }
          }
       }
