@@ -33,19 +33,15 @@ const UpdateTeamGroup = async () => {
          membersFilters: [{
             condition: 'include',
             type: 'all_reporters',
-            // include vsubhashini(WPVQ9M7QT), bstoicov(WAAGN7CBE), Venkata(WABQUSMQX),
-            // Ninad(WABQS3KK9), ffeng(WAATHDZK7), pudis(WABQY8DF1), Abhijit(WAAGJJCMA),
-            // jakeli(WAAPBH3FC), achakravarti(WABLCQTFG) all
-            members: ['WPVQ9M7QT', 'WAAGN7CBE', 'WABQUSMQX', 'WABQS3KK9', 'WAATHDZK7',
-               'WABQY8DF1', 'WAAGJJCMA', 'WAAPBH3FC', 'WABLCQTFG']
+            // include ninadk(WABQS3KK9), pudis(WABQY8DF1) all
+            members: ['WABQS3KK9', 'WABQY8DF1']
          },
          {
             condition: 'include',
             type: 'selected',
-            // include amdurm(WAA2WLE72), daip(WABL9CTK8), randhirs(WAAGK72PN), adesai(WABLDKJPQ),
-            // eknauft(WAAPCHAHY), prenauld(WAA319ZK2), wenguangw(WAAGMNVHS), ochen(WCJQY2KSM) all
-            members: ['WAA2WLE72', 'WABL9CTK8', 'WAAGK72PN', 'WABLDKJPQ', 'WAAPCHAHY',
-               'WAA319ZK2', 'WAAGMNVHS', 'WCJQY2KSM']
+            // include amdurm(WAA2WLE72), daip(WABL9CTK8), adesai(WABLDKJPQ),
+            // wenguangw(WAAGMNVHS), ochen(WCJQY2KSM) all
+            members: ['WAA2WLE72', 'WABL9CTK8', 'WABLDKJPQ', 'WAAGMNVHS', 'WCJQY2KSM']
          }]
       },
       {
@@ -74,10 +70,10 @@ const UpdateTeamGroup = async () => {
             type: 'selected',
             // include aguo(WAA2ZMETS), xfan(WF4MRCQ1Z), jagnyadattat(U02P5TRU1GX),
             // rshiju(U02DGP7TTEF), sbhargo(U02LKCG6L13), xiangyu(WEC01CSN9), gracex(W012RS6KKRT),
-            // wmanman(U02NYP2FMR8), sriramp(WAATJ7EAH), mutgia(WAALCJL4B), rshreesha(WQ5B4VC2H),
-            // huangxin(WAAPFKZCJ), wxinyan(WEVJ18N9X) all
+            // wmanman(U02NYP2FMR8), sriramp(WAATJ7EAH), gmaneesh(U05AW7QJ90U), neil(WGVJ12HBP),
+            // rshreesha(WQ5B4VC2H), huangxin(WAAPFKZCJ), wxinyan(WEVJ18N9X) all
             members: ['WAA2ZMETS', 'WF4MRCQ1Z', 'U02P5TRU1GX', 'U02DGP7TTEF', 'U02LKCG6L13',
-               'WEC01CSN9', 'W012RS6KKRT', 'U02NYP2FMR8', 'WAATJ7EAH', 'WAALCJL4B', 'WAALCJL4B',
+               'WEC01CSN9', 'W012RS6KKRT', 'U02NYP2FMR8', 'WAATJ7EAH', 'U05AW7QJ90U', 'WGVJ12HBP',
                'WQ5B4VC2H', 'WAAPFKZCJ', 'WEVJ18N9X']
          }]
       },
