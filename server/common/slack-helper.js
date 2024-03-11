@@ -303,7 +303,7 @@ export function LoadSlashCommandUsage(name) {
    }
 }
 
-export function VMwareId2GoogleChatUserId(vmwareId) {
+export function VMwareId2GoogleUserInfo(vmwareId) {
    if (vmwareId.endsWith('null') || vmwareId.endsWith('undefined')) {
       return ''
    }
@@ -312,9 +312,9 @@ export function VMwareId2GoogleChatUserId(vmwareId) {
       vSANUserIdCache = JSON.parse(fs.readFileSync(idFile))
    }
    try {
-      return vSANUserIdCache[vmwareId].gid
+      return vSANUserIdCache[vmwareId]
    } catch (e) {
-      logger.error(`Failed to get gid by vmwareId ${vmwareId} due to ${JSON.stringify(e)}`)
+      logger.error(`Failed to get user info by vmwareId ${vmwareId} due to ${JSON.stringify(e)}`)
    }
-   return ''
+   return { gid: '', broadcom_email: '', full_name: '' }
 }

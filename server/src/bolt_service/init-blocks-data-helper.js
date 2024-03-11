@@ -1,6 +1,6 @@
 import logger from '../../common/logger.js'
 import {
-   LoadBlocks, FindBlockById, GetUsersName
+   LoadBlocks, FindBlockById
 } from '../../common/slack-helper.js'
 import {
    ConvertTimeWithTz, FormatDateTime, FormatDate, ParseDateWithTz,
@@ -286,7 +286,7 @@ export async function InitReportBlocks(report, view, blocks, options, tz) {
             }
             if (reportSpecConfig?.nannyAssignee?.length > 0) {
                FindBlockById(blocks, 'reportSpecConfig.nannyAssignee')
-                  .element.initial_conversations = reportSpecConfig.nannyAssignee
+                  .element.initial_value = reportSpecConfig.nannyAssignee
             }
             if (reportSpecConfig?.text?.length > 0) {
                FindBlockById(blocks, 'reportSpecConfig.text')
@@ -490,15 +490,14 @@ export async function GenerateNannyRoster(report, isRecycle, tz) {
    if (report.reportType !== 'nanny_reminder') {
       return ''
    }
-   let assigneeIDs = report.reportSpecConfig.nannyAssignee
-   if (!assigneeIDs || assigneeIDs.length <= 1) {
+   const assignees = report.reportSpecConfig.nannyAssignee.split('\n')
+   if (!assignees || assignees.length <= 1) {
       return 'The number of nanny assignee should be greater than 1.'
    }
    if (isRecycle) {
-      assigneeIDs = RecycleAssignees(assigneeIDs)
-      report.reportSpecConfig.nannyAssignee = assigneeIDs
+      const newAssignees = RecycleAssignees(assignees)
+      report.reportSpecConfig.nannyAssignee = newAssignees.join('\n')
    }
-   const assignees = await GetUsersName(assigneeIDs)
    const result = []
    const repeatConfig = report.repeatConfig
    if (repeatConfig.repeatType === 'not_repeat') {
@@ -593,10 +592,11 @@ export async function GenerateNannyRoster(report, isRecycle, tz) {
    }
    let nannyRoster = ''
    for (const data of result) {
+      const nannyStr = data.nanny.split(',').join(' & ')
       if (data.end === '') {
-         nannyRoster += `${data.nanny} serve day: ${data.start}\n`
+         nannyRoster += `${nannyStr} serve day: ${data.start}\n`
       } else {
-         nannyRoster += `${data.nanny} serve from ${data.start} to ${data.end}\n`
+         nannyRoster += `${nannyStr} serve from ${data.start} to ${data.end}\n`
       }
    }
    return nannyRoster

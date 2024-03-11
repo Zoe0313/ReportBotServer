@@ -10,9 +10,8 @@ import { UpdateTeamGroup } from '../src/model/team-group.js'
 import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
 import {
    GetConversationsName, GetUsersName, VerifyBotInChannel,
-   VMwareId2GoogleChatUserId
+   VMwareId2GoogleUserInfo
 } from '../common/slack-helper.js'
-import { FindUserInfoByName } from '../src/model/user-info.js'
 import logger from '../common/logger.js'
 import { WebClient } from '@slack/web-api'
 import path from 'path'
@@ -344,30 +343,49 @@ const ContentEvaluate = async (report) => {
          break
       }
       case 'nanny_reminder': {
-         const assignees = report.reportSpecConfig.nannyAssignee
-         const thisTimeNanny = assignees[0]
-         const nextTimeNanny = assignees[1]
-         // Mention nanny in Slack by <@slack member ID>
-         stdout = report.reportSpecConfig.text
-            .replace('@this-nanny', `<@${thisTimeNanny}>`)
-            .replace('@next-nanny', `<@${nextTimeNanny}>`)
-         // Mention nanny in Google Chat by <users/user ID>
-         const vmwareIDs = await GetUsersName(assignees)
-         const thisTimeNannyUserId = VMwareId2GoogleChatUserId(vmwareIDs[0])
-         const nextTimeNannyUserId = VMwareId2GoogleChatUserId(vmwareIDs[1])
-         stdoutGoogle = report.reportSpecConfig.text
-            .replace('@this-nanny', `<users/${thisTimeNannyUserId}>`)
-            .replace('@next-nanny', `<users/${nextTimeNannyUserId}>`)
-         // Mention the name of next week nanny instead of cc the person
-         if (report.reportSpecConfig.text.includes('next-nanny-full-name')) {
-            const nextTimeUsers = await GetUsersName([nextTimeNanny])
-            const nextTimeNannyInfo = await FindUserInfoByName(nextTimeUsers[0])
-            if (nextTimeNannyInfo?.fullName != null) {
-               stdout = stdout.replace('next-nanny-full-name', nextTimeNannyInfo?.fullName)
-               stdoutGoogle = stdoutGoogle.replace('next-nanny-full-name',
-                  nextTimeNannyInfo?.fullName)
+         const MentionNannys = (text, nannyVMwareIds, mentionKey) => {
+            let textSlack = text.slack
+            let textGoogle = text.google
+            for (let i = 0; i < nannyVMwareIds.length; i++) {
+               const vmwareId = nannyVMwareIds[i]
+               let nannyMentionKey = `@${mentionKey}`
+               let nannyFullNameKey = `${mentionKey}` + '-full-name'
+               if (nannyVMwareIds.length > 1) {
+                  nannyMentionKey = nannyMentionKey + `${i + 1}`
+                  nannyFullNameKey = nannyFullNameKey + `${i + 1}`
+               }
+               const gUserInfo = VMwareId2GoogleUserInfo(vmwareId)
+               // Mention nanny in Slack by <@vmware ID>
+               textSlack = textSlack.replace(nannyMentionKey, `<@${vmwareId}>`)
+               // Mention nanny in Google Chat by <users/Google user ID>
+               if (gUserInfo.gid.length > 0) {
+                  textGoogle = textGoogle.replace(nannyMentionKey, `<users/${gUserInfo.gid}>`)
+               } else {
+                  textGoogle = textGoogle.replace(nannyMentionKey, `@${vmwareId}`)
+               }
+               if (gUserInfo.full_name.length > 0) {
+                  textSlack = textSlack.replace(nannyFullNameKey, gUserInfo.full_name)
+                  textGoogle = textGoogle.replace(nannyFullNameKey, gUserInfo.full_name)
+               } else {
+                  textSlack = textSlack.replace(nannyFullNameKey, `<@${vmwareId}>`)
+                  textGoogle = textGoogle.replace(nannyFullNameKey, `@${vmwareId}`)
+               }
             }
+            return { slack: textSlack, google: textGoogle }
          }
+         stdout = report.reportSpecConfig.text
+         const assignees = report.reportSpecConfig.nannyAssignee.split('\n')
+         const thisTimeNannys = assignees[0].split(',')
+         const nextTimeNannys = assignees[1].split(',')
+         let resultText = { slack: stdout, google: stdout }
+         if (stdout.indexOf('this-nanny') >= 0) {
+            resultText = MentionNannys(resultText, thisTimeNannys, 'this-nanny')
+         }
+         if (stdout.indexOf('next-nanny') >= 0) {
+            resultText = MentionNannys(resultText, nextTimeNannys, 'next-nanny')
+         }
+         stdout = resultText.slack
+         stdoutGoogle = resultText.google
          break
       }
       case 'jira_list': {
@@ -402,7 +420,7 @@ const ContentEvaluate = async (report) => {
    if (report.mentionUsers != null && report.mentionUsers.length > 0) { // need to mention user in message
       const vmwareIds = await GetUsersName(report.mentionUsers)
       const googleUserIds = vmwareIds.map(vmwareId => {
-         return VMwareId2GoogleChatUserId(vmwareId)
+         return VMwareId2GoogleUserInfo(vmwareId).gid
       }).filter(value => value.length > 0)
       mentionUserIds = '\n' + googleUserIds.map(userId => {
          return `<users/${userId}>`
