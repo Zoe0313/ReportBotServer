@@ -49,7 +49,7 @@ export function RegisterCommonServiceHandler(app) {
    })
 
    // slash command
-   app.command('/test-nanny', async ({ client, payload, ack }) => {
+   app.command('/whois-nanny', async ({ client, payload, ack }) => {
       await SlashCommandHandler(client, payload, ack)
    })
 }
