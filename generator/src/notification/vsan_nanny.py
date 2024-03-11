@@ -3,7 +3,7 @@
 # Copyright 2022 VMware, Inc.  All rights reserved. -- VMware Confidential
 
 '''
-Module docstring.  
+Module docstring.
 vsan_nanny.py
 == Vsan-nanny Duty Roster  ==
 https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster

@@ -28,6 +28,16 @@ async function GetReportByNannyCode(nannyCode) {
    return report
 }
 
+const GenerateMentionStr = (oneWeekAssigneeStr) => {
+   const oneWeekAssignees = oneWeekAssigneeStr.split(',')
+   if (oneWeekAssignees.length === 1) {
+      return `<@${oneWeekAssigneeStr}>` + ' is'
+   }
+   return oneWeekAssignees.map(assignee =>
+      `<@${assignee}>`
+   ).join(' & ') + ' are'
+}
+
 const GetMondayDate = (oneDay) => {
    let day = oneDay.getDay()
    if (day === 0) {
@@ -68,11 +78,13 @@ const GenerateNannyReply = async (payload, tz) => {
       return stdout
    }
    const report = await GetReportByNannyCode(nannyCode)
-   const nannyAssignees = report?.reportSpecConfig?.nannyAssignee || []
+   const nannyAssigneeStr = report?.reportSpecConfig?.nannyAssignee || ''
+   const nannyAssignees = nannyAssigneeStr.split('\n')
    if (nannyAssignees.length > 0) {
       switch (param.split(' ').length) {
          case 1: {
-            stdout = `<@${nannyAssignees[0]}> is ${nannyCode} nanny this week.`
+            const mentionAssigneeStr = GenerateMentionStr(nannyAssignees[0])
+            stdout = `${mentionAssigneeStr} ${nannyCode} nanny this week.`
             break
          }
          case 2: {
@@ -81,16 +93,23 @@ const GenerateNannyReply = async (payload, tz) => {
                const startDayWithTZ = ParseDateWithTz(inputStr, tz)
                const startMonDate = GetMondayDate(startDayWithTZ)
                const nannyIndex = GetNannyIndexByDay(nannyAssignees, startMonDate)
-               stdout = `<@${nannyAssignees[nannyIndex]}> is ${nannyCode} nanny at ${inputStr}.`
+               const mentionAssigneeStr = GenerateMentionStr(nannyAssignees[nannyIndex])
+               stdout = `${mentionAssigneeStr} ${nannyCode} nanny at ${inputStr}.`
             } else { // whois-nanny <nanny code> vmwareId
                const userInfo = await FindUserInfoByName(inputStr)
                if (userInfo == null) {
                   throw new Error(`Command failed: ${command}, vmwareId ${inputStr} is not found.`)
                }
-               const slackId = userInfo.slackId
-               const nannyIndex = nannyAssignees.indexOf(slackId)
+               const vmwareId = inputStr
+               let nannyIndex = -1
+               for (let i = 0; i < nannyAssignees.length; i++) {
+                  const oneWeekAssignees = nannyAssignees[i].split(',')
+                  if (oneWeekAssignees.indexOf(vmwareId) >= 0) {
+                     nannyIndex = i
+                  }
+               }
                if (nannyIndex === 0) {
-                  stdout = `<@${slackId}> is ${nannyCode} nanny this week.`
+                  stdout = `<@${vmwareId}> is ${nannyCode} nanny this week.`
                } else if (nannyIndex > 0) {
                   const thisMondayDate = GetMondayDate(ParseDateWithTz(FormatDate(new Date()), tz))
                   const diffWeekSeconds = nannyIndex * (24 * 3600 * 1000 * 7)
@@ -100,9 +119,9 @@ const GenerateNannyReply = async (payload, tz) => {
                   oneSaturdayDate.setDate(oneSaturdayDate.getDate() + 6)
                   const monDateStr = FormatDate(oneMondayDate)
                   const satDateStr = FormatDate(oneSaturdayDate)
-                  stdout = `<@${slackId}> will be ${nannyCode} nanny from ${monDateStr} to ${satDateStr}.`
+                  stdout = `<@${vmwareId}> will be ${nannyCode} nanny from ${monDateStr} to ${satDateStr}.`
                } else {
-                  stdout = `<@${slackId}> is not in ${nannyCode} nanny list.`
+                  stdout = `<@${vmwareId}> is not in ${nannyCode} nanny list.`
                }
             }
             break
@@ -127,7 +146,8 @@ const GenerateNannyReply = async (payload, tz) => {
             while (startMonDate <= endDayWithTZ) {
                const monDateStr = FormatDate(startMonDate)
                const satDateStr = FormatDate(satDate)
-               stdout += `<@${nannyAssignees[nannyIndex]}> ${monDateStr} - ${satDateStr}` + '\n'
+               const mentionAssigneeStr = GenerateMentionStr(nannyAssignees[nannyIndex]).replace(/is|are/, '')
+               stdout += `${mentionAssigneeStr} ${monDateStr} - ${satDateStr}` + '\n'
                startMonDate = new Date(startMonDate.setDate(startMonDate.getDate() + 7))
                satDate.setDate(satDate.getDate() + 7)
                nannyIndex += 1

@@ -24,29 +24,23 @@
 		{
 			"type": "input",
 			"block_id": "reportSpecConfig.nannyAssignee",
-			"label": {
-				"type": "plain_text",
-				"text": ":five: Select nanny assignee(s) from the list"
-			},
 			"hint": {
 				"type": "plain_text",
-				"text": "Select the assignee(s) you want to add into nanny duty roster from this time one by one."
+				"text": "Input the assignee(s) you want to add into nanny duty roster from this time one by one."
 			},
 			"element": {
-				"type": "multi_conversations_select",
+				"type": "plain_text_input",
+				"multiline": true,
 				"placeholder": {
 					"type": "plain_text",
-					"text": "Add someone into the nanny list",
-					"emoji": true
+					"text": "Input someone into the nanny list"
 				},
-				"filter": {
-					"include": [
-						"im"
-					],
-					"exclude_external_shared_channels": true,
-					"exclude_bot_users": true
-				},
-				"action_id": "action_pick_nanny_assignee"
+				"action_id": "action_input_text"
+			},
+			"label": {
+				"type": "plain_text",
+				"text": ":five: Input nanny assignee(s)",
+				"emoji": true
 			}
 		},
 		{
@@ -84,7 +78,7 @@
 			"block_id": "reportSpecConfig.text",
 			"hint": {
 				"type": "plain_text",
-				"text": "@this-nanny means the current nanny.\n@next-nanny means the next nanny.\nnext-nanny-full-name means next nanny real name without mention him(her)."
+				"text": "@this-nanny/@next-nanny means mention current/next nanny.\nthis-nanny-full-name/next-nanny-full-name means current/next nanny real name without mention him(her). For multi-nannys, use @this-nanny1, @this-nanny2, @next-nanny1, this-nanny-full-name1...\n"
 			},
 			"element": {
 				"type": "plain_text_input",
