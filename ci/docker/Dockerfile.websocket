@@ -24,6 +24,9 @@ RUN pip install pandas
 RUN pip install rbtools
 RUN pip install python-dotenv
 
+RUN apt-get update
+RUN apt-get install -y vim
+
 # set perforce environment
 ENV P4PORT ssl:perforce.eng.vmware.com:1666
 

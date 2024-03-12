@@ -443,6 +443,7 @@ export function RegisterManageReportServiceHandler(app) {
                   teams: inputObj.reportSpecConfig.perforceReviewCheck?.teams
                      ?.map(option => option.value)
                },
+               nannyAssignee: inputObj.reportSpecConfig?.nannyAssignee || '',
                nannyRoster: nannyRoster,
                jira: {
                   fields: jiraFields
