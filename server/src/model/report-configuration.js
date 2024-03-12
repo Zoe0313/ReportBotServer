@@ -35,6 +35,10 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
 const YES_OR_NO_ENUM = ['Yes', 'No']
 
+const JIRA_BASIC_TOKEN = Buffer.from(
+   `${process.env.SERVICE_ACCOUNT}` + ':' + `${process.env.SERVICE_PASSWORD}`
+).toString('base64')
+
 const PerforceCheckInMembersFilterSchema = new mongoose.Schema({
    members: {
       type: [String],
@@ -302,7 +306,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
                         method: 'post',
                         url: 'https://jira.eng.vmware.com/rest/api/2/search',
                         headers: {
-                           Authorization: `Basic ${process.env.SERVICE_BASIC_TOKEN}`
+                           Authorization: `Basic ${JIRA_BASIC_TOKEN}`
                         },
                         data: {
                            jql: queryStr,
