@@ -34,7 +34,7 @@ from typing import Dict, Union, Any
 import requests
 import json
 from urllib import parse
-from generator.src.utils.BotConst import SERVICE_BASIC_TOKEN, CONTENT_TYPE_JSON, \
+from generator.src.utils.BotConst import JIRA_BASIC_TOKEN, CONTENT_TYPE_JSON, \
    BUGZILLA_DETAIL_URL, JIRA_BROWSE_URL
 from generator.src.utils.Logger import logger
 from generator.src.utils.Utils import splitOverlengthReport, transformReport
@@ -81,7 +81,7 @@ class JiraReport(object):
       logger.debug('user define fields: {}'.format(fields))
       logger.debug('user define group by field: {}'.format(self.groupbyField))
       self.session = requests.session()
-      self.session.headers = {'Authorization': f'Basic {SERVICE_BASIC_TOKEN}',
+      self.session.headers = {'Authorization': f'Basic {JIRA_BASIC_TOKEN}',
                               'Content-Type': CONTENT_TYPE_JSON}
       self.totalSize = 0
 

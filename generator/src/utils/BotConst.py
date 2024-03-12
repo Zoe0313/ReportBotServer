@@ -8,6 +8,7 @@ BotConst.py
 '''
 
 import os
+import base64
 from dotenv import load_dotenv
 ProjectPath = os.path.abspath(__file__).split("/generator")[0]
 load_dotenv(dotenv_path=os.path.join(ProjectPath, 'server', '.env'))
@@ -28,7 +29,8 @@ BUGZILLA_BY_ASSIGNEE = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/query?l
 # service account 'svc.vsan-er' is used to login bugzilla and perforce system
 SERVICE_ACCOUNT = os.environ.get('SERVICE_ACCOUNT')
 SERVICE_PASSWORD = os.environ.get('SERVICE_PASSWORD')
-SERVICE_BASIC_TOKEN = os.environ.get('SERVICE_BASIC_TOKEN')
+# Basic token for querying JIRA API (base64 "{SERVICE_ACCOUNT}:{SERVICE_PASSWORD}")
+JIRA_BASIC_TOKEN = base64.b64encode(f"{SERVICE_ACCOUNT}:{SERVICE_PASSWORD}".encode("ascii")).decode("ascii")
 
 # content type
 CONTENT_TYPE_JSON_UTF = "application/json;charset=utf-8"
