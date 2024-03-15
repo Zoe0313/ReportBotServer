@@ -26,7 +26,7 @@ from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, sh
 from generator.src.utils.Logger import logger
 PerfLogger.info('import customized parameters, functions')
 
-DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp")
+DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/bugzilla-report")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # transfer Horizontal/Vertical Axis name to query param
