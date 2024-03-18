@@ -80,7 +80,7 @@ class PerforceSpider(object):
             if len(withApprovedMessage) > 0:
                withApprovedReports = splitOverlengthReport(messages=withApprovedMessage, isContentInCodeBlock=True,
                                                            enablePagination=True)
-               withApprovedReports[0] = self.showTitle + ':arrow_down: *With Approval*\n' + withApprovedReports[0]
+               withApprovedReports[0] = self.showTitle + '*With Approval*\n' + withApprovedReports[0]
                message.extend(withApprovedReports)
             # Without Approval
             withoutApprovedResult = list(filter(lambda data: data['approved'] == 'without', result))
@@ -88,7 +88,7 @@ class PerforceSpider(object):
             if len(withoutApprovedMessage) > 0:
                withoutApprovedReports = splitOverlengthReport(messages=withoutApprovedMessage, isContentInCodeBlock=True,
                                                               enablePagination=True)
-               withoutApprovedReports[0] = ':arrow_down: *`Without Approval`*\n' + withoutApprovedReports[0]
+               withoutApprovedReports[0] = '*Without Approval*\n' + withoutApprovedReports[0]
                if len(message) == 0:
                   withoutApprovedReports[0] = self.showTitle + withoutApprovedReports[0]
                message.extend(withoutApprovedReports)
