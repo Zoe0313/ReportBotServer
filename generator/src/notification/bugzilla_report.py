@@ -303,8 +303,8 @@ class BugzillaSpider(object):
          bugCountInfo = "One bug found." if 1 == bugCount else "{0} bugs found.".format(bugCount)
          message.append(bugCountInfo)
          detail = self.getBuglistDetail()
-         reports = splitOverlengthReport(detail, isContentInCodeBlock=True, enablePagination=True)
-         reports[0] = "\n".join(message) + reports[0]
+         reports = splitOverlengthReport(detail, isContentInCodeBlock=False, enablePagination=True)
+         reports[0] = "\n".join(message) + "\n" + reports[0]
          message = reports
       else:
          isNoContent = True
@@ -324,44 +324,34 @@ class BugzillaSpider(object):
             # drop empty columns
             df.dropna(axis=1, how='all', inplace=True)
             df.fillna(value="", inplace=True)
-            # get existed column name list
-            headers = df.columns.values
-            logger.info('headers: {0}'.format(headers))
-            summaryColumnName = 'Summary' if 'Summary' in headers else 'Summary (first 60 chars)'
-            paramsLength = {'Bug ID': 7, 'Assignee': -1, 'Priority': 3, 'Status': -1, 'ETA': 10, summaryColumnName: 60}
-            showParams = [k for k, v in paramsLength.items()]
-            showParams = [param for param in showParams if param in headers]
-            if 'Assignee' in showParams:
-               paramsLength['Assignee'] = max([len(user) for user in df['Assignee'].values] + [len('Assignee')])
-            if 'Status' in showParams:
-               paramsLength['Status'] = max([len(status) for status in df['Status'].values] + [len('Status')])
             # default sort by 'Bug ID' column
             df = df.sort_values(by='Bug ID', ascending=True)
-            # calculate column chars size
-            formatList = []
-            for param, length in paramsLength.items():
-               if param in showParams:
-                  formatList.append("{:<%ds}" % length)
-            lineFormatter = formatList[0] + "  " + " ".join(formatList[1:-1]) + " {}"
-            # get show column list
-            nameDict = {'Bug ID': 'PR', 'Assignee': 'Assignee', 'Priority': 'Pri', 'Status': 'Status', 'ETA': 'ETA',
-                        summaryColumnName: 'Summary'}
-            showColumns = [name for param, name in nameDict.items() if param in headers]
-            logger.info('show columns: {0}'.format(showColumns))
-            # make buglist content
+            # get existed column name list
+            headers = list(df.columns.values)
+            logger.info('headers: {0}'.format(headers))
+            summaryColumnName = 'Summary' if 'Summary' in headers else 'Summary (first 60 chars)'
+            # display column names
+            displayLimitDict = {'Bug ID': 'PR', summaryColumnName: 'Summary',
+                                'Assignee': 'Assignee', 'Priority': 'Pri', 'Status': 'Status', 'ETA': 'ETA',
+                                'Product': 'Product', 'Category': 'Category', 'Component': 'Comp',
+                                'Component Manager': 'Comp Mgr'}
+            # generate buglist content
             messages = []
-            messages.append("```" + lineFormatter.format(*showColumns))
             for _, bug in df.iterrows():
-               valueList = []
-               for param in showParams:
-                  value = bug[param]
-                  if "Bug ID" == param:
-                     value = "<%s|%s>" % (BUGZILLA_DETAIL_URL + str(value), str(value))
-                  elif summaryColumnName == param:
+               line = ""
+               for columnName, displayName in displayLimitDict.items():
+                  if columnName not in headers:
+                     continue
+                  value = bug[columnName]
+                  if "Bug ID" == columnName:
+                     value = str(value)
+                     line = "<%s|PR%s>" % (BUGZILLA_DETAIL_URL + value, value)
+                  elif summaryColumnName == columnName:
                      value = value if len(value) < SUMMARY_MAX_LENGTH else value[:SUMMARY_MAX_LENGTH] + "..."
-                  valueList.append(value)
-               messages.append(lineFormatter.format(*valueList))
-            messages.append("```")
+                     line += " - " + value + "\n                        "
+                  else:
+                     line += "_%s_: %s " % (displayName, value)
+               messages.append(line)
             return messages
          else:
             logger.info("CSV file {0}'s content is empty.".format(csvFile))
