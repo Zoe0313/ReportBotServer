@@ -10,7 +10,8 @@ import {
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
    RegisterScheduler, RegisterPerforceInfoScheduler,
-   RegisterPerforceMembersScheduler, RegisterTeamGroupScheduler
+   RegisterPerforceMembersScheduler, RegisterTeamGroupScheduler,
+   RegisterVSANNannyScheduler
 } from './scheduler-adapter.js'
 import { performance } from 'perf_hooks'
 import { ConnectMongoDatabase } from '../common/db-utils.js'
@@ -28,9 +29,12 @@ ConnectMongoDatabase(async () => {
    logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)
    const updateTeamGroupJob = RegisterTeamGroupScheduler()
    logger.info(`next invocation of team group members update is ${updateTeamGroupJob.nextInvocation()}`)
+   const updateVsanNannyJob = RegisterVSANNannyScheduler()
+   logger.info(`next invocation of vsan nannys update is ${updateVsanNannyJob.nextInvocation()}`)
    if (process.env.NODE_ENV !== 'development') {
       updatePerforceInfoJob.invoke()
       updateTeamGroupJob.invoke()
+      updateVsanNannyJob.invoke()
    }
 })
 
