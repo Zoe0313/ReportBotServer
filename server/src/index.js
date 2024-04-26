@@ -1,21 +1,17 @@
 import dotenv from 'dotenv'
-import bolt from '@slack/bolt'
-import {
-   RegisterCommonServiceHandler,
-   RegisterCreateReportServiceHandler,
-   RegisterManageReportServiceHandler,
-   RegisterReportHistoryServiceHandler,
-   RegisterRequestApiTokenServiceHandler
-} from './bolt_service/index.js'
+import axios from 'axios'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
    RegisterScheduler, RegisterPerforceInfoScheduler,
    RegisterPerforceMembersScheduler, RegisterTeamGroupScheduler,
    RegisterVSANNannyScheduler
 } from './scheduler-adapter.js'
+import Koa from 'koa'
+import Router from 'koa-router'
+import koaBody from 'koa-body'
+import http from 'http'
 import { performance } from 'perf_hooks'
 import { ConnectMongoDatabase } from '../common/db-utils.js'
-import { InitSlackClient } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 dotenv.config()
 
@@ -38,17 +34,10 @@ ConnectMongoDatabase(async () => {
    }
 })
 
-// new bolt app with slack bolt token
-// get token from https://api.slack.com/apps and write them in .env file
-const app = new bolt.App({
-   socketMode: true,
-   token: process.env.SLACK_BOT_TOKEN,
-   appToken: process.env.SLACK_APP_TOKEN,
-   userToken: process.env.SLACK_USER_TOKEN,
-   signingSecret: process.env.SLACK_SIGNING_SECRET
-})
+const app = new Koa()
+const router = new Router()
 
-InitSlackClient(app.client)
+app.use(koaBody())
 
 // handler performance
 app.use(async ({ body, next }) => {
@@ -65,30 +54,29 @@ app.use(async ({ body, next }) => {
 })
 
 // global error handler
-app.error((error) => {
+app.on('error', error => {
    const errorMessage = `original message: ${error.original}, ` +
       `stack: ${error.original?.stack}`
    logger.error(error)
    logger.error(errorMessage)
-   if (process.env.ISSUE_CHANNEL_ID) {
+   if (process.env.ISSUE_GCHAT_WEBHOOK) {
       try {
-         app.client.chat.postMessage({
-            channel: process.env.ISSUE_CHANNEL_ID,
-            blocks: [],
-            text: errorMessage
-         })
+         const CONTENT_TYPE_JSON_UTF = { 'Content-Type': 'application/json; charset=UTF-8' }
+         axios.post(
+            process.env.ISSUE_GCHAT_WEBHOOK,
+            JSON.stringify({ text: errorMessage }),
+            { headers: CONTENT_TYPE_JSON_UTF }
+         )
       } catch (e) {
          logger.error(e)
       }
    }
 })
 
-// register handlers for slack bolt UI
-RegisterCommonServiceHandler(app)
-RegisterCreateReportServiceHandler(app)
-RegisterManageReportServiceHandler(app)
-RegisterReportHistoryServiceHandler(app)
-RegisterRequestApiTokenServiceHandler(app)
+app.use(router.routes())
+   .use(router.allowedMethods())
 
-app.start()
+const serverCallback = app.callback()
+http.createServer(serverCallback).listen(process.env.PORT || 3000)
+
 logger.info('⚡️ Bolt app is running!')

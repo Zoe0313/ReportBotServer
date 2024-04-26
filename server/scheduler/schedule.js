@@ -9,11 +9,9 @@ import { UpdateP4Branches } from '../src/model/perforce-info.js'
 import { UpdateTeamGroup } from '../src/model/team-group.js'
 import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
 import {
-   GetConversationsName, GetUsersName, VerifyBotInChannel,
-   VMwareId2GoogleUserInfo
+   GetUsersName, VMwareId2GoogleUserInfo
 } from '../common/slack-helper.js'
 import logger from '../common/logger.js'
-import { WebClient } from '@slack/web-api'
 import path from 'path'
 import cronParser from 'cron-parser'
 import { GenerateNannyRoster } from '../src/bolt_service/init-blocks-data-helper.js'
@@ -30,7 +28,7 @@ logger.info('system time zone ' + systemTz)
 const projectRootPath = path.join(path.resolve(), '..')
 const scheduleJobStore = {}
 const updateNannyScheduleJobStore = {}
-const client = new WebClient(process.env.SLACK_BOT_TOKEN)
+const CONTENT_TYPE_JSON_UTF = { 'Content-Type': 'application/json; charset=UTF-8' }
 
 const AsyncForEach = async function (array, callback) {
    let results = []
@@ -43,31 +41,22 @@ const AsyncForEach = async function (array, callback) {
 const NotificationExecutor = async (report, ContentEvaluate) => {
    let reportHistory = null
    try {
-      const mentionUsers = report.mentionUsers?.concat(
-         report.mentionGroups?.map(group => group.value) || []) || []
+      const mentionUsers = report.mentionUsers || []
       logger.debug(`mentionusers: ${mentionUsers}`)
 
-      // filter channel IDs which bot is not in
-      let adminChannelIDs = report.adminConfig?.channels?.map(
-         channel => channel.split('/')[0]) || []
-      if (adminChannelIDs != null && adminChannelIDs.length > 0) {
-         const results = await Promise.all(
-            adminChannelIDs.map(channelID => VerifyBotInChannel(channelID)
-               .then(inChannel => ({ channelID, inChannel }))
-            ))
-         adminChannelIDs = results.filter(result => result.inChannel)
-            .map(result => result.channelID)
+      let isWebhookEmpty = false
+      const sendWebhooks = Array.from(new Set(report.webhooks || []))
+      if (sendWebhooks.length === 0) {
+         sendWebhooks.push(process.env.ISSUE_GCHAT_WEBHOOK)
+         isWebhookEmpty = true
       }
-      const sendConversations = Array.from(new Set(report.conversations?.concat(
-         adminChannelIDs || []) || []))
-      logger.debug(`Send conversations: ${sendConversations}`)
-
+      logger.debug(`Send webhooks: ${JSON.stringify(sendWebhooks)}`)
       reportHistory = new ReportHistory({
          reportConfigId: report._id,
          title: report.title,
          creator: report.creator,
          reportType: report.reportType,
-         conversations: sendConversations,
+         conversations: sendWebhooks,
          mentionUsers: mentionUsers,
          sentTime: null,
          content: '',
@@ -77,118 +66,71 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
 
       // 10 mins timeout
       const messageInfo = await ContentEvaluate(report)
-      const slackMessages = messageInfo.slackMessages
+      const messages = messageInfo.messages
       logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messageInfo)}`)
 
       const isSkipEmptyReport = report.skipEmptyReport
       if (isSkipEmptyReport === 'Yes' && messageInfo.isEmpty === true) {
          logger.info(`The option of skip empty report is ${isSkipEmptyReport} `)
-         reportHistory.content = JSON.stringify(slackMessages[0])
+         reportHistory.content = JSON.stringify(messages[0])
          reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
          reportHistory.sentTime = new Date()
          await reportHistory.save()
          return
       }
-      // post reports to slack channels
-      const slackResults = await Promise.all(
-         sendConversations.map(conversation => {
-            return AsyncForEach(slackMessages, async message => {
-               return await client.chat.postMessage({
-                  channel: conversation,
-                  text: message
-               }).catch((e) => {
-                  logger.error(`failed to post message to conversation ${conversation}` +
-                     `since error: ${JSON.stringify(e)}`)
-                  return null
-               })
+
+      // post reports to Google spaces
+      const results = await Promise.all(
+         sendWebhooks.map(webhook => {
+            return AsyncForEach(messages, async message => {
+               if (isWebhookEmpty === true) {
+                  message = `[*Webhook Empty* ID_${report._id}]\n` + message
+               }
+               const appMessage = { text: message }
+               const webhookWithId = webhook + messageInfo.webhookUserIds
+               try {
+                  const response = await axios.post(
+                     webhookWithId,
+                     JSON.stringify(appMessage),
+                     { headers: CONTENT_TYPE_JSON_UTF }
+                  )
+                  logger.debug(JSON.stringify(response.data))
+                  return { webhook: webhookWithId, result: response.data }
+               } catch (e) {
+                  const errorMessage = `Fail to post message by webhook ${webhookWithId}` +
+                     `, error: ${JSON.stringify(e)}`
+                  logger.error(errorMessage)
+                  return { webhook: webhookWithId, result: null }
+               }
             })
          })
       )
       const tsMap = Object.fromEntries(
-         slackResults.filter(result => {
-            return result != null
-         }).map(result => {
-            return [result.channel, result.ts]
+         results.filter(data => {
+            return data.result != null
+         }).map(data => {
+            // we use 'thread.name' to send thread message.
+            // we couldn't delete sent message by webhook and thread.name. (to be design)
+            return [data.webhook, data.result.thread.name]
          })
       )
-      logger.info(`the tsMap of Slack is ${JSON.stringify(tsMap)}`)
-      let tsGChatMap = null
-      const messageHeaders = {
-         'Content-Type': 'application/json; charset=UTF-8'
-      }
-      const sendWebhooks = Array.from(report.webhooks || [])
-      if (sendWebhooks.length > 0) {
-         logger.debug(`Send with the webhooks ${sendWebhooks}`)
-         const googleMessages = messageInfo.googleMessages
-         const webhookResults = await Promise.all(
-            sendWebhooks.map(webhook => {
-               return AsyncForEach(googleMessages, async message => {
-                  const appMessage = { text: message }
-                  const webhookWithId = webhook + messageInfo.webhookUserIds
-                  try {
-                     const response = await axios.post(
-                        webhookWithId,
-                        JSON.stringify(appMessage),
-                        { headers: messageHeaders }
-                     )
-                     logger.debug(JSON.stringify(response.data))
-                     return { webhook, result: response.data }
-                  } catch (e) {
-                     logger.error(`failed to post message to webhook ${webhookWithId}` +
-                         `since error: ${JSON.stringify(e)}`)
-                     const errorMessage = `Failed to send the report for webhook ${webhook}` +
-                        ` as the ${JSON.stringify(e)} error`
-                     client.chat.postMessage({
-                        channel: process.env.ISSUE_CHANNEL_ID,
-                        text: errorMessage
-                     })
-                     return null
-                  }
-               })
-            })
-         )
-         tsGChatMap = Object.fromEntries(
-            webhookResults.filter(data => {
-               return data.result != null
-            }).map(data => {
-               return [data.webhook, data.result.thread.name]
-            })
-         )
-         logger.info(`the tsMap of gChat is ${JSON.stringify(tsGChatMap)}`)
-      }
-      // update status and content of report history
-      reportHistory.sentTime = new Date()
-
+      logger.info(`the tsMap of Google Chat is ${JSON.stringify(tsMap)}`)
       if (tsMap.size === 0) {
-         throw new Error('Sent notification to all conversations failed.')
-      }
-      if (sendWebhooks.length > 0 && tsGChatMap.size === 0) {
          throw new Error('Sent notification to all spaces failed.')
       }
+      // check the via link is stable or not. If unstable, send bugzilla full link to thread.
       if (report.reportType === 'bugzilla') {
          try {
             await axios({
-               method: 'get', url: 'https://via.vmw.com/'
+               method: 'get', url: 'https://via.vmw.com/', timeout: 5000
             })
          } catch (e) {
             logger.error(`Via link is unstable. Error: ${JSON.stringify(e)}`)
             const threadMessage = 'via short link service is in maintenance, please use the <' +
                `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
-            // send thread message in Slack
-            for (const channel in tsMap) {
-               const threadTs = tsMap[channel]
-               await client.chat.postMessage({
-                  channel: channel,
-                  thread_ts: threadTs,
-                  text: threadMessage
-               }).catch((e) => {
-                  logger.error(`failed to post message to Slack thread ${threadTs}` +
-                     `since error: ${JSON.stringify(e)}`)
-               })
-            }
             // send thread message in Google Chat
-            for (const webhook in tsGChatMap) {
-               const threadName = tsGChatMap[webhook]
+            for (const webhook in tsMap) {
+               const threadName = tsMap[webhook]
                const appMessage = { text: threadMessage, thread: { name: threadName } }
                const webhookWithOpt = webhook +
                   '&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD'
@@ -196,18 +138,19 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
                   await axios.post(
                      webhookWithOpt,
                      JSON.stringify(appMessage),
-                     { headers: messageHeaders }
+                     { headers: CONTENT_TYPE_JSON_UTF }
                   )
                } catch (e) {
-                  logger.error(`failed to post message to Space thread ${threadName}` +
+                  logger.error(`Fail to post message to Google Space thread ${threadName}` +
                      `since error: ${JSON.stringify(e)}`)
                }
             }
          }
       }
-
-      reportHistory.tsMap = tsMap
-      reportHistory.content = JSON.stringify(slackMessages[0])
+      // update status and content of report history
+      reportHistory.sentTime = new Date()
+      // reportHistory.tsMap = tsMap // validation error
+      reportHistory.content = JSON.stringify(messages[0])
       reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
       await reportHistory.save()
    } catch (e) {
@@ -233,10 +176,11 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
          let errorMessage = `*Title: ${reportHistory.title}*\n`
          errorMessage += `Sent Time: ${reportHistory.sentTime}\n`
          errorMessage += `Error: ${reportHistory.content}`
-         client.chat.postMessage({
-            channel: process.env.ISSUE_CHANNEL_ID,
-            text: errorMessage
-         })
+         axios.post(
+            process.env.ISSUE_GCHAT_WEBHOOK,
+            JSON.stringify({ text: errorMessage }),
+            { headers: CONTENT_TYPE_JSON_UTF }
+         )
       }
    }
 }
@@ -279,7 +223,6 @@ const ContentEvaluate = async (report) => {
    let timeout = 10 * 60 * 1000
    let scriptPath = ''
    let stdout = ''
-   let stdoutGoogle = ''
    let command = ''
    const reportTitle = report.title.replace(/'/g, '%27')
    switch (report.reportType) {
@@ -290,12 +233,10 @@ const ContentEvaluate = async (report) => {
             `--url '${report.reportSpecConfig.bugzillaLink}'`
          logger.debug(`execute the bugzilla report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
-         stdoutGoogle = stdout
          break
       }
       case 'text': {
          stdout = report.reportSpecConfig.text
-         stdoutGoogle = stdout
          break
       }
       case 'perforce_checkin': {
@@ -311,7 +252,6 @@ const ContentEvaluate = async (report) => {
             --endTime ${endTime.getTime() / 1000}`
          logger.debug(`execute the perforce checkin report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
-         stdoutGoogle = stdout
          break
       }
       case 'perforce_review_check': {
@@ -328,24 +268,27 @@ const ContentEvaluate = async (report) => {
             --endTime ${endTime.getTime() / 1000}`
          logger.debug(`execute the perforce review check report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
-         stdoutGoogle = stdout
          break
       }
       case 'bugzilla_by_assignee': {
          scriptPath = projectRootPath + '/generator/src/notification/bugzilla_assignee_report.py'
-         const assignees = await GetUsersName(report.reportSpecConfig.bugzillaAssignee)
-         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
-         `--title '${reportTitle}' ` +
-         `--users '${assignees.join(',')}'`
-         logger.debug(`execute the bugzilla by assignee report generator: ${command}`)
-         stdout = await ExecCommand(command, timeout)
-         stdoutGoogle = stdout
+         let assignees = await GetUsersName(report.reportSpecConfig.bugzillaAssignee)
+         assignees = assignees.filter(value => value != null)
+         if (assignees.length > 0) {
+            command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
+               --title '${reportTitle}' \
+               --users '${assignees.join(',')}'`
+            logger.debug(`execute the bugzilla by assignee report generator: ${command}`)
+            stdout = await ExecCommand(command, timeout)
+         }
+         if (stdout === '') {
+            throw new Error(`Fail to generate bugzilla_by_assignee report because of ` +
+               `${report.reportSpecConfig.bugzillaAssignee} not find in db.userinfos`)
+         }
          break
       }
       case 'nanny_reminder': {
          const MentionNannys = (text, nannyVMwareIds, mentionKey) => {
-            let textSlack = text.slack
-            let textGoogle = text.google
             for (let i = 0; i < nannyVMwareIds.length; i++) {
                const vmwareId = nannyVMwareIds[i]
                let nannyMentionKey = `@${mentionKey}`
@@ -355,51 +298,53 @@ const ContentEvaluate = async (report) => {
                   nannyFullNameKey = nannyFullNameKey + `${i + 1}`
                }
                const gUserInfo = VMwareId2GoogleUserInfo(vmwareId)
-               // Mention nanny in Slack by <@vmware ID>
-               textSlack = textSlack.replace(nannyMentionKey, `<@${vmwareId}>`)
                // Mention nanny in Google Chat by <users/Google user ID>
                if (gUserInfo.gid.length > 0) {
-                  textGoogle = textGoogle.replace(nannyMentionKey, `<users/${gUserInfo.gid}>`)
+                  text = text.replace(nannyMentionKey, `<users/${gUserInfo.gid}>`)
                } else {
-                  textGoogle = textGoogle.replace(nannyMentionKey, `@${vmwareId}`)
+                  text = text.replace(nannyMentionKey, `@${vmwareId}`)
                }
                if (gUserInfo.full_name.length > 0) {
-                  textSlack = textSlack.replace(nannyFullNameKey, gUserInfo.full_name)
-                  textGoogle = textGoogle.replace(nannyFullNameKey, gUserInfo.full_name)
+                  text = text.replace(nannyFullNameKey, gUserInfo.full_name)
                } else {
-                  textSlack = textSlack.replace(nannyFullNameKey, `<@${vmwareId}>`)
-                  textGoogle = textGoogle.replace(nannyFullNameKey, `@${vmwareId}`)
+                  text = text.replace(nannyFullNameKey, `@${vmwareId}`)
                }
             }
-            return { slack: textSlack, google: textGoogle }
+            return text
          }
          stdout = report.reportSpecConfig.text
          const assignees = report.reportSpecConfig.nannyAssignee.split('\n')
          const thisTimeNannys = assignees[0].split(',')
          const nextTimeNannys = assignees[1].split(',')
-         let resultText = { slack: stdout, google: stdout }
+         let resultText = stdout
          if (stdout.indexOf('this-nanny') >= 0) {
             resultText = MentionNannys(resultText, thisTimeNannys, 'this-nanny')
          }
          if (stdout.indexOf('next-nanny') >= 0) {
             resultText = MentionNannys(resultText, nextTimeNannys, 'next-nanny')
          }
-         stdout = resultText.slack
-         stdoutGoogle = resultText.google
+         stdout = resultText
          break
       }
       case 'jira_list': {
-         const assignees = await GetUsersName([report.creator])
+         let assignees = await GetUsersName([report.creator])
+         assignees = assignees.filter(value => value != null)
+         let creatorName = ''
+         if (assignees.length > 0) {
+            creatorName = assignees[0]
+         } else if (report.reportSpecConfig.jira.jql.indexOf('currentUser()') >= 0) {
+            throw new Error(`Fail to generate jira list report because of ` +
+               `${report.creator} not find in db.userinfos`)
+         }
          scriptPath = projectRootPath + '/generator/src/notification/jira_list_report.py'
-         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
-         `--title '${reportTitle}' ` +
-         `--jql '${escape(report.reportSpecConfig.jira.jql)}' ` +
-         `--fields '${report.reportSpecConfig.jira.fields.join(',')}' ` +
-         `--groupby '${report.reportSpecConfig.jira.groupby}' ` +
-         `--creator '${assignees[0]}'`
+         command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
+            --title '${reportTitle}' \
+            --jql '${escape(report.reportSpecConfig.jira.jql)}' \
+            --fields '${report.reportSpecConfig.jira.fields.join(',')}' \
+            --groupby '${report.reportSpecConfig.jira.groupby}' \
+            --creator '${creatorName}'`
          logger.debug(`execute the jira report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
-         stdoutGoogle = stdout
          break
       }
       // case 'svs':
@@ -408,15 +353,8 @@ const ContentEvaluate = async (report) => {
       default:
          throw new Error(`report type ${report.reportType} not supported.`)
    }
-   let mentionUserNames = ''
-   const mentionUsers = report.mentionUsers?.concat(
-      report.mentionGroups?.map(group => group.value) || []) || [] // mix with mention groups
-   logger.debug(`mention users: ${mentionUsers}`)
-   if (mentionUsers != null && mentionUsers.length > 0) {
-      mentionUserNames = '\n' + (await GetConversationsName(mentionUsers))
-   }
    let mentionUserIds = '' // shown by google chat format: <users/user ID>
-   let webhookUserIds = '' // used in google chat webhook
+   let gIdsStr = '' // used in google chat webhook
    if (report.mentionUsers != null && report.mentionUsers.length > 0) { // need to mention user in message
       const vmwareIds = await GetUsersName(report.mentionUsers)
       const googleUserIds = vmwareIds.map(vmwareId => {
@@ -425,46 +363,28 @@ const ContentEvaluate = async (report) => {
       mentionUserIds = '\n' + googleUserIds.map(userId => {
          return `<users/${userId}>`
       }).join(', ')
-      webhookUserIds = '&id=' + googleUserIds.join(',')
+      gIdsStr = '&id=' + googleUserIds.join(',')
    }
    // If the report type is text or nanny_reminder, we return the report content by array directly.
    if (report.reportType === 'text' || report.reportType === 'nanny_reminder') {
-      stdout += mentionUserNames
-      stdoutGoogle += mentionUserIds
-      return {
-         slackMessages: [stdout],
-         googleMessages: [stdoutGoogle],
-         isEmpty: false,
-         webhookUserIds: webhookUserIds
-      }
+      stdout += mentionUserIds
+      return { messages: [stdout], isEmpty: false, webhookUserIds: gIdsStr }
    }
    try {
       const output = JSON.parse(stdout)
       // Here output's format is {“messages”: [“……“, “……“], “isEmpty”: False}
       if (typeof output === 'object' && Array.isArray(output.messages)) {
          const messages = output.messages?.map(message => unescape(message)) || []
-         const googleMessages = messages.slice()
          if (messages.length > 0) {
-            messages[messages.length - 1] += mentionUserNames
-            googleMessages[googleMessages.length - 1] += mentionUserIds
+            messages[messages.length - 1] += mentionUserIds
          }
-         return {
-            slackMessages: messages,
-            googleMessages: googleMessages,
-            isEmpty: output.isEmpty,
-            webhookUserIds: webhookUserIds
-         }
+         return { messages: messages, isEmpty: output.isEmpty, webhookUserIds: gIdsStr }
       }
    } catch (e) {
-      logger.error(`failed to JSON.parse(stdout):`)
+      logger.error(`Fail to parse report generator stdout:`)
       logger.error(e)
    }
-   return {
-      slackMessages: [stdout],
-      googleMessages: [stdout],
-      isEmpty: false,
-      webhookUserIds: webhookUserIds
-   }
+   return { messages: [stdout], isEmpty: false, webhookUserIds: gIdsStr }
 }
 
 const ScheduleOption = function (repeatConfig) {
@@ -610,13 +530,14 @@ const InvokeNow = async function (id, sendToUserId) {
       if (sendToUserId) {
          const report = await ReportConfiguration.findById(id)
          const messageInfo = await ContentEvaluate(report)
-         const messages = messageInfo.slackMessages
-         logger.debug(`send notification to me now: ${JSON.stringify(messageInfo)}`)
+         const messages = messageInfo.messages
+         logger.debug(`send notification to test space now: ${JSON.stringify(messageInfo)}`)
          AsyncForEach(messages, async message => {
-            await client.chat.postMessage({
-               channel: sendToUserId,
-               text: message
-            })
+            await axios.post(
+               process.env.DEV_GCHAT_WEBHOOK,
+               JSON.stringify({ text: message }),
+               { headers: CONTENT_TYPE_JSON_UTF }
+            )
          })
       } else {
          job.invoke()
@@ -737,10 +658,7 @@ const UpdateVSANNanny = async () => {
       logger.debug(`execute the refresh vsan-nanny.csv command: ${command}`)
       await ExecCommand(command, 60 * 1000)
    } catch (e) {
-      client.chat.postMessage({
-         channel: process.env.ISSUE_CHANNEL_ID,
-         text: `*Update vsan-nanny.csv occur error*\n${e.message}`
-      })
+      logger.error(`Fail to update vsan-nanny.csv since error: ${e.message}`)
    }
 }
 
@@ -754,7 +672,7 @@ const RegisterVSANNannyScheduler = function () {
 
 export {
    RegisterScheduler, UnregisterScheduler, NextInvocation,
-   CancelNextInvocation, InvokeNow,
+   CancelNextInvocation, InvokeNow, ContentEvaluate,
    RegisterPerforceInfoScheduler, RegisterPerforceMembersScheduler,
    RegisterTeamGroupScheduler, RegisterVSANNannyScheduler
 }

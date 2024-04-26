@@ -1,6 +1,5 @@
 import mongoose from 'mongoose'
 import logger from '../../common/logger.js'
-import { LookUpUserByName } from '../../common/slack-helper.js'
 
 const UserInfoSchema = new mongoose.Schema({
    userName: {
@@ -38,15 +37,21 @@ const UpdateUserInfo = async (userInfoList) => {
 }
 
 const FindUserInfoByName = async (userName) => {
-   let userInfo = await UserInfo.findOne({ userName: userName })
+   const userInfo = await UserInfo.findOne({ userName: userName })
    if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
       logger.debug(`the user ${userName} not found in db. Search info by Slack API.`)
-      userInfo = await LookUpUserByName(userName)
-      if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
-         return null
-      }
+      return null
    }
    return userInfo
 }
 
-export { UserInfo, UpdateUserInfo, FindUserInfoByName }
+const GetVMwareIdBySlackId = async (slackId) => {
+   const userInfo = await UserInfo.findOne({ slackId: slackId })
+   if (userInfo == null || userInfo.userName == null || userInfo.userName === '') {
+      logger.debug(`Fail to query VMware ID by slack ID ${slackId} in db.`)
+      return null
+   }
+   return userInfo.userName
+}
+
+export { UserInfo, UpdateUserInfo, FindUserInfoByName, GetVMwareIdBySlackId }
