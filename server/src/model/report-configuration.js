@@ -61,29 +61,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
    creator: { type: String, required: true },
    status: { type: String, enum: STATUS_ENUM, required: true },
    reportType: { type: String, enum: REPORT_TYPE_ENUM, required: true },
-   conversations: {
-      type: [String],
-      validate: {
-         validator: async function(v) {
-            if (!v || v.length === 0) {
-               throw new Error(`Should select at least one channel/direct message to send report.`)
-            } else {
-               const results = await Promise.all(
-                  v.filter(channel => channel.startsWith('C')).map(channel =>
-                     VerifyBotInChannel(channel)
-                        .then(inChannel => ({ channel, inChannel }))
-                  )
-               )
-               const notInChannelList = results.filter(result => !result.inChannel)
-                  .map(result => result.channel)
-               if (notInChannelList.length > 0) {
-                  throw new Error('I am not in some selected private channel(s)' +
-                     ' or direct message(s), please invite me into the channel(s).')
-               }
-            }
-         }
-      }
-   },
+   conversations: [String],
    mentionUsers: [String],
    mentionGroups: [Object],
    skipEmptyReport: {
