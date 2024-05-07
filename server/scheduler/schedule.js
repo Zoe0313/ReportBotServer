@@ -534,7 +534,7 @@ const InvokeNow = async function (id, sendToUserId) {
          logger.debug(`send notification to test space now: ${JSON.stringify(messageInfo)}`)
          AsyncForEach(messages, async message => {
             await axios.post(
-               process.env.DEV_GCHAT_WEBHOOK,
+               process.env.DEV_GCHAT_WEBHOOK + messageInfo.webhookUserIds,
                JSON.stringify({ text: message }),
                { headers: CONTENT_TYPE_JSON_UTF }
             )

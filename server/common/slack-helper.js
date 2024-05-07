@@ -105,7 +105,10 @@ export function GetConversationsName(conversationIds) {
 
 export async function GetUsersName(users) {
    return await Promise.all(users.map(slackId => {
-      return GetVMwareIdBySlackId(slackId)
+      if (slackId.startsWith('U') || slackId.startsWith('W')) {
+         return GetVMwareIdBySlackId(slackId)
+      }
+      return slackId
    }))
 }
 

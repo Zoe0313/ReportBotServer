@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vsanbot-server-stage
+  labels:
+    app.name: vsanbot-server-stage
+spec:
+  selector:
+    matchLabels:
+      app.name: vsanbot-server-stage
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.name: vsanbot-server-stage
+        environment: stage
+    spec:
+      containers:
+        - name: vsanbot-server-stage
+          image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/stage/slackbot/vsanbot-server:release-now
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: MONGO_DB
+              value: zoe-slackbot
+            - name: MONGO_PORT
+              value: "27017"
+            - name: PORT
+              value: "3000"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+          - name: slackbot-nfs
+            mountPath: /slackbot/persist
+          - name: apps-volume
+            mountPath: /build/apps
+          - name: toolchain-volume
+            mountPath: /build/toolchain
+          resources:
+            requests:
+              memory: "200Mi"
+              cpu: "100m"
+            limits:
+              memory: "500Mi"
+              cpu: "200m"
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10002
+        fsGroup: 10002
+      volumes:
+        - name: slackbot-nfs
+          nfs:
+            server: pa-archive.eng.vmware.com
+            path: /slackbot-aas
+        - name: apps-volume
+          nfs:
+            server: build-apps.eng.vmware.com
+            path: /apps
+        - name: toolchain-volume
+          nfs:
+            server: build-toolchain.eng.vmware.com
+            path: /toolchain
+      dnsConfig:
+        searches:
+          - eng.vmware.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vsanbot-server-stage
+  labels:
+    app.name: vsanbot-server-stage
+spec:
+  selector:
+    app.name: vsanbot-server-stage
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 3000
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: vsanbot-server-stage
+  annotations:
+    kubernetes.io/ingress.class: "vdp-contour-int"
+spec:
+  virtualhost:
+    fqdn: vsanbot-staging.vdp.oc.vmware.com
+    tls:
+      secretName: infra-system/vdp-int-domain-tls
+  routes:
+    - conditions:
+        - prefix: /
+      services:
+        - name: vsanbot-server-stage
+          port: 443
+      timeoutPolicy:
+        response: 480s

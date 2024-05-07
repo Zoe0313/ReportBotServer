@@ -1,8 +1,6 @@
 import logger from '../../common/logger.js'
 import { RegisterApiRouters } from './manage-api-service.js'
 import { ConnectMongoDatabase } from '../../common/db-utils.js'
-import { InitSlackClient } from '../../common/slack-helper.js'
-import { WebClient } from '@slack/web-api'
 import Koa from 'koa'
 import Router from 'koa-router'
 import koaBody from 'koa-body'
@@ -10,19 +8,17 @@ import http from 'http'
 import mount from 'koa-mount'
 import serve from 'koa-static'
 import path from 'path'
+import axios from 'axios'
 
 // connect to mongodb
 ConnectMongoDatabase()
 
-const client = new WebClient(process.env.SLACK_BOT_TOKEN_REST)
 const app = new Koa()
 const router = new Router()
 
-InitSlackClient(client)
-
 app.use(koaBody())
 
-RegisterApiRouters(router, client)
+RegisterApiRouters(router)
 
 app.use(async (ctx, next) => {
    try {
@@ -35,11 +31,23 @@ app.use(async (ctx, next) => {
 })
 
 app.on('error', err => {
-   logger.error('api server error', err)
+   const errorMessage = err
+   logger.error(errorMessage)
+   if (process.env.ISSUE_GCHAT_WEBHOOK) {
+      try {
+         const headers = { 'Content-Type': 'application/json; charset=UTF-8' }
+         axios.post(
+            process.env.ISSUE_GCHAT_WEBHOOK,
+            JSON.stringify({ text: errorMessage }),
+            { headers: headers }
+         )
+      } catch (e) {
+         logger.error(e)
+      }
+   }
 })
 
-app
-   .use(router.routes())
+app.use(router.routes())
    .use(router.allowedMethods())
 
 const serverCallback = app.callback()
