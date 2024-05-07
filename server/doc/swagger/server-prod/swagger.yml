@@ -1,0 +1,407 @@
+openapi: 3.0.0
+info:
+  description: >
+    This is the document of vSAN Bot restful API on production.
+  version: 1.0.0-oas3
+  title: vSAN Bot Rest API on production
+  contact:
+    email: vsan-slackbot-team@vmware.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+components:
+  schemas:
+    Text:
+      type: string
+      example: This is the example message to be post via API
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+  - name: public
+    description: Public vSAN Bot rest Api for VMware users
+  - name: private
+    description: Private vSAN Bot rest Api for vSAN bot admins
+paths:
+  /api/v1/metrics:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - private
+      summary: Get metrics collect from server
+      operationId: getMetrics
+      description: >
+        This internal API can be used to get metrics from vSANSlackbot server.
+        It will response datas include number of sent report, number of enabled report.
+
+        After the metrics endpoint registered in chronus, we can setup the dashboard
+        of each report type count. It will be easier for us to monitor vSAN bot service.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/team_members/{teamCode}:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - public
+      summary: fetch the latest specific team members
+      operationId: getMessage
+      description: >
+         This API can be used to get the latest specific team member list.
+
+         Please request a bearer token on vSANSlackbot APP for posting Slack
+         message. Pass the bearer token in header.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: teamCode
+          in: path
+          required: true
+          type: string
+          description: the team's code
+          example: >
+            <br>`vsan` is vSAN Team's code.<br>
+            `vsan-zdom` is vSAN zDOM Team's code.<br>
+            `vsan-fs` is vSAN VDFS Team's code.<br>
+            `vsan-clom` is vSAN CLOM Team's code.<br>
+            `vsan-health` is vSAN Health Team's code.
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/team_members/{managerName}/all:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - public
+      summary: fetch all the members report to the given manager
+      operationId: getMessage
+      description: >
+        This API can be used to get the latest members list of the given manager.
+        The members list include all direct and indirect reporters.
+
+        Please request a bearer token on vSANSlackbot APP for posting Slack
+        message. Pass the bearer token in header.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: managerName
+          in: path
+          required: true
+          type: string
+          description: the manager's VMware ID
+          example: >
+            Zhou Huang's email address is zhouhuang@vmware.com,
+            pick `zhouhuang` as the manager name.
+
+            Here is a way to get email address from Slack. Click slack user's
+            head icon and `View full profile`, then it show `Email address` on
+            Profile broad.
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/team_members/{managerName}/direct:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - public
+      summary: fetch the members direct report to the given manager
+      operationId: getMessage
+      description: >
+        This API can be used to get the latest members list of the given manager.
+        The members list only include direct reporters.
+
+        Please request a bearer token on vSANSlackbot APP for posting Slack
+        message. Pass the bearer token in header.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: managerName
+          in: path
+          required: true
+          type: string
+          description: the manager's VMware ID
+          example: >
+            Zhou Huang's email address is zhouhuang@vmware.com,
+            pick `zhouhuang` as the manager name.
+
+            Here is a way to get email address from Slack. Click slack user's
+            head icon and `View full profile`, then it show `Email address` on
+            Profile broad.
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/report_configurations:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - public
+      summary: fetch your enabled/disabled report configuration list
+      operationId: getMessage
+      description: >
+        This API can be used to get the list of your report configurations.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Text'
+            example:
+              text: offset=0&limit=5
+        description: Your report configurations pagenation
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/report_configuration/{id}:
+    get:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - public
+      summary: fetch one report configuration by report id
+      operationId: getMessage
+      description: >
+        This API can be used to get one report configuration by id.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: report configuration uuid "_id"
+          example: >
+            {"_id": "662efda0eb69b4a81793d24d"} which get from create or list report configurations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /api/v1/create_report_configuration:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - public
+      summary: create a new report configuration and enable it
+      operationId: postMessage
+      description: >
+        This API can be used to create a new report configuration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Text'
+            example:
+              text: This is the example to create a bugzilla report which send to test space on Monday 16pm.
+                    {"webhooks":"https://chat.googleapis.com/v1/spaces/AAAAraSpqB0/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=v5Bkn6XSoqyLXE90tPTg1IkN_t7GsB8o9M_GyN3xTd4",
+                    "reportSpecConfig":{"bugzillaLink":"https://via.vmw.com/CjU20C"},
+                    "repeatConfig":{"tz":"Asia/Chongqing","dayOfWeek":[1],"repeatType":"weekly","time":"16:00"},
+                    "reportType":"bugzilla","title":"vSAN Found-in 8.0.3.0 PRs"}
+        description: The request data need to be sent in creating a report configuration via API.
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/edit_report_configuration/{id}:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - public
+      summary: edit one report configuration by report id
+      operationId: postMessage
+      description: >
+        This API can be used to edit an existed report configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: report configuration uuid "_id"
+          example: >
+            {"_id": "662efda0eb69b4a81793d24d"} which get from create or list report configurations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Text'
+            example:
+              text: This is the example to edit an exist report. Update recurrence type into daily 8am.
+                    {"repeatConfig":{"repeatType":"daily","time":"08:00"}}
+        description: The request data need to be sent in editing a report configuration via API.
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /api/v1/change_status/{status}/{id}:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - public
+      summary: enable or disable one report configuration by report id
+      operationId: putMessage
+      description: >
+        This API can be used to enable or disable report configuration
+      parameters:
+        - name: status
+          in: path
+          required: true
+          type: string
+          description: do "enable" or "disable" operation to report
+          example: >
+            PUT /api/v1/change_status/disable/662efda0eb69b4a81793d24d update the report into disabled status.
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: report configuration uuid "_id"
+          example: >
+            {"_id": "662efda0eb69b4a81793d24d"} which get from create or list report configurations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/invoke_now/{id}:
+    post:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - private
+      summary: post one enabled report immediately in test space
+      operationId: postMessage
+      description: >
+        This API can be used to post one enabled report in test space by report id.
+        This API is only used by admins.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: report configuration uuid "_id"
+          example: >
+            {"_id": "662efda0eb69b4a81793d24d"} which get from create or list report configurations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/v1/delete_report_configuration/{id}:
+    put:
+      security:
+        - bearerAuth: [ ]
+      tags:
+        - private
+      summary: delete one report configuration by report id
+      operationId: putMessage
+      description: >
+        This API can be used to delete one report configuration by report id.
+        This API is only used by admins.
+        This API won't delete the record in db.reportconfigurations, just update status into `REMOVED`.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: report configuration uuid "_id"
+          example: >
+            {"_id": "662efda0eb69b4a81793d24d"} which get from create or list report configurations
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+
+servers:
+  - url: https://vsanbot.vdp.oc.vmware.com/

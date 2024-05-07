@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: slackbot-api-server
+  name: vsanbot-server
   labels:
-    app.name: slackbot-api-server
+    app.name: vsanbot-server
 spec:
   selector:
     matchLabels:
-      app.name: slackbot-api-server
+      app.name: vsanbot-server
   replicas: 1
   template:
     metadata:
       labels:
-        app.name: slackbot-api-server
+        app.name: vsanbot-server
         environment: product
     spec:
       containers:
-        - name: slackbot-api-server
-          image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/slackbot-api-server:release-now
+        - name: vsanbot-server
+          image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/vsanbot-server:release-now
           env:
             - name: POD_IP
               valueFrom:
@@ -28,13 +28,17 @@ spec:
             - name: MONGO_PORT
               value: "27017"
             - name: PORT
-              value: "4433"
+              value: "3000"
           imagePullPolicy: Always
           ports:
-            - containerPort: 4433
+            - containerPort: 3000
           volumeMounts:
           - name: slackbot-nfs
             mountPath: /slackbot/persist
+          - name: apps-volume
+            mountPath: /build/apps
+          - name: toolchain-volume
+            mountPath: /build/toolchain
           resources:
             requests:
               memory: "200Mi"
@@ -51,6 +55,14 @@ spec:
           nfs:
             server: pa-archive.eng.vmware.com
             path: /slackbot-aas
+        - name: apps-volume
+          nfs:
+            server: build-apps.eng.vmware.com
+            path: /apps
+        - name: toolchain-volume
+          nfs:
+            server: build-toolchain.eng.vmware.com
+            path: /toolchain
       dnsConfig:
         searches:
           - eng.vmware.com
@@ -58,35 +70,33 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: slackbot-api-server
+  name: vsanbot-server
   labels:
-    app.name: slackbot-api-server
+    app.name: vsanbot-server
 spec:
   selector:
-    app.name: slackbot-api-server
+    app.name: vsanbot-server
   ports:
   - protocol: TCP
     port: 443
-    targetPort: 4433
+    targetPort: 3000
 ---
 apiVersion: projectcontour.io/v1
 kind: HTTPProxy
 metadata:
-  name: slackbot-api-server
+  name: vsanbot-server
   annotations:
     kubernetes.io/ingress.class: "vdp-contour-int"
 spec:
   virtualhost:
-    # the original host is slackbot.vela.decc.vmware.com
-    # Domain vdp.oc.vmware.com only works for Production!
-    fqdn: slackbot.vdp.oc.vmware.com
+    fqdn: vsanbot.vdp.oc.vmware.com
     tls:
       secretName: infra-system/vdp-int-domain-tls
   routes:
     - conditions:
         - prefix: /
       services:
-        - name: slackbot-api-server
+        - name: vsanbot-server
           port: 443
       timeoutPolicy:
         response: 480s

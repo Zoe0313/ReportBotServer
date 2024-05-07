@@ -39,7 +39,7 @@ const UpdateUserInfo = async (userInfoList) => {
 const FindUserInfoByName = async (userName) => {
    const userInfo = await UserInfo.findOne({ userName: userName })
    if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
-      logger.debug(`the user ${userName} not found in db. Search info by Slack API.`)
+      logger.debug(`Fail to query user info by VMware ID ${userName} in db.userinfos`)
       return null
    }
    return userInfo
@@ -48,7 +48,7 @@ const FindUserInfoByName = async (userName) => {
 const GetVMwareIdBySlackId = async (slackId) => {
    const userInfo = await UserInfo.findOne({ slackId: slackId })
    if (userInfo == null || userInfo.userName == null || userInfo.userName === '') {
-      logger.debug(`Fail to query VMware ID by slack ID ${slackId} in db.`)
+      logger.debug(`Fail to query VMware ID by slack ID ${slackId} in db.userinfos`)
       return null
    }
    return userInfo.userName

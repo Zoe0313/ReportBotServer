@@ -1,17 +1,20 @@
 import dotenv from 'dotenv'
 import axios from 'axios'
+import Koa from 'koa'
+import Router from 'koa-router'
+import koaBody from 'koa-body'
+import http from 'http'
+import mount from 'koa-mount'
+import serve from 'koa-static'
+import path from 'path'
+import { ConnectMongoDatabase } from '../common/db-utils.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
    RegisterScheduler, RegisterPerforceInfoScheduler,
    RegisterPerforceMembersScheduler, RegisterTeamGroupScheduler,
    RegisterVSANNannyScheduler
 } from './scheduler-adapter.js'
-import Koa from 'koa'
-import Router from 'koa-router'
-import koaBody from 'koa-body'
-import http from 'http'
-import { performance } from 'perf_hooks'
-import { ConnectMongoDatabase } from '../common/db-utils.js'
+import { RegisterApiRouters } from './api_service/manage-api-service.js'
 import logger from '../common/logger.js'
 dotenv.config()
 
@@ -39,32 +42,27 @@ const router = new Router()
 
 app.use(koaBody())
 
-// handler performance
-app.use(async ({ body, next }) => {
-   const user = body?.user?.id || body?.message?.user || body?.user_id ||
-      body?.event?.user?.id || body?.event?.user || body?.event?.message?.user
-   const type = body?.actions?.map(action => action.action_id)?.join(', ') ||
-      body?.subtype || body?.type || body?.command
-   const t0 = performance.now()
-   await next()
-   const t1 = performance.now()
-   if (body?.event?.type !== 'user_change') {
-      logger.debug(`${user} did ${type} took ${(t1 - t0)} milliseconds.`)
+RegisterApiRouters(router)
+
+app.use(async (ctx, next) => {
+   try {
+      await next()
+   } catch (err) {
+      ctx.status = err.status || 500
+      ctx.body = err
+      ctx.app.emit('error', err, ctx)
    }
 })
 
 // global error handler
 app.on('error', error => {
-   const errorMessage = `original message: ${error.original}, ` +
-      `stack: ${error.original?.stack}`
    logger.error(error)
-   logger.error(errorMessage)
    if (process.env.ISSUE_GCHAT_WEBHOOK) {
       try {
          const CONTENT_TYPE_JSON_UTF = { 'Content-Type': 'application/json; charset=UTF-8' }
          axios.post(
             process.env.ISSUE_GCHAT_WEBHOOK,
-            JSON.stringify({ text: errorMessage }),
+            JSON.stringify({ text: error }),
             { headers: CONTENT_TYPE_JSON_UTF }
          )
       } catch (e) {
@@ -78,5 +76,12 @@ app.use(router.routes())
 
 const serverCallback = app.callback()
 http.createServer(serverCallback).listen(process.env.PORT || 3000)
+
+let swaggerPath = path.join(path.resolve(), 'doc/swagger/server-prod')
+if (process.env.NODE_ENV === 'development') {
+   swaggerPath = path.join(path.resolve(), 'doc/swagger/server-stg')
+}
+console.log(swaggerPath)
+app.use(mount('/api/v1/', serve(swaggerPath)))
 
 logger.info('⚡️ Bolt app is running!')
