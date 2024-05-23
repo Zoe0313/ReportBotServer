@@ -4,11 +4,12 @@
 
 '''
 Module docstring.
-RefreshVsanNannyList.py
+RefreshNannysOnWiki.py
+Description:
+  Refresh nanny list from wiki page
 Function:
-- Refresh vsan nanny list from wiki page
-  https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster on Monday 9:30am.
-- Save the list in persist/config/vsan-nanny.csv
+- VSAN Nanny: https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster on Monday 9:30am.
+  Save the list in persist/config/vsan-nanny.csv
 Tips:
 - If login failed, please confirm the login user and password are valid or not.
   Or the wiki api maybe changed again.
@@ -96,6 +97,3 @@ def RefreshVSanNannyList():
     csvFile = os.path.join(persistDir, "vsan-nanny.csv")
     df.to_csv(csvFile, index=False)
     print('{} saved'.format(csvFile))
-
-if __name__ == "__main__":
-    RefreshVSanNannyList()
