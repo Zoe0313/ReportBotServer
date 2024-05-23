@@ -77,10 +77,7 @@ app.use(router.routes())
 const serverCallback = app.callback()
 http.createServer(serverCallback).listen(process.env.PORT || 3000)
 
-let swaggerPath = path.join(path.resolve(), 'doc/swagger/server-prod')
-if (process.env.NODE_ENV === 'development') {
-   swaggerPath = path.join(path.resolve(), 'doc/swagger/server-stg')
-}
+const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
 console.log(swaggerPath)
 app.use(mount('/api/v1/', serve(swaggerPath)))
 

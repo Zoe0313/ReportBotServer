@@ -1,0 +1,589 @@
+swagger: "2.0"
+info:
+  description: >
+    This is the document of vSAN Bot restful API on production.
+  version: 1.0.0-oas3
+  title: vSAN Bot Rest API on staging
+  contact:
+    email: vsan-slackbot-team@vmware.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+components:
+  schemas:
+    Text:
+      type: string
+      example: This is the example message to be post via API
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+  - name: public
+    description: Public vSAN Bot rest Api for VMware users
+  - name: private
+    description: Private vSAN Bot rest Api for vSAN bot admins
+definitions:
+  VMWareID:
+    type: string
+    example: "zhouhuang"
+  Content:
+    type: string
+  ReportConfig:
+    type: object
+    properties:
+      webhooks:
+        type: string
+        example: "https://chat.googleapis.com/v1/spaces/AAAAAI6ECZk/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=OgL0LB4DiSxSSYMEkxTh0-3GX2VFVENkGV7f8m5dUzA"
+      reportType:
+        type: string
+        example: "bugzilla"
+      title:
+        type: string
+        example: "vSAN Found-in 8.0.3.0 PRs"
+      reportSpecConfig:
+        properties:
+          bugzillaLink:
+            type: string
+            example: "https://via.vmw.com/CjU20C"
+      repeatConfig:
+        properties:
+          tz:
+            type: string
+            example: "Asia/Chongqing"
+          repeatType:
+            type: string
+            example: "weekly"
+          dayOfWeek:
+            type: array
+            items:
+              type: integer
+            example: [1,5]
+          time:
+            type: string
+            example: "09:00"
+  ReportHistory:
+    type: object
+    properties:
+      _id:
+        type: string
+        example: "664d5f571a4c6e221b22ceef"
+      reportConfigId:
+        type: string
+        example: "664d585875569e118453cfff"
+      conversations:
+        type: array
+        items:
+          type: string
+          example: "https://chat.googleapis.com/v1/spaces/AAAAAI6ECZk/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=OgL0LB4DiSxSSYMEkxTh0-3GX2VFVENkGV7f8m5dUzA"
+      mentionUsers:
+        type: array
+        items:
+          type: string
+      title:
+        type: string
+        example: "vSAN Found-in 8.0.3.0 PRs"
+      creator:
+        type: string
+        example: "U02CA5G4VU4"
+      reportType:
+        type: string
+        example: "bugzilla"
+      sentTime:
+        type: string
+        example: "2024-05-22T02:58:41.018Z"
+      content:
+        type: string
+        example: "\"*Title: Test for create a bugzilla report*\\nCount         Component\\n---------------------------\\n<https://via.vmw.com/NDthSw|2>                    Total\\n<https://via.vmw.com/WCEar5|1>                    Mgmt\\n<https://via.vmw.com/FJ2JVz|1>                    zDOM\""
+      status:
+        type: string
+        example: "SUCCEED"
+      createdAt:
+        type: string
+        example: "2024-05-22T02:58:31.763Z"
+      updatedAt:
+        type: string
+        example: "2024-05-22T02:58:41.020Z"
+  ReportConfigPagination:
+    type: object
+    properties:
+      total:
+        type: integer
+      page:
+        type: integer
+      limit:
+        type: integer
+      reports:
+        type: array
+        items:
+          $ref: '#/definitions/ReportConfig'
+  ReportHistoryPagination:
+    type: object
+    properties:
+      total:
+        type: integer
+      page:
+        type: integer
+      limit:
+        type: integer
+      reports:
+        type: array
+        items:
+          $ref: '#/definitions/ReportHistory'
+  HTTPInfo:
+    properties:
+      result:
+        example: true
+        type: boolean
+      message:
+        example: Info message
+        type: string
+    type: object
+  HTTPError:
+    properties:
+      result:
+        example: false
+        type: boolean
+      message:
+        example: Error message
+        type: string
+    type: object
+paths:
+  /api/v1/team/members:
+    get:
+      parameters:
+      - description: Filter type of team members. Select `group` or `manager`.
+        in: query
+        name: filterType
+        required: true
+        type: string
+        example: group
+      - description:  Filter name of team members.<br>
+                      - For filterType=group, the filterName can be below:<br>
+                      `vsan` is vSAN team code.<br>
+                      `vsan-zdom` is zDOM team code.<br>
+                      `vsan-fs` is vSAN-FS team code.<br>
+                      `vsan-clom` is CLOM team code.<br>
+                      `vsan-health` is health team code.<br>
+                      - For filterType=manager, the filterName is the manager VMWare ID:<br>
+                      Zhou Huang's VMWare email address is zhouhuang@vmware.com,
+                      pick `zhouhuang` as the manager name.
+        in: query
+        name: filterName
+        required: true
+        type: string
+        example: vsan
+      - description: Include indirect reporters or not.<br>
+                     e.g. includeIndirectReport=true  return the all reporters of manager;<br>
+                     e.g. includeIndirectReport=false  return the direct reporters of manager.
+        in: query
+        name: includeIndirectReport
+        required: false
+        type: boolean
+        example: false
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/VMWareID'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch the latest specific team members of team code or given manager
+      description: >
+        This API can be used to get the latest specific team member list
+        or the latest members list of the given manager.
+        If filter type is manager, the members list include all direct or indirect reporters.
+  /api/v1/report/configuration:
+    get:
+      parameters:
+      - description: The index of report configuration pages
+        in: query
+        name: page
+        required: false
+        type: integer
+        example: 0
+      - description: The upper limit of per page report configurations
+        in: query
+        name: limit
+        required: false
+        type: integer
+        example: 5
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfigPagination'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch your enabled/disabled report configuration list
+      description: >
+        This API can be used to get the list of your report configurations.
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Report configuration
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/ReportConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Create a report configuration and enable it
+      description: >
+        This API can be used to create a report configuration.
+
+  /api/v1/report/{id}/configuration:
+    get:
+      parameters:
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfig'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch one report configuration by id
+      description: >
+        This API can be used to get one report configuration by id.
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      - description: Edit report configuration
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/ReportConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Edit one report configuration by id
+      description: >
+        This API can be used to edit an existed report configuration.
+    patch:
+      parameters:
+        - description: The uuid of report configuration
+          in: path
+          name: id
+          required: true
+          type: string
+          example: 662efda0eb69b4a81793d24d
+        - description: Enable or disable report configuration. Select `enable` or `disable`.
+          in: query
+          name: status
+          required: true
+          type: string
+          example: enable
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/HTTPInfo'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Enable or disable one report configuration by id
+      description: >
+        This API can be used to enable or disable a report configuration by id
+    delete:
+      parameters:
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/HTTPInfo'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Delete one report configuration by id
+      description: >
+        This API can be used to delete one report configuration by id.
+        This API won't delete the db record, just update report status into `REMOVED`.
+  /api/v1/report/{id}/history:
+    get:
+      parameters:
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      - description: The index of report histories pages
+        in: query
+        name: page
+        required: false
+        type: integer
+        example: 0
+      - description: The upper limit of per page report histories
+        in: query
+        name: limit
+        required: false
+        type: integer
+        example: 5
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportHistoryPagination'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch sent report histories by report id
+      description: >
+        This API can be used to get the list of sent report histories by report id.
+    post:
+      parameters:
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportHistory'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - private
+      summary: Send report immediately in test space to generate a report history of this report
+      description: >
+        This API can be used to post one report in test space by report id.
+        This API only can be used by admins.
+
+
+  /api/v1/metrics:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Content'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - private
+      summary: Collect metrics from vSAN-bot server
+      description: >
+        This internal API can be used to get metrics from vSAN-bot server.
+        It will response datas include number of sent report, number of enabled report.
+
+        After the metrics endpoint registered in chronus, we can setup the dashboard
+        of each report type count.
+        It will be easier for team members to monitor vSAN bot service.
+
+  /api/v1/log/{filename}:
+    get:
+      parameters:
+      - description:
+        in: path
+        name: filename
+        required: true
+        type: string
+        example: slackbot-legacy.log
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Content'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch one log file by path
+      description: >
+        This API can be used to show the content of specific log file
+servers:
+  - url: https://vsanbot.vdp.oc.vmware.com/
