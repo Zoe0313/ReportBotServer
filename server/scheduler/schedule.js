@@ -520,31 +520,65 @@ const CancelNextInvocation = function (id) {
    }
 }
 
-const InvokeNow = async function (id, sendToUserId) {
+const InvokeNow = async function (id) {
    if (id == null) {
-      throw new Error('scheduler id is null, can not cancel next report sending')
+      throw new Error('report id is null, can not cancel next report sending')
    }
-   logger.info(`start to immediately invoke for job ${id}`)
-   const job = scheduleJobStore[id.toString()]
-   if (job != null) {
-      if (sendToUserId) {
-         const report = await ReportConfiguration.findById(id)
-         const messageInfo = await ContentEvaluate(report)
-         const messages = messageInfo.messages
-         logger.debug(`send notification to test space now: ${JSON.stringify(messageInfo)}`)
-         AsyncForEach(messages, async message => {
-            await axios.post(
-               process.env.DEV_GCHAT_WEBHOOK + messageInfo.webhookUserIds,
-               JSON.stringify({ text: message }),
-               { headers: CONTENT_TYPE_JSON_UTF }
-            )
-         })
-      } else {
-         job.invoke()
+   logger.info(`start to immediately invoke for report ${id}`)
+   let reportHistory = null
+   try {
+      const report = await ReportConfiguration.findById(id)
+      reportHistory = new ReportHistory({
+         reportConfigId: report._id,
+         title: report.title,
+         creator: report.creator,
+         reportType: report.reportType,
+         conversations: [process.env.DEV_GCHAT_WEBHOOK],
+         mentionUsers: [],
+         sentTime: null,
+         content: '',
+         status: REPORT_HISTORY_STATUS.PENDING
+      })
+      let saved = await reportHistory.save()
+      // generate report will take some time. 10 minutes timeout
+      const messageInfo = await ContentEvaluate(report)
+      const messages = messageInfo.messages
+      logger.debug(`send notification to test space now: ${JSON.stringify(messageInfo)}`)
+      AsyncForEach(messages, async message => {
+         const response = await axios.post(
+            process.env.DEV_GCHAT_WEBHOOK + messageInfo.webhookUserIds,
+            JSON.stringify({ text: message }),
+            { headers: CONTENT_TYPE_JSON_UTF }
+         )
+         return { result: response.data }
+      })
+      reportHistory.sentTime = new Date()
+      reportHistory.content = JSON.stringify(messages[0])
+      reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
+      saved = await reportHistory.save()
+      return saved
+   } catch (e) {
+      logger.error(`failed to immediately send report ${id} in test space:`)
+      logger.error(e)
+      if (reportHistory != null) {
+         if (reportHistory.sentTime === null) {
+            reportHistory.sentTime = new Date()
+         }
+         reportHistory.content = e.message
+         if (e.signal === 'SIGTERM') {
+            reportHistory.status = REPORT_HISTORY_STATUS.TIMEOUT
+         } else {
+            reportHistory.status = REPORT_HISTORY_STATUS.FAILED
+         }
       }
-   } else {
-      logger.warn(`failed to immediately invoke since no job for ${id}`)
+      try {
+         const saved = await reportHistory.save()
+         return saved
+      } catch (e1) {
+         logger.error(`save failed report history failed again since error: ${JSON.stringify(e1)}`)
+      }
    }
+   return null
 }
 
 // register scheduler for updating branches of all perforce projects in db

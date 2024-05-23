@@ -1,8 +1,11 @@
 import mongoose from 'mongoose'
+import path from 'path'
+import fs from 'fs'
 import { performance } from 'perf_hooks'
 import {
    ReportConfiguration, FlattenMembers, REPORT_STATUS
 } from '../model/report-configuration.js'
+import { ReportHistory } from '../model/report-history.js'
 import { SlackbotApiToken } from '../model/api-token.js'
 import { AddApiHistoryInfo } from '../model/api-history.js'
 import { FindUserInfoByName } from '../model/user-info.js'
@@ -122,88 +125,113 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.get('/api/v1/team_members/:teamCode', async (ctx, next) => {
-      const teamCode = ctx.params.teamCode
-      if (teamCode == null) {
+   router.get('/api/v1/log/:filename', async (ctx, next) => {
+      const logName = ctx.params.filename
+      if (logName == null) {
          ctx.response.status = 400
-         ctx.response.body = {
-            result: false,
-            message: 'Bad request: team code not given.'
-         }
+         ctx.response.body = { result: false, message: 'Bad request: file name not given.' }
          return
       }
+      // only open the read access of path persist/legacy/log for user
+      const logPath = path.join(path.resolve(), '..') +
+         `/persist/legacy/log/${logName}`
       try {
-         const team = await TeamGroup.findOne({ code: teamCode })
+         const logContent = fs.readFileSync(logPath).toString()
          ctx.response.status = 200
-         ctx.response.body = team.members
+         ctx.response.body = logContent
       } catch (error) {
-         const errorMsg = `Fail to get members of ${teamCode} team.`
+         const errorMsg = `Fail to get the content of log: ${logPath}`
          logger.error(errorMsg + '\n' + error)
          ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
       }
    })
 
-   router.get('/api/v1/team_members/:managerName/:filterType', async (ctx, next) => {
-      const managerName = ctx.params.managerName
-      const filterType = ctx.params.filterType
-      if (managerName == null) {
+   router.get('/api/v1/team/members', async (ctx, next) => {
+      const filterType = ctx.query?.filterType || null
+      const filterName = ctx.query?.filterName || null
+      const includeIndirectReport = (ctx.query?.includeIndirectReport?.toLowerCase() === 'true')
+      if (filterType !== 'group' && filterType !== 'manager') {
          ctx.response.status = 400
          ctx.response.body = {
             result: false,
-            message: 'Bad request: manager name not given.'
+            message: 'Bad request: only 2 options for filter type "group" and "manager".'
          }
          return
       }
-      if (filterType !== 'direct' && filterType !== 'all') {
+      if (filterName == null) {
          ctx.response.status = 400
          ctx.response.body = {
             result: false,
-            message: `Bad request: invalid filter type. Please use 'all' or 'direct'.`
+            message: 'Bad request: filter name not given.'
          }
          return
       }
-      try {
-         const managerInfo = await FindUserInfoByName(managerName)
-         if (managerInfo == null) {
-            ctx.response.status = 404
-            ctx.response.body = {
-               result: false,
-               message: 'Bad request: manager name not found.'
+      if (filterType === 'group') {
+         const teamCode = filterName
+         logger.debug(`team code: ${teamCode}`)
+         try {
+            const team = await TeamGroup.findOne({ code: teamCode })
+            ctx.response.status = 200
+            ctx.response.body = team.members
+         } catch (error) {
+            const errorMsg = `Fail to get members of ${teamCode} team.`
+            logger.error(errorMsg + '\n' + error)
+            ctx.response.status = 500
+            ctx.response.body = { result: false, message: errorMsg }
+         }
+         return
+      }
+      if (filterType === 'manager') {
+         const managerName = filterName
+         logger.debug(`manager name: ${managerName}`)
+         let reporterType = 'direct_reporters'
+         if (includeIndirectReport === true) {
+            reporterType = 'all_reporters'
+         }
+         try {
+            const managerInfo = await FindUserInfoByName(managerName)
+            if (managerInfo == null) {
+               ctx.response.status = 404
+               ctx.response.body = {
+                  result: false,
+                  message: `Bad request: not find manager info by ${managerName}.`
+               }
+               return
             }
-            return
-         }
-         const team = {
-            code: managerName,
-            name: managerName + ' engineers',
-            membersFilters: [{
-               condition: 'include', type: filterType + '_reporters', members: [managerInfo.slackId]
+            const membersFilters = [{
+               condition: 'include',
+               type: reporterType,
+               members: [managerInfo.slackId]
             }]
-         }
-         team.members = await FlattenMembers(team.membersFilters)
-         if (team.members.length <= 1) {
-            ctx.response.status = 400
-            ctx.response.body = {
-               result: false,
-               message: 'Bad request: the given manager name is an individual engineer, ' +
-                  'no one reports to him/her.'
+            const members = await FlattenMembers(membersFilters)
+            if (members.length <= 1) {
+               ctx.response.status = 400
+               ctx.response.body = {
+                  result: false,
+                  message: 'Bad request: the given manager name is an individual engineer, ' +
+                     'no one reports to him/her.'
+               }
+               return
             }
-            return
+            ctx.response.status = 200
+            ctx.response.body = members
+         } catch (error) {
+            let errorMsg = `Failed to get direct reporters of ${managerName} team.`
+            if (includeIndirectReport === true) {
+               errorMsg = `Failed to get all reporters of ${managerName} team.`
+            }
+            logger.error(errorMsg + '\n' + error)
+            ctx.response.status = 500
+            ctx.response.body = { result: false, message: errorMsg }
          }
-         ctx.response.status = 200
-         ctx.response.body = team.members
-      } catch (error) {
-         const errorMsg = `Failed to get members of ${managerName} team.`
-         logger.error(errorMsg + '\n' + error)
-         ctx.response.status = 500
-         ctx.response.body = { result: false, message: errorMsg }
       }
    })
 
-   router.get('/api/v1/report_configurations', async (ctx, next) => {
+   router.get('/api/v1/report/configuration', async (ctx, next) => {
       const slackId = ctx.state.slackId
       const vmwareId = ctx.state.vmwareId
-      const offset = parseInt(ctx?.query?.offset || 0)
+      const page = parseInt(ctx?.query?.page || 0)
       const limit = parseInt(ctx?.query?.limit || 1)
       const filter = {
          status: { $nin: [REPORT_STATUS.CREATED, REPORT_STATUS.REMOVED] }
@@ -214,11 +242,11 @@ function RegisterApiRouters(router) {
       try {
          const total = await ReportConfiguration.countDocuments(filter)
          const reports = await ReportConfiguration.find(filter)
-            .skip(offset).limit(limit)
+            .skip(page).limit(limit)
          logger.info(`The total number of ${vmwareId}'s reports is ${total}.`)
          logger.info(`The number of reports querying from db is ${reports.length}.`)
          ctx.response.status = 200
-         ctx.response.body = { total, reports }
+         ctx.response.body = { total, page, limit, reports }
       } catch (error) {
          const errorMsg = `Fail to list ${vmwareId}'s report configurations.`
          logger.error(errorMsg + '\n' + error)
@@ -227,34 +255,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.get('/api/v1/report_configuration/:id', async (ctx, next) => {
-      const reportId = ctx.params.id
-      if (reportId == null) {
-         ctx.response.status = 400
-         ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
-         return
-      }
-      try {
-         const report = await ReportConfiguration.findById(reportId)
-         if (report == null) {
-            ctx.response.status = 404
-            ctx.response.body = {
-               result: false, message: `Not found: report configuration by id ${reportId}`
-            }
-            return
-         }
-         logger.info(`Succeed to find report by ID ${reportId}.`)
-         ctx.response.status = 200
-         ctx.response.body = report
-      } catch (error) {
-         const errorMsg = `Fail to find report by ID ${reportId}.`
-         logger.error(errorMsg + '\n' + error)
-         ctx.response.status = 500
-         ctx.response.body = { result: false, message: 'Internal Server Error' }
-      }
-   })
-
-   router.post('/api/v1/create_report_configuration', async (ctx, next) => {
+   router.post('/api/v1/report/configuration', async (ctx, next) => {
       const reqData = ctx.request.body
       if (reqData == null) {
          ctx.response.status = 400
@@ -289,7 +290,34 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.post('/api/v1/edit_report_configuration/:id', async (ctx, next) => {
+   router.get('/api/v1/report/:id/configuration', async (ctx, next) => {
+      const reportId = ctx.params.id
+      if (reportId == null) {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
+         return
+      }
+      try {
+         const report = await ReportConfiguration.findById(reportId)
+         if (report == null) {
+            ctx.response.status = 404
+            ctx.response.body = {
+               result: false, message: `Not found: report configuration by id ${reportId}`
+            }
+            return
+         }
+         logger.info(`Succeed to find report by ID ${reportId}.`)
+         ctx.response.status = 200
+         ctx.response.body = report
+      } catch (error) {
+         const errorMsg = `Fail to find report by ID ${reportId}.`
+         logger.error(errorMsg + '\n' + error)
+         ctx.response.status = 500
+         ctx.response.body = { result: false, message: 'Internal Server Error' }
+      }
+   })
+
+   router.put('/api/v1/report/:id/configuration', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
@@ -325,7 +353,7 @@ function RegisterApiRouters(router) {
          ctx.response.body = report
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
-            const errorMsg = e.errors.title.message
+            const errorMsg = e.errors.title
             ctx.response.status = 400
             ctx.response.body = { result: false, message: 'Bad request: ' + errorMsg }
          } else {
@@ -337,15 +365,15 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.put('/api/v1/change_status/:status/:id', async (ctx, next) => {
+   router.patch('/api/v1/report/:id/configuration', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
          ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
          return
       }
-      const reportStatus = ctx.params.status
-      if (!CHANGE_REPORT_STATUS_ENUM.includes(reportStatus)) {
+      const reportStatus = ctx.query?.status || null
+      if (!CHANGE_REPORT_STATUS_ENUM.includes(reportStatus) || reportStatus == null) {
          ctx.response.status = 400
          ctx.response.body = {
             result: false,
@@ -360,6 +388,14 @@ function RegisterApiRouters(router) {
          }
          await ReportConfiguration.updateOne({ _id: reportId }, { status })
          const report = await ReportConfiguration.findById(reportId)
+         if (report == null) {
+            ctx.response.status = 404
+            ctx.response.body = {
+               result: false,
+               message: `Not found: report configuration by id ${reportId}`
+            }
+            return
+         }
          if (report.status === REPORT_STATUS.ENABLED) {
             RegisterScheduler(report)
          } else {
@@ -367,7 +403,8 @@ function RegisterApiRouters(router) {
          }
          ctx.response.status = 200
          ctx.response.body = {
-            result: true, message: `Report '${report.title}' ${reportStatus}d.`
+            result: true,
+            message: `Report '${report.title}' ${report?.status?.toLowerCase()}.`
          }
       } catch (error) {
          const errorMsg = 'Fail to update report status.'
@@ -382,34 +419,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.post('/api/v1/invoke_now/:id', async (ctx, next) => {
-      const reportId = ctx.params.id
-      if (reportId == null) {
-         ctx.response.status = 400
-         ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
-         return
-      }
-      try {
-         await InvokeNow(reportId, 'test space')
-         const report = await ReportConfiguration.findById(reportId)
-         let statusReminder = ''
-         if (report.status !== REPORT_STATUS.ENABLED) {
-            statusReminder = ` But the report status is '${report.status}'. ` +
-               `Please enable it by 'PUT /api/v1/change_status/enable/${reportId}'`
-         }
-         ctx.response.status = 200
-         ctx.response.body = {
-            result: true, message: 'Send report successfully!' + statusReminder
-         }
-      } catch (error) {
-         const errorMsg = 'Fail to send report immediately in test space.'
-         logger.error(errorMsg + '\n' + error)
-         ctx.response.status = 500
-         ctx.response.body = { result: false, message: errorMsg }
-      }
-   })
-
-   router.put('/api/v1/delete_report_configuration/:id', async (ctx, next) => {
+   router.delete('/api/v1/report/:id/configuration', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
@@ -422,10 +432,66 @@ function RegisterApiRouters(router) {
          ctx.response.status = 200
          ctx.response.body = { result: true, message: 'Deleted.' }
       } catch (error) {
-         const errorMsg = 'Fail to delete report.'
+         const errorMsg = 'Fail to delete report configuration.'
          ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
          logger.error(errorMsg + '\n' + error)
+      }
+   })
+
+   router.get('/api/v1/report/:id/history', async (ctx, next) => {
+      const reportId = ctx.params.id
+      if (reportId == null) {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
+         return
+      }
+      const page = parseInt(ctx?.query?.page || 0)
+      const limit = parseInt(ctx?.query?.limit || 1)
+      const filter = {
+         reportConfigId: reportId
+      }
+      try {
+         const total = await ReportHistory.countDocuments(filter)
+         const histories = await ReportHistory.find(filter)
+            .skip(page).limit(limit)
+         logger.info(`The total number of histories of report Id ${reportId} is ${total}.`)
+         logger.info(`The number of histories querying from db is ${histories.length}.`)
+         ctx.response.status = 200
+         ctx.response.body = { total, page, limit, histories }
+      } catch (error) {
+         const errorMsg = `Fail to list the histories of report Id ${reportId}.`
+         logger.error(errorMsg + '\n' + error)
+         ctx.response.status = 500
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+   })
+
+   router.post('/api/v1/report/:id/history', async (ctx, next) => {
+      const reportId = ctx.params.id
+      if (reportId == null) {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
+         return
+      }
+      try {
+         const report = await ReportConfiguration.findById(reportId)
+         if (report == null) {
+            ctx.response.status = 404
+            ctx.response.body = {
+               result: false,
+               message: `Not found: report configuration by id ${reportId}`
+            }
+            return
+         }
+         const reportHistory = await InvokeNow(reportId)
+         ctx.response.status = 200
+         ctx.response.body = reportHistory
+      } catch (error) {
+         const errorMsg = 'Fail to send report immediately in test space.'
+         logger.error(errorMsg + '\n' + error)
+         ctx.response.status = 500
+         ctx.response.body = { result: false, message: errorMsg }
       }
    })
 }
