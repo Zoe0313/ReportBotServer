@@ -688,8 +688,8 @@ const RegisterUpdateNannyScheduler = function (report) {
 const UpdateVSANNanny = async () => {
    try {
       const command = `PYTHONPATH=${projectRootPath} python3 ${projectRootPath}` +
-         '/generator/src/utils/RefreshVsanNannyList.py'
-      logger.debug(`execute the refresh vsan-nanny.csv command: ${command}`)
+         '/generator/src/nanny/RefreshNannyList.py'
+      logger.debug(`execute the refresh nanny list command: ${command}`)
       await ExecCommand(command, 60 * 1000)
    } catch (e) {
       logger.error(`Fail to update vsan-nanny.csv since error: ${e.message}`)
