@@ -585,5 +585,38 @@ paths:
       summary: Fetch one log file by path
       description: >
         This API can be used to show the content of specific log file
+  /api/v1/report/{filename}:
+    get:
+      parameters:
+      - description:
+        in: path
+        name: filename
+        required: true
+        type: string
+        example: weekly_perforce_checkin_for_dom.html
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Content'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch one html report file by path
+      description: >
+        This API can be used to show the content of specific html file
 servers:
   - url: https://vsanbot.vdp.oc.vmware.com/

@@ -147,6 +147,28 @@ function RegisterApiRouters(router) {
       }
    })
 
+   router.get('/api/v1/report/:filename', async (ctx, next) => {
+      const fileName = ctx.params.filename
+      if (fileName == null) {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: 'Bad request: file name not given.' }
+         return
+      }
+      // only open the read access of path persist/legacy/report for user
+      const reportPath = path.join(path.resolve(), '..') +
+         `/persist/legacy/report/${fileName}`
+      try {
+         const reportContent = fs.readFileSync(reportPath).toString()
+         ctx.response.status = 200
+         ctx.response.body = reportContent
+      } catch (error) {
+         const errorMsg = `Fail to get the content of legacy report: ${reportPath}`
+         logger.error(errorMsg + '\n' + error)
+         ctx.response.status = 500
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+   })
+
    router.get('/api/v1/team/members', async (ctx, next) => {
       const filterType = ctx.query?.filterType || null
       const filterName = ctx.query?.filterName || null
