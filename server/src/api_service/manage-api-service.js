@@ -140,8 +140,9 @@ function RegisterApiRouters(router) {
          ctx.response.status = 200
          ctx.response.body = logContent
       } catch (error) {
-         const errorMsg = `Fail to get the content of log: ${logPath}`
-         logger.error(errorMsg + '\n' + error)
+         const errorMsg = `Fail to get the content of log: ${logName}`
+         logger.error(`Fail to get the content of log: ${logPath}`)
+         logger.error(error)
          ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
       }
@@ -162,8 +163,9 @@ function RegisterApiRouters(router) {
          ctx.response.status = 200
          ctx.response.body = reportContent
       } catch (error) {
-         const errorMsg = `Fail to get the content of legacy report: ${reportPath}`
-         logger.error(errorMsg + '\n' + error)
+         const errorMsg = `Fail to get the content of report: ${fileName}`
+         logger.error(`Fail to get the content of report: ${reportPath}`)
+         logger.error(error)
          ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
       }
