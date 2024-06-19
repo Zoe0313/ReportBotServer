@@ -1,11 +1,11 @@
 swagger: "2.0"
 info:
   description: >
-    This is the document of vSAN Bot restful API on production.
+    This is the document of vSAN Bot restful API on staging.
   version: 1.0.0-oas3
   title: vSAN Bot Rest API on staging
   contact:
-    email: vsan-slackbot-team@vmware.com
+    email: vsan-messager-bot.pdl@broadcom.com
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -150,7 +150,7 @@ definitions:
         type: string
     type: object
 paths:
-  /api/v1/team/members:
+  /team/members:
     get:
       parameters:
       - description: Filter type of team members. Select `group` or `manager`.
@@ -210,7 +210,7 @@ paths:
         This API can be used to get the latest specific team member list
         or the latest members list of the given manager.
         If filter type is manager, the members list include all direct or indirect reporters.
-  /api/v1/report/configuration:
+  /report/configuration:
     get:
       parameters:
       - description: The index of report configuration pages
@@ -284,7 +284,7 @@ paths:
       description: >
         This API can be used to create a report configuration.
 
-  /api/v1/report/{id}/configuration:
+  /report/{id}/configuration:
     get:
       parameters:
       - description: The uuid of report configuration
@@ -436,7 +436,7 @@ paths:
       description: >
         This API can be used to delete one report configuration by id.
         This API won't delete the db record, just update report status into `REMOVED`.
-  /api/v1/report/{id}/history:
+  /report/{id}/history:
     get:
       parameters:
       - description: The uuid of report configuration
@@ -524,7 +524,7 @@ paths:
         This API only can be used by admins.
 
 
-  /api/v1/metrics:
+  /metrics:
     get:
       produces:
       - application/json

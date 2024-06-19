@@ -107,12 +107,12 @@ function RegisterApiRouters(router) {
       logger.debug(`${apiToken.userName} did "${method} ${url}" took ${performance.now() - t0}ms cost`)
    })
 
-   router.get('/api/v1/server/health', (ctx, next) => {
+   router.get('/server/health', (ctx, next) => {
       ctx.response.status = 200
       ctx.response.body = { result: true }
    })
 
-   router.get('/api/v1/metrics', async (ctx, next) => {
+   router.get('/metrics', async (ctx, next) => {
       try {
          const metrics = await GetMetrics()
          ctx.response.status = 200
@@ -171,7 +171,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.get('/api/v1/team/members', async (ctx, next) => {
+   router.get('/team/members', async (ctx, next) => {
       const filterType = ctx.query?.filterType || null
       const filterName = ctx.query?.filterName || null
       const includeIndirectReport = (ctx.query?.includeIndirectReport?.toLowerCase() === 'true')
@@ -252,7 +252,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.get('/api/v1/report/configuration', async (ctx, next) => {
+   router.get('/report/configuration', async (ctx, next) => {
       const slackId = ctx.state.slackId
       const vmwareId = ctx.state.vmwareId
       const page = parseInt(ctx?.query?.page || 0)
@@ -279,7 +279,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.post('/api/v1/report/configuration', async (ctx, next) => {
+   router.post('/report/configuration', async (ctx, next) => {
       const reqData = ctx.request.body
       if (reqData == null) {
          ctx.response.status = 400
@@ -314,7 +314,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.get('/api/v1/report/:id/configuration', async (ctx, next) => {
+   router.get('/report/:id/configuration', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
@@ -341,7 +341,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.put('/api/v1/report/:id/configuration', async (ctx, next) => {
+   router.put('/report/:id/configuration', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
@@ -389,7 +389,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.patch('/api/v1/report/:id/configuration', async (ctx, next) => {
+   router.patch('/report/:id/configuration', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
@@ -443,7 +443,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.delete('/api/v1/report/:id/configuration', async (ctx, next) => {
+   router.delete('/report/:id/configuration', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
@@ -463,7 +463,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.get('/api/v1/report/:id/history', async (ctx, next) => {
+   router.get('/report/:id/history', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
@@ -491,7 +491,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.post('/api/v1/report/:id/history', async (ctx, next) => {
+   router.post('/report/:id/history', async (ctx, next) => {
       const reportId = ctx.params.id
       if (reportId == null) {
          ctx.response.status = 400
