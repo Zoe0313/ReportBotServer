@@ -171,6 +171,25 @@ function RegisterApiRouters(router) {
       }
    })
 
+   router.get('/service/admins/:vmwareId', async (ctx, next) => {
+      const vmwareId = ctx.params.vmwareId
+      if (vmwareId == null) {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: 'Bad request: user name not given.' }
+         return
+      }
+      if (!process.env.ADMIN_VMWARE_ID.includes(vmwareId)) {
+         ctx.response.status = 404
+         ctx.response.body = { result: false, message: `${vmwareId} is not system administrator.` }
+         return
+      }
+      ctx.response.status = 200
+      ctx.response.body = {
+         result: true,
+         message: `You are the system administrator of vSAN Bot service.`
+      }
+   })
+
    router.get('/team/members', async (ctx, next) => {
       const filterType = ctx.query?.filterType || null
       const filterName = ctx.query?.filterName || null

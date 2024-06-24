@@ -7,6 +7,7 @@ import http from 'http'
 import mount from 'koa-mount'
 import serve from 'koa-static'
 import path from 'path'
+import fs from 'fs'
 import { ConnectMongoDatabase } from '../common/db-utils.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
@@ -38,9 +39,14 @@ ConnectMongoDatabase(async () => {
 })
 
 const app = new Koa()
+app.use(serve('src/static'))
+app.use(koaBody())
 const router = new Router()
 
-app.use(koaBody())
+router.get(['/', '/reports', '/history'], (ctx, next) => {
+   ctx.body = fs.readFileSync('src/static/index.html', 'utf8')
+   next()
+})
 
 RegisterApiRouters(router)
 
@@ -71,14 +77,14 @@ app.on('error', error => {
    }
 })
 
+const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
+console.log(swaggerPath)
+
 app.use(router.routes())
    .use(router.allowedMethods())
+   .use(mount('/api/v1/', serve(swaggerPath)))
 
 const serverCallback = app.callback()
 http.createServer(serverCallback).listen(process.env.PORT || 3000)
-
-const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
-console.log(swaggerPath)
-app.use(mount('/api/v1/', serve(swaggerPath)))
 
 logger.info('⚡️ Bolt app is running!')
