@@ -6,12 +6,12 @@ import {
    ReportConfiguration, FlattenMembers, REPORT_STATUS
 } from '../model/report-configuration.js'
 import { ReportHistory } from '../model/report-history.js'
-import { SlackbotApiToken } from '../model/api-token.js'
-import { AddApiHistoryInfo } from '../model/api-history.js'
-import { FindUserInfoByName } from '../model/user-info.js'
 import { TeamGroup } from '../model/team-group.js'
+import { GetVMwareIdBySlackId, FindUserInfoByName } from '../model/user-info.js'
+import { GetUsersName } from '../../common/slack-helper.js'
 import {
-   RegisterScheduler, UnregisterScheduler, InvokeNow
+   RegisterScheduler, UnregisterScheduler, InvokeNow,
+   NextInvocation
 } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import { FormatDate, Merge } from '../../common/utils.js'
@@ -25,10 +25,12 @@ const CHANGE_REPORT_STATUS_ENUM = ['enable', 'disable']
 async function UpdateReportConfiguration(slackId, reqData, oldReport) {
    const ParseRequestData = async (slackId, requestData) => {
       const tz = requestData.repeatConfig?.tz || 'Asia/Chongqing'// TBD
+      const vmwareId = await GetUsersName([slackId])
       const perforceCheckIn = requestData.reportSpecConfig?.perforceCheckIn
       const nannyRoster = await GenerateNannyRoster(requestData, false, tz)
       const reportObj = Merge(requestData, {
          creator: slackId,
+         vmwareId: vmwareId,
          mentionUsers: requestData.mentionUsers?.split(',') || [],
          mentionGroups: [],
          skipEmptyReport: requestData.skipEmptyReport || 'No',
@@ -84,35 +86,34 @@ function RegisterApiRouters(router) {
       const t0 = performance.now()
       const method = ctx.request.method
       const url = ctx.request.url
-      if (url.endsWith('/server/health') || url.endsWith('/metrics')) {
+      if (url.startsWith('/api/v1/')) {
          await next()
          logger.debug(`${method} ${url} ${performance.now() - t0} cost`)
          return
       }
       const ipAddr = ctx.request.ip
-      const token = 'd89f55072b9d4fbda1e38a66c83adaad'
-      // const token = ctx.request.headers.authorization?.substring('Bearer '.length)
-      const apiToken = await SlackbotApiToken.findOne({ token })
-      if (apiToken == null || apiToken.userId == null) {
+      const vmwareId = ctx.query?.user || null
+      console.log('request param user:', vmwareId)
+      const userInfo = await FindUserInfoByName(vmwareId)
+      if (userInfo == null) {
          const errorMsg = 'Authorization failure'
          ctx.response.status = 401
          ctx.response.body = { result: false, message: errorMsg }
-         AddApiHistoryInfo({ userId: '', ipAddr: ipAddr }, { channel: '', text: '' }, ctx.response)
          return
       }
-      ctx.state.slackId = apiToken.userId
-      ctx.state.vmwareId = apiToken.userName
+      ctx.state.slackId = userInfo.slackId
+      ctx.state.vmwareId = userInfo.userName
       ctx.state.ipAddr = ipAddr
       await next()
-      logger.debug(`${apiToken.userName} did "${method} ${url}" took ${performance.now() - t0}ms cost`)
+      logger.debug(`${userInfo.userName} did "${method} ${url}" took ${performance.now() - t0}ms cost`)
    })
 
-   router.get('/server/health', (ctx, next) => {
+   router.get('/api/v1/server/health', (ctx, next) => {
       ctx.response.status = 200
       ctx.response.body = { result: true }
    })
 
-   router.get('/metrics', async (ctx, next) => {
+   router.get('/api/v1/metrics', async (ctx, next) => {
       try {
          const metrics = await GetMetrics()
          ctx.response.status = 200
@@ -171,26 +172,7 @@ function RegisterApiRouters(router) {
       }
    })
 
-   router.get('/service/admins/:vmwareId', async (ctx, next) => {
-      const vmwareId = ctx.params.vmwareId
-      if (vmwareId == null) {
-         ctx.response.status = 400
-         ctx.response.body = { result: false, message: 'Bad request: user name not given.' }
-         return
-      }
-      if (!process.env.ADMIN_VMWARE_ID.includes(vmwareId)) {
-         ctx.response.status = 404
-         ctx.response.body = { result: false, message: `${vmwareId} is not system administrator.` }
-         return
-      }
-      ctx.response.status = 200
-      ctx.response.body = {
-         result: true,
-         message: `You are the system administrator of vSAN Bot service.`
-      }
-   })
-
-   router.get('/team/members', async (ctx, next) => {
+   router.get('/api/v1/team/members', async (ctx, next) => {
       const filterType = ctx.query?.filterType || null
       const filterName = ctx.query?.filterName || null
       const includeIndirectReport = (ctx.query?.includeIndirectReport?.toLowerCase() === 'true')
@@ -271,6 +253,20 @@ function RegisterApiRouters(router) {
       }
    })
 
+   router.get('/service/admins', async (ctx, next) => {
+      const vmwareId = ctx.state.vmwareId
+      if (!process.env.ADMIN_VMWARE_ID.includes(vmwareId)) {
+         ctx.response.status = 404
+         ctx.response.body = { result: false, message: `${vmwareId} is not system administrator.` }
+         return
+      }
+      ctx.response.status = 200
+      ctx.response.body = {
+         result: true,
+         message: `You are the system administrator of vSAN Bot service.`
+      }
+   })
+
    router.get('/report/configuration', async (ctx, next) => {
       const slackId = ctx.state.slackId
       const vmwareId = ctx.state.vmwareId
@@ -286,6 +282,22 @@ function RegisterApiRouters(router) {
          const total = await ReportConfiguration.countDocuments(filter)
          const reports = await ReportConfiguration.find(filter)
             .skip(page).limit(limit)
+         await Promise.all(reports.map(async (report) => {
+            if (report.vmwareId == null) {
+               const vmwareId = await GetVMwareIdBySlackId(report.creator)
+               if (vmwareId != null) {
+                  report.vmwareId = vmwareId
+                  await report.save()
+                  logger.info(`${report.title} report save vmwareId ${report.vmwareId} by ${report.creator}.`)
+               }
+               const nextInvocationTime = await NextInvocation(report.id)
+               report.repeatConfig.nextInvocation = ''
+               if (nextInvocationTime != null) {
+                  report.repeatConfig.nextInvocation = nextInvocationTime
+                  await report.save()
+               }
+            }
+         }))
          logger.info(`The total number of ${vmwareId}'s reports is ${total}.`)
          logger.info(`The number of reports querying from db is ${reports.length}.`)
          ctx.response.status = 200

@@ -35,10 +35,6 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
 const YES_OR_NO_ENUM = ['Yes', 'No']
 
-const JIRA_BASIC_TOKEN = Buffer.from(
-   `${process.env.SERVICE_ACCOUNT}` + ':' + `${process.env.SERVICE_PASSWORD}`
-).toString('base64')
-
 const PerforceCheckInMembersFilterSchema = new mongoose.Schema({
    members: {
       type: [String],
@@ -59,6 +55,7 @@ const PerforceCheckInMembersFilterSchema = new mongoose.Schema({
 const ReportConfigurationSchema = new mongoose.Schema({
    title: { type: String, required: true },
    creator: { type: String, required: true },
+   vmwareId: { type: String, required: false },
    status: { type: String, enum: STATUS_ENUM, required: true },
    reportType: { type: String, enum: REPORT_TYPE_ENUM, required: true },
    conversations: [String],
@@ -86,30 +83,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
                if (v == null) {
                   return true
                }
-               let link = v
-               if (v.includes('via.vmw.com')) {
-                  try {
-                     const res = await axios.get(v, {
-                        maxRedirects: 0,
-                        validateStatus: function (status) {
-                           return status >= 200 && status <= 303
-                        }
-                     })
-                     if (res.headers.location != null) {
-                        link = res.headers.location
-                        logger.debug(`original link is: ${link}`)
-                     } else {
-                        throw new Error(`failed to get the original link of ${v}.`)
-                     }
-                  } catch (e) {
-                     logger.warn(e)
-                     throw new Error(`Parse the original link of ${v} failed. ` +
-                        `Please try again or use original link directly. ` +
-                        `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table for tabular table ` +
-                        `or https://bugzilla.eng.vmware.com/query.cgi? for bug list.`)
-                  }
-               }
-               const url = parseUrl(link)
+               const url = parseUrl(v)
                if (url.resource === 'bugzilla.eng.vmware.com') {
                   if (url.protocol === 'https') {
                      if ((url.pathname === '/report.cgi' && url.search.includes('format=table')) ||
@@ -271,51 +245,6 @@ const ReportConfigurationSchema = new mongoose.Schema({
             type: String,
             required: function(v) {
                return this.reportType === 'jira_list'
-            },
-            validate: {
-               validator: async function(queryStr) {
-                  if (queryStr == null) {
-                     return true
-                  }
-                  try {
-                     const fields = this.reportSpecConfig.jira.fields
-                     logger.debug(`input fields=${fields}`)
-                     const res = await axios({
-                        method: 'post',
-                        url: 'https://jira.eng.vmware.com/rest/api/2/search',
-                        headers: {
-                           Authorization: `Basic ${JIRA_BASIC_TOKEN}`
-                        },
-                        data: {
-                           jql: queryStr,
-                           startAt: 0,
-                           maxResults: 1,
-                           fields: fields.length === 0 ? ['id', 'key'] : fields
-                        }
-                     })
-                     if (res.status === 200) {
-                        if (fields.length > 0 && res.data?.total > 0) {
-                           const issueFields = res.data?.issues[0]?.fields
-                           if (issueFields != null && typeof issueFields !== 'undefined') {
-                              const notFoundFields = fields.filter(field => {
-                                 return !Object.prototype.hasOwnProperty.call(issueFields, field)
-                              })
-                              if (notFoundFields.length > 0) {
-                                 throw new Error(`not found fields "${notFoundFields.toString()}"`)
-                              }
-                           } else {
-                              throw new Error(`not found fields "${fields.toString()}"`)
-                           }
-                        }
-                        return true
-                     }
-                  } catch (e) {
-                     logger.warn(e)
-                     throw new Error(`Failed to parse the JQL because ${e.message}. ` +
-                        'Please check your JQL in https://jira.eng.vmware.com/issues?jql=' +
-                        ' or adjust your custom fields.')
-                  }
-               }
             }
          },
          fields: {
@@ -428,6 +357,10 @@ const ReportConfigurationSchema = new mongoose.Schema({
          },
          min: [0, 'Day of month should be greater than or equal to 0'],
          max: [59, 'Day of month should be less than or equal to 59']
+      },
+      nextInvocation: {
+         type: String,
+         required: false
       }
    },
    adminConfig: {

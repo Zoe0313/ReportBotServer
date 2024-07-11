@@ -37,6 +37,9 @@ const UpdateUserInfo = async (userInfoList) => {
 }
 
 const FindUserInfoByName = async (userName) => {
+   if (userName == null || userName === '' || typeof userName == 'undefined') {
+      return null
+   }
    const userInfo = await UserInfo.findOne({ userName: userName })
    if (userInfo == null || userInfo.slackId == null || userInfo.slackId === '') {
       logger.debug(`Fail to query user info by VMware ID ${userName} in db.userinfos`)

@@ -150,7 +150,369 @@ definitions:
         type: string
     type: object
 paths:
-  /team/members:
+  /report/configuration:
+    get:
+      parameters:
+      - description: VMWare AD account
+        in: query
+        name: user
+        required: true
+        type: string
+        example: zhouhuang
+      - description: The index of report configuration pages
+        in: query
+        name: page
+        required: false
+        type: integer
+        example: 0
+      - description: The upper limit of per page report configurations
+        in: query
+        name: limit
+        required: false
+        type: integer
+        example: 5
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfigPagination'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch your enabled/disabled report configuration list
+      description: >
+        This API can be used to get the list of your report configurations.
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: VMWare AD account
+        in: query
+        name: user
+        required: true
+        type: string
+        example: zhouhuang
+      - description: Report configuration
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/ReportConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Create a report configuration and enable it
+      description: >
+        This API can be used to create a report configuration.
+
+  /report/{id}/configuration:
+    get:
+      parameters:
+      - description: VMWare AD account
+        in: query
+        name: user
+        required: true
+        type: string
+        example: zhouhuang
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfig'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch one report configuration by id
+      description: >
+        This API can be used to get one report configuration by id.
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: VMWare AD account
+        in: query
+        name: user
+        required: true
+        type: string
+        example: zhouhuang
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      - description: Edit report configuration
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/ReportConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportConfig'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Edit one report configuration by id
+      description: >
+        This API can be used to edit an existed report configuration.
+    patch:
+      parameters:
+        - description: VMWare AD account
+          in: query
+          name: user
+          required: true
+          type: string
+          example: zhouhuang
+        - description: The uuid of report configuration
+          in: path
+          name: id
+          required: true
+          type: string
+          example: 662efda0eb69b4a81793d24d
+        - description: Enable or disable report configuration. Select `enable` or `disable`.
+          in: query
+          name: status
+          required: true
+          type: string
+          example: enable
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/HTTPInfo'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Enable or disable one report configuration by id
+      description: >
+        This API can be used to enable or disable a report configuration by id
+    delete:
+      parameters:
+      - description: VMWare AD account
+        in: query
+        name: user
+        required: true
+        type: string
+        example: zhouhuang
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/HTTPInfo'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Delete one report configuration by id
+      description: >
+        This API can be used to delete one report configuration by id.
+        This API won't delete the db record, just update report status into `REMOVED`.
+  /report/{id}/history:
+    get:
+      parameters:
+      - description: VMWare AD account
+        in: query
+        name: user
+        required: true
+        type: string
+        example: zhouhuang
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      - description: The index of report histories pages
+        in: query
+        name: page
+        required: false
+        type: integer
+        example: 0
+      - description: The upper limit of per page report histories
+        in: query
+        name: limit
+        required: false
+        type: integer
+        example: 5
+      produces:
+      - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportHistoryPagination'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Fetch sent report histories by report id
+      description: >
+        This API can be used to get the list of sent report histories by report id.
+    post:
+      parameters:
+      - description: VMWare AD account
+        in: query
+        name: user
+        required: true
+        type: string
+        example: zhouhuang
+      - description: The uuid of report configuration
+        in: path
+        name: id
+        required: true
+        type: string
+        example: 662efda0eb69b4a81793d24d
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ReportHistory'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - private
+      summary: Send report immediately in test space to generate a report history of this report
+      description: >
+        This API can be used to post one report in test space by report id.
+        This API only can be used by admins.
+
+
+  /api/v1/team/members:
     get:
       parameters:
       - description: Filter type of team members. Select `group` or `manager`.
@@ -210,348 +572,6 @@ paths:
         This API can be used to get the latest specific team member list
         or the latest members list of the given manager.
         If filter type is manager, the members list include all direct or indirect reporters.
-  /report/configuration:
-    get:
-      parameters:
-      - description: The index of report configuration pages
-        in: query
-        name: page
-        required: false
-        type: integer
-        example: 0
-      - description: The upper limit of per page report configurations
-        in: query
-        name: limit
-        required: false
-        type: integer
-        example: 5
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/ReportConfigPagination'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - public
-      summary: Fetch your enabled/disabled report configuration list
-      description: >
-        This API can be used to get the list of your report configurations.
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Report configuration
-        in: body
-        name: report
-        required: true
-        schema:
-          $ref: '#/definitions/ReportConfig'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/ReportConfig'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - public
-      summary: Create a report configuration and enable it
-      description: >
-        This API can be used to create a report configuration.
-
-  /report/{id}/configuration:
-    get:
-      parameters:
-      - description: The uuid of report configuration
-        in: path
-        name: id
-        required: true
-        type: string
-        example: 662efda0eb69b4a81793d24d
-      produces:
-        - application/json
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/ReportConfig'
-        '400':
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '401':
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '404':
-          description: Not Found
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '500':
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - public
-      summary: Fetch one report configuration by id
-      description: >
-        This API can be used to get one report configuration by id.
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: The uuid of report configuration
-        in: path
-        name: id
-        required: true
-        type: string
-        example: 662efda0eb69b4a81793d24d
-      - description: Edit report configuration
-        in: body
-        name: report
-        required: true
-        schema:
-          $ref: '#/definitions/ReportConfig'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/ReportConfig'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '404':
-          description: Not Found
-          schema:
-            $ref: '#/definitions/HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - public
-      summary: Edit one report configuration by id
-      description: >
-        This API can be used to edit an existed report configuration.
-    patch:
-      parameters:
-        - description: The uuid of report configuration
-          in: path
-          name: id
-          required: true
-          type: string
-          example: 662efda0eb69b4a81793d24d
-        - description: Enable or disable report configuration. Select `enable` or `disable`.
-          in: query
-          name: status
-          required: true
-          type: string
-          example: enable
-      produces:
-        - application/json
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/HTTPInfo'
-        '400':
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '401':
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '500':
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - public
-      summary: Enable or disable one report configuration by id
-      description: >
-        This API can be used to enable or disable a report configuration by id
-    delete:
-      parameters:
-      - description: The uuid of report configuration
-        in: path
-        name: id
-        required: true
-        type: string
-        example: 662efda0eb69b4a81793d24d
-      produces:
-        - application/json
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/HTTPInfo'
-        '400':
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '401':
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '500':
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - public
-      summary: Delete one report configuration by id
-      description: >
-        This API can be used to delete one report configuration by id.
-        This API won't delete the db record, just update report status into `REMOVED`.
-  /report/{id}/history:
-    get:
-      parameters:
-      - description: The uuid of report configuration
-        in: path
-        name: id
-        required: true
-        type: string
-        example: 662efda0eb69b4a81793d24d
-      - description: The index of report histories pages
-        in: query
-        name: page
-        required: false
-        type: integer
-        example: 0
-      - description: The upper limit of per page report histories
-        in: query
-        name: limit
-        required: false
-        type: integer
-        example: 5
-      produces:
-      - application/json
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/ReportHistoryPagination'
-        '400':
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '401':
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '404':
-          description: Not Found
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '500':
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - public
-      summary: Fetch sent report histories by report id
-      description: >
-        This API can be used to get the list of sent report histories by report id.
-    post:
-      parameters:
-      - description: The uuid of report configuration
-        in: path
-        name: id
-        required: true
-        type: string
-        example: 662efda0eb69b4a81793d24d
-      produces:
-        - application/json
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/ReportHistory'
-        '400':
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '401':
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '404':
-          description: Not Found
-          schema:
-            $ref: '#/definitions/HTTPError'
-        '500':
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - private
-      summary: Send report immediately in test space to generate a report history of this report
-      description: >
-        This API can be used to post one report in test space by report id.
-        This API only can be used by admins.
-
-
-  /metrics:
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/Content'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/HTTPError'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/HTTPError'
-      tags:
-        - private
-      summary: Collect metrics from vSAN-bot server
-      description: >
-        This internal API can be used to get metrics from vSAN-bot server.
-        It will response datas include number of sent report, number of enabled report.
-
-        After the metrics endpoint registered in chronus, we can setup the dashboard
-        of each report type count.
-        It will be easier for team members to monitor vSAN bot service.
-
   /api/v1/log/{filename}:
     get:
       parameters:
@@ -618,5 +638,33 @@ paths:
       summary: Fetch one html report file by path
       description: >
         This API can be used to show the content of specific html file
+  /api/v1/metrics:
+    get:
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Content'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - private
+      summary: Collect metrics from vSAN-bot server
+      description: >
+        This internal API can be used to get metrics from vSAN-bot server.
+        It will response datas include number of sent report, number of enabled report.
+
+        After the metrics endpoint registered in chronus, we can setup the dashboard
+        of each report type count.
+        It will be easier for team members to monitor vSAN bot service.
+
 servers:
   - url: https://vsanbot.vdp.oc.vmware.com/
