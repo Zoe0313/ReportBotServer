@@ -14,15 +14,12 @@ import {
 import logger from '../../common/logger.js'
 import { FormatDate, Merge } from '../../common/utils.js'
 import { GetMetrics } from './metrics.js'
-import {
-   UpdateFlattenMembers, GenerateNannyRoster
-} from '../bolt_service/init-blocks-data-helper.js'
+import { UpdateFlattenMembers } from '../bolt_service/init-blocks-data-helper.js'
 
 const CHANGE_REPORT_STATUS_ENUM = ['enable', 'disable']
 
 async function UpdateReportConfiguration(reqData, oldReport) {
    const ParseRequestData = async (requestData) => {
-      const tz = requestData.repeatConfig?.tz
       const reportObj = {
          title: requestData.title,
          creator: requestData.creator,
