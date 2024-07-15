@@ -54,8 +54,8 @@ const PerforceCheckInMembersFilterSchema = new mongoose.Schema({
 
 const ReportConfigurationSchema = new mongoose.Schema({
    title: { type: String, required: true },
-   creator: { type: String, required: true },
-   vmwareId: { type: String, required: false },
+   creator: { type: String, required: true }, // Slack ID
+   vmwareId: { type: String, required: true }, // VMWare ID
    status: { type: String, enum: STATUS_ENUM, required: true },
    reportType: { type: String, enum: REPORT_TYPE_ENUM, required: true },
    conversations: [String],
@@ -71,7 +71,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
       },
       enum: YES_OR_NO_ENUM
    },
-   webhooks: [String],
+   webhooks: { type: [String], required: true },
    reportSpecConfig: {
       bugzillaLink: {
          type: String,
@@ -219,19 +219,18 @@ const ReportConfigurationSchema = new mongoose.Schema({
          }
       },
       nannyAssignee: {
-         type: String,
+         type: [String],
          required: function(v) {
             return this.reportType === 'nanny_reminder'
          },
          validate: {
-            validator: async function(v) {
+            validator: function(v) {
                if (v == null || this.reportType !== 'nanny_reminder') {
                   return true
                }
-               const assignees = v.split('\n')
-               return assignees.length >= 2
+               return v.length >= 2
             },
-            message: 'The number of nanny should be greater than 1.'
+            message: 'The number of nanny assignees should be greater than 1.'
          }
       },
       nannyRoster: {
@@ -357,10 +356,6 @@ const ReportConfigurationSchema = new mongoose.Schema({
          },
          min: [0, 'Day of month should be greater than or equal to 0'],
          max: [59, 'Day of month should be less than or equal to 59']
-      },
-      nextInvocation: {
-         type: String,
-         required: false
       }
    },
    adminConfig: {

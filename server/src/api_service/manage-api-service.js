@@ -8,10 +8,8 @@ import {
 import { ReportHistory } from '../model/report-history.js'
 import { TeamGroup } from '../model/team-group.js'
 import { GetVMwareIdBySlackId, FindUserInfoByName } from '../model/user-info.js'
-import { GetUsersName } from '../../common/slack-helper.js'
 import {
-   RegisterScheduler, UnregisterScheduler, InvokeNow,
-   NextInvocation
+   RegisterScheduler, UnregisterScheduler, InvokeNow
 } from '../scheduler-adapter.js'
 import logger from '../../common/logger.js'
 import { FormatDate, Merge } from '../../common/utils.js'
@@ -22,52 +20,46 @@ import {
 
 const CHANGE_REPORT_STATUS_ENUM = ['enable', 'disable']
 
-async function UpdateReportConfiguration(slackId, reqData, oldReport) {
-   const ParseRequestData = async (slackId, requestData) => {
-      const tz = requestData.repeatConfig?.tz || 'Asia/Chongqing'// TBD
-      const vmwareId = await GetUsersName([slackId])
-      const perforceCheckIn = requestData.reportSpecConfig?.perforceCheckIn
-      const nannyRoster = await GenerateNannyRoster(requestData, false, tz)
-      const reportObj = Merge(requestData, {
-         creator: slackId,
-         vmwareId: vmwareId,
-         mentionUsers: requestData.mentionUsers?.split(',') || [],
-         mentionGroups: [],
-         skipEmptyReport: requestData.skipEmptyReport || 'No',
-         webhooks: requestData.webhooks?.split(',') || [],
+async function UpdateReportConfiguration(reqData, oldReport) {
+   const ParseRequestData = async (requestData) => {
+      const tz = requestData.repeatConfig?.tz
+      const reportObj = {
+         title: requestData.title,
+         creator: requestData.creator,
+         vmwareId: requestData.vmwareId,
+         status: requestData.status,
+         reportType: requestData.reportType,
+         mentionUsers: requestData.mentionUsers || [],
+         skipEmptyReport: requestData.skipEmptyReport ? 'Yes' : 'No',
+         webhooks: requestData?.webhooks || [],
          reportSpecConfig: {
-            perforceCheckIn: {
-               teams: perforceCheckIn?.teams?.split(',') || [],
-               branches: perforceCheckIn?.branches?.split(',') || [],
-               needCheckinApproved: perforceCheckIn?.needCheckinApproved || 'Yes'
-            },
-            bugzillaAssignee: requestData.reportSpecConfig?.bugzillaAssignee?.split(',') || [],
-            nannyAssignee: requestData.reportSpecConfig?.nannyAssignee || '',
-            nannyRoster: nannyRoster,
-            jira: {
-               fields: requestData.jira?.fields?.split(',') || []
-            }
+            bugzillaLink: requestData?.bugzilla?.bugzillaLink || null,
+            bugzillaAssignee: requestData.bugzillaAssignee?.bugzillaAssignees || []
          },
          repeatConfig: {
-            tz,
+            repeatType: requestData.repeatConfig.repeatType,
+            tz: requestData.repeatConfig.tz,
+            startDate: new Date(requestData.repeatConfig?.startDate),
+            endDate: requestData.repeatConfig?.endDate || null,
+            cronExpression: requestData.repeatConfig?.cronExpression || '',
+            date: FormatDate(requestData.repeatConfig?.date) || null,
+            time: requestData.repeatConfig?.time || null,
+            dayOfMonth: requestData.repeatConfig?.dayOfMonth || null,
             dayOfWeek: requestData.repeatConfig?.dayOfWeek || [],
-            date: FormatDate(requestData.repeatConfig?.date || null),
-            startDate: FormatDate(requestData.repeatConfig?.startDate || new Date()),
-            endDate: requestData.repeatConfig?.endDate || null
+            minsOfHour: requestData.repeatConfig?.minsOfHour || null
          }
-      })
+      }
       return reportObj
    }
    logger.debug(`request data: ${JSON.stringify(reqData)}`)
    let report = null
    if (oldReport != null) {
       logger.debug(`Start to edit report configuration.`)
-      const reportObj = await ParseRequestData(slackId, reqData)
+      const reportObj = await ParseRequestData(reqData)
       report = Merge(oldReport, reportObj)
    } else {
       logger.debug(`Start to create report configuration.`)
-      reqData.status = REPORT_STATUS.ENABLED
-      const reportObj = await ParseRequestData(slackId, reqData)
+      const reportObj = await ParseRequestData(reqData)
       report = new ReportConfiguration(reportObj)
    }
    const saved = await report.save()
@@ -254,10 +246,10 @@ function RegisterApiRouters(router) {
    })
 
    router.get('/service/admins', async (ctx, next) => {
-      const vmwareId = ctx.state.vmwareId
-      if (!process.env.ADMIN_VMWARE_ID.includes(vmwareId)) {
+      const account = ctx.state.vmwareId
+      if (!process.env.ADMIN_VMWARE_ID.includes(account)) {
          ctx.response.status = 404
-         ctx.response.body = { result: false, message: `${vmwareId} is not system administrator.` }
+         ctx.response.body = { result: false, message: `${account} is not system administrator.` }
          return
       }
       ctx.response.status = 200
@@ -269,19 +261,16 @@ function RegisterApiRouters(router) {
 
    router.get('/report/configuration', async (ctx, next) => {
       const slackId = ctx.state.slackId
-      const vmwareId = ctx.state.vmwareId
-      const page = parseInt(ctx?.query?.page || 0)
-      const limit = parseInt(ctx?.query?.limit || 1)
+      const account = ctx.state.vmwareId
       const filter = {
-         status: { $nin: [REPORT_STATUS.CREATED, REPORT_STATUS.REMOVED] }
+         status: { $nin: [REPORT_STATUS.REMOVED] }
       }
       if (!process.env.ADMIN_USER_ID.includes(slackId)) {
          filter.creator = slackId
       }
       try {
          const total = await ReportConfiguration.countDocuments(filter)
-         const reports = await ReportConfiguration.find(filter)
-            .skip(page).limit(limit)
+         const reports = await ReportConfiguration.find(filter).sort({ updatedAt: -1 })
          await Promise.all(reports.map(async (report) => {
             if (report.vmwareId == null) {
                const vmwareId = await GetVMwareIdBySlackId(report.creator)
@@ -290,20 +279,14 @@ function RegisterApiRouters(router) {
                   await report.save()
                   logger.info(`${report.title} report save vmwareId ${report.vmwareId} by ${report.creator}.`)
                }
-               const nextInvocationTime = await NextInvocation(report.id)
-               report.repeatConfig.nextInvocation = ''
-               if (nextInvocationTime != null) {
-                  report.repeatConfig.nextInvocation = nextInvocationTime
-                  await report.save()
-               }
             }
          }))
-         logger.info(`The total number of ${vmwareId}'s reports is ${total}.`)
+         logger.info(`The total number of ${account}'s reports is ${total}.`)
          logger.info(`The number of reports querying from db is ${reports.length}.`)
          ctx.response.status = 200
-         ctx.response.body = { total, page, limit, reports }
+         ctx.response.body = { total, reports }
       } catch (error) {
-         const errorMsg = `Fail to list ${vmwareId}'s report configurations.`
+         const errorMsg = `Fail to list ${account}'s report configurations.`
          logger.error(errorMsg + '\n' + error)
          ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
@@ -325,17 +308,17 @@ function RegisterApiRouters(router) {
          return
       }
       try {
-         const slackId = ctx.state.slackId
-         const report = await UpdateReportConfiguration(slackId, reqData, null)
+         reqData.creator = ctx.state.slackId
+         const report = await UpdateReportConfiguration(reqData, null)
          RegisterScheduler(report)
          logger.info(`Create successful. ID: ${report._id}`)
          ctx.response.status = 200
          ctx.response.body = report
       } catch (e) {
          if (e instanceof mongoose.Error.ValidationError) {
-            const errorMsg = e.errors.title.message
+            const errorMsg = e.errors
             ctx.response.status = 400
-            ctx.response.body = { result: false, message: 'Bad request: ' + errorMsg }
+            ctx.response.body = { result: false, message: `Bad request: ${JSON.stringify(errorMsg)}` }
          } else {
             ctx.response.status = 500
             ctx.response.body = { result: false, message: 'Internal Server Error' }
@@ -396,8 +379,7 @@ function RegisterApiRouters(router) {
             }
             return
          }
-         const slackId = ctx.state.slackId
-         const report = await UpdateReportConfiguration(slackId, reqData, oldReport)
+         const report = await UpdateReportConfiguration(reqData, oldReport)
          if (report.status === REPORT_STATUS.ENABLED) {
             RegisterScheduler(report)
          } else {
@@ -501,19 +483,16 @@ function RegisterApiRouters(router) {
          ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
          return
       }
-      const page = parseInt(ctx?.query?.page || 0)
-      const limit = parseInt(ctx?.query?.limit || 1)
       const filter = {
          reportConfigId: reportId
       }
       try {
          const total = await ReportHistory.countDocuments(filter)
-         const histories = await ReportHistory.find(filter)
-            .skip(page).limit(limit)
+         const histories = await ReportHistory.find(filter).sort({ updatedAt: -1 })
          logger.info(`The total number of histories of report Id ${reportId} is ${total}.`)
          logger.info(`The number of histories querying from db is ${histories.length}.`)
          ctx.response.status = 200
-         ctx.response.body = { total, page, limit, histories }
+         ctx.response.body = { total, histories }
       } catch (error) {
          const errorMsg = `Fail to list the histories of report Id ${reportId}.`
          logger.error(errorMsg + '\n' + error)
