@@ -105,29 +105,21 @@ definitions:
       updatedAt:
         type: string
         example: "2024-05-22T02:58:41.020Z"
-  ReportConfigPagination:
+  ReportConfigList:
     type: object
     properties:
       total:
-        type: integer
-      page:
-        type: integer
-      limit:
         type: integer
       reports:
         type: array
         items:
           $ref: '#/definitions/ReportConfig'
-  ReportHistoryPagination:
+  ReportHistoryList:
     type: object
     properties:
       total:
         type: integer
-      page:
-        type: integer
-      limit:
-        type: integer
-      reports:
+      histories:
         type: array
         items:
           $ref: '#/definitions/ReportHistory'
@@ -159,25 +151,13 @@ paths:
         required: true
         type: string
         example: zhouhuang
-      - description: The index of report configuration pages
-        in: query
-        name: page
-        required: false
-        type: integer
-        example: 0
-      - description: The upper limit of per page report configurations
-        in: query
-        name: limit
-        required: false
-        type: integer
-        example: 5
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/ReportConfigPagination'
+            $ref: '#/definitions/ReportConfigList'
         "400":
           description: Bad Request
           schema:
@@ -427,25 +407,13 @@ paths:
         required: true
         type: string
         example: 662efda0eb69b4a81793d24d
-      - description: The index of report histories pages
-        in: query
-        name: page
-        required: false
-        type: integer
-        example: 0
-      - description: The upper limit of per page report histories
-        in: query
-        name: limit
-        required: false
-        type: integer
-        example: 5
       produces:
       - application/json
       responses:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/ReportHistoryPagination'
+            $ref: '#/definitions/ReportHistoryList'
         '400':
           description: Bad Request
           schema:
