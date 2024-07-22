@@ -7,7 +7,7 @@ import {
 } from '../model/report-configuration.js'
 import { ReportHistory } from '../model/report-history.js'
 import { TeamGroup } from '../model/team-group.js'
-import { GetVMwareIdBySlackId, FindUserInfoByName } from '../model/user-info.js'
+import { FindUserInfoByName } from '../model/user-info.js'
 import {
    RegisterScheduler, UnregisterScheduler, InvokeNow
 } from '../scheduler-adapter.js'
@@ -260,7 +260,8 @@ function RegisterApiRouters(router) {
       const slackId = ctx.state.slackId
       const account = ctx.state.vmwareId
       const filter = {
-         status: { $nin: [REPORT_STATUS.REMOVED] }
+         status: { $nin: [REPORT_STATUS.REMOVED] },
+         reportType: { $in: ['bugzilla', 'bugzilla_by_assignee'] }
       }
       if (!process.env.ADMIN_USER_ID.includes(slackId)) {
          filter.creator = slackId
@@ -268,16 +269,6 @@ function RegisterApiRouters(router) {
       try {
          const total = await ReportConfiguration.countDocuments(filter)
          const reports = await ReportConfiguration.find(filter).sort({ updatedAt: -1 })
-         await Promise.all(reports.map(async (report) => {
-            if (report.vmwareId == null) {
-               const vmwareId = await GetVMwareIdBySlackId(report.creator)
-               if (vmwareId != null) {
-                  report.vmwareId = vmwareId
-                  await report.save()
-                  logger.info(`${report.title} report save vmwareId ${report.vmwareId} by ${report.creator}.`)
-               }
-            }
-         }))
          logger.info(`The total number of ${account}'s reports is ${total}.`)
          logger.info(`The number of reports querying from db is ${reports.length}.`)
          ctx.response.status = 200
