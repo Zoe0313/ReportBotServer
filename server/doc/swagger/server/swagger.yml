@@ -1,9 +1,9 @@
 swagger: "2.0"
 info:
   description: >
-    This is the document of vSAN Bot restful API on staging.
+    This is the document of vSAN Bot restful API.
   version: 1.0.0-oas3
-  title: vSAN Bot Rest API on staging
+  title: vSAN Bot Rest API
   contact:
     email: vsan-messager-bot.pdl@broadcom.com
   license:
