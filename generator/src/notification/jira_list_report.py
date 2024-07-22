@@ -38,7 +38,6 @@ from generator.src.utils.BotConst import JIRA_BASIC_TOKEN, CONTENT_TYPE_JSON, \
    BUGZILLA_DETAIL_URL, JIRA_BROWSE_URL
 from generator.src.utils.Logger import logger
 from generator.src.utils.Utils import splitOverlengthReport, transformReport
-from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile
 
 DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/jira")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -244,9 +243,6 @@ class JiraReport(object):
          groupbyJql = self.jql + ' AND {0} = "{1}"'.format(self.groupbyField, key)
          urlTailDict[groupbyJql] = JIRA_PAGE_URL + parse.quote(groupbyJql)
          numberDict[key] = len(groupbyDict[key])
-      # Shorten long jira link by via api
-      shortUrlDict = getShortUrlsFromCacheFile(fileDir=DOWNLOAD_DIR, fileKey=self.jql,
-                                               urlTailDict=urlTailDict)
       # Generate simple table report
       messages = []
       fieldDisplayName = DisplayFields.get(self.groupbyField)
@@ -254,7 +250,7 @@ class JiraReport(object):
       messages.append('---------------------------')
       for indexName, jql in zip(numberDict, urlTailDict):
          count = numberDict[indexName]
-         shortUrl = shortUrlDict[jql]
+         shortUrl = urlTailDict[jql]
          resultLine = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
          resultLine += '             '
          if count < 100:
