@@ -219,7 +219,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
          }
       },
       nannyAssignee: {
-         type: [String],
+         type: String,
          required: function(v) {
             return this.reportType === 'nanny_reminder'
          },
@@ -228,7 +228,8 @@ const ReportConfigurationSchema = new mongoose.Schema({
                if (v == null || this.reportType !== 'nanny_reminder') {
                   return true
                }
-               return v.length >= 2
+               const assignees = v.split('\n')
+               return assignees.length >= 2
             },
             message: 'The number of nanny assignees should be greater than 1.'
          }

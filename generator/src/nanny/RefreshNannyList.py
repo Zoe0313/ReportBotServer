@@ -12,4 +12,4 @@ from generator.src.nanny.RefreshNannysOnPage import RefreshNannysOnPage
 
 if __name__ == "__main__":
     RefreshVSanNannyList()
-    RefreshNannysOnPage()
+    # RefreshNannysOnPage()
