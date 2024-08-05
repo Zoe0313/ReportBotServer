@@ -83,7 +83,30 @@ const ReportConfigurationSchema = new mongoose.Schema({
                if (v == null) {
                   return true
                }
-               const url = parseUrl(v)
+               let link = v
+               if (v.includes('vsanvia.vmware.com')) {
+                  try {
+                     const res = await axios.get(v, {
+                        maxRedirects: 0,
+                        validateStatus: function (status) {
+                           return status >= 200 && status <= 303
+                        }
+                     })
+                     if (res.headers.location != null) {
+                        link = res.headers.location
+                        logger.debug(`original link is: ${link}`)
+                     } else {
+                        throw new Error(`failed to get the original link of ${v}.`)
+                     }
+                  } catch (e) {
+                     logger.warn(e)
+                     throw new Error(`Parse the original link of ${v} failed. ` +
+                        `Please try again or use original link directly. ` +
+                        `Refer to https://bugzilla.eng.vmware.com/query.cgi?format=report-table for tabular table ` +
+                        `or https://bugzilla.eng.vmware.com/query.cgi? for bug list.`)
+                  }
+               }
+               const url = parseUrl(link)
                if (url.resource === 'bugzilla.eng.vmware.com') {
                   if (url.protocol === 'https') {
                      if ((url.pathname === '/report.cgi' && url.search.includes('format=table')) ||
