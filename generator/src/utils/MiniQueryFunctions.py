@@ -11,37 +11,36 @@ import os
 import json
 import requests
 import urllib3
-import certifi
 import hashlib
 import pickle
 from filelock import FileLock
 from generator.src.utils.Logger import logger
 
+def long2short(long_url):
+    try:
+        payload = {'original_url': long_url,
+                   'short_key': '',
+                   'expire_type': 'indefinitely',
+                   'user_id': 'svc.vsan-er'}
+        response = requests.post(url='http://vsanvia.vmware.com/api/shorten',
+                                 data=json.dumps(payload), verify=False)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('short_url', None)
+    except Exception as e:
+        logger.error("get short url error: {0}".format(e))
+    return None
 
-def short2long(url):
-   session = requests.session()
-   try:
-      r = session.get(url, allow_redirects=False)
-      longUrl = r.headers.get('location')
-   except Exception as e:
-      logger.error("get long url error: ", e)
-      return url
-   return longUrl
-
-def long2short(url):
-   http = urllib3.PoolManager(ca_certs=certifi.where())
-   encodedBody = json.dumps({"resource": url}).encode()
-   try:
-      res = http.request(method='POST',
-                         url="https://via.vmware.com/via-console/app-api/v2/vialink",
-                         headers={'Content-Type': 'application/json',
-                                  "X-HeaderKey": "%241%24Yfai%2FUQF%24egNLEHGRocRPuPuzq3tsE%2F"},
-                         body=encodedBody)
-      r = json.loads(res.data.decode('utf-8'))
-   except Exception as e:
-      logger.error("get short url error: {0}".format(e))
-      return None
-   return r.get('viaUrl', {}).get('url', '')
+def short2long(short_url):
+    try:
+        response = requests.get(url=short_url, allow_redirects=False,
+                                verify=False)
+        if response.status_code == 302:
+            long_url = response.headers.get('location')
+            return long_url
+    except Exception as e:
+        logger.error("get long url error: ", e)
+    return None
 
 def readMemoryFile(pklFile):
    if os.path.exists(pklFile):

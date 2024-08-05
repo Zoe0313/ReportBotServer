@@ -22,6 +22,7 @@ import pandas as pd
 PerfLogger.info('import pandas as pd')
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, BUGZILLA_DETAIL_URL
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport, transformReport
+from generator.src.utils.MiniQueryFunctions import getShortUrlsFromCacheFile, short2long
 from generator.src.utils.Logger import logger
 PerfLogger.info('import customized parameters, functions')
 
@@ -209,17 +210,20 @@ class BugzillaSpider(object):
       return keyName
 
    def getShortUrlDict(self, html):
-      longUrlDict = {}
+      shortUrlDict = {}
       longUrlList = html.xpath('//*[@id="reportContainer"]//td//a//@href')
       if len(longUrlList) > 0:
          lastLongUrl = longUrlList[-1]
          completeLastLongUrl = self.foreUrl.format(lastLongUrl)
+         urlTails = {}
          for url in longUrlList:
             longUrl = self.foreUrl.format(url)
             urlTail = longUrl.split(completeLastLongUrl)[1][1:] if url != lastLongUrl else 'Total'
             urlTail = parse.unquote(urlTail)
-            longUrlDict[urlTail] = longUrl
-      return longUrlDict
+            urlTails[urlTail] = longUrl
+         shortUrlDict = getShortUrlsFromCacheFile(fileDir=DOWNLOAD_DIR, fileKey=completeLastLongUrl,
+                                                  urlTailDict=urlTails)
+      return shortUrlDict
 
    def outputSimpleTable(self, dfData, shortUrlDict):
       indexNameList = dfData.index.values.tolist() if dfData.index.values.tolist() else []
@@ -232,10 +236,7 @@ class BugzillaSpider(object):
       for indexName in indexNameList:
          count = dfData.loc[indexName][columnName]
          shortUrlKey = self.getKeyName(indexName, columnName)
-         if shortUrlKey == 'Total':
-            shortUrl = self.buglistUrl
-         else:
-            shortUrl = ''
+         shortUrl = '' if 0 == count else shortUrlDict.get(shortUrlKey, '')
          resultLine = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
          resultLine += '                '
          if int(count) < 100:
@@ -270,7 +271,7 @@ class BugzillaSpider(object):
                countWithLink = '-'
                columnLength += 1
             else:
-               shortUrl = self.buglistUrl if shortUrlKey == 'Total' else ''
+               shortUrl = shortUrlDict.get(shortUrlKey, '')
                countWithLink = '<%s|%s>' % (shortUrl, str(count)) if shortUrl else str(count)
             tableRowList.append(countWithLink)
             formatList.append("{:<%ds}" % (len('<%s|>' % shortUrl) + columnLength - len(str(count)) + 1
@@ -379,7 +380,7 @@ class BugzillaSpider(object):
 
    @logExecutionTime
    def parseHtml(self):
-      self.longUrl = self.buglistUrl
+      self.longUrl = short2long(self.buglistUrl) if "vsanvia.vmware.com" in self.buglistUrl else self.buglistUrl
       res = self.session.get(self.buglistUrl)
       content = res.content.decode(errors='ignore')
       html = etree.HTML(content)

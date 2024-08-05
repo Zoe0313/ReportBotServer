@@ -118,6 +118,36 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       if (tsMap.size === 0) {
          throw new Error('Sent notification to all spaces failed.')
       }
+
+      if (report.reportType === 'bugzilla') {
+         try {
+            await axios({
+               method: 'get', url: 'http://vsanvia.vmware.com/'
+            })
+         } catch (e) {
+            logger.error(`vSAN via link is unstable. Error: ${JSON.stringify(e)}`)
+            const threadMessage = 'vSAN via short link service is in maintenance, please' +
+               ' use the <' + `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
+            // send thread message in Google Chat
+            for (const webhook in sendWebhooks) {
+               const threadName = tsMap[webhook]
+               const appMessage = { text: threadMessage, thread: { name: threadName } }
+               const webhookWithOpt = webhook +
+                  '&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD'
+               try {
+                  await axios.post(
+                     webhookWithOpt,
+                     JSON.stringify(appMessage),
+                     { headers: CONTENT_TYPE_JSON_UTF }
+                  )
+               } catch (e) {
+                  logger.error(`Fail to post message to Space thread ${threadName}` +
+                     `since error: ${JSON.stringify(e)}`)
+               }
+            }
+         }
+      }
+
       // update status and content of report history
       reportHistory.sentTime = new Date()
       // reportHistory.tsMap = tsMap // validation error
