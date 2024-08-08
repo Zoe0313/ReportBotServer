@@ -506,11 +506,11 @@ function RegisterApiRouters(router) {
             }
             return
          }
-         const reportHistory = await InvokeNow(reportId)
+         await InvokeNow(reportId)
          ctx.response.status = 200
-         ctx.response.body = reportHistory
+         ctx.response.body = { result: true, message: 'Succeed to send report immediately.' }
       } catch (error) {
-         const errorMsg = 'Fail to send report immediately in test space.'
+         const errorMsg = 'Fail to send report immediately.'
          logger.error(errorMsg + '\n' + error)
          ctx.response.status = 500
          ctx.response.body = { result: false, message: errorMsg }
