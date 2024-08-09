@@ -260,8 +260,7 @@ function RegisterApiRouters(router) {
       const slackId = ctx.state.slackId
       const account = ctx.state.vmwareId
       const filter = {
-         status: { $nin: [REPORT_STATUS.REMOVED] },
-         reportType: { $in: ['bugzilla', 'bugzilla_by_assignee'] }
+         status: { $nin: [REPORT_STATUS.REMOVED] }
       }
       if (!process.env.ADMIN_USER_ID.includes(slackId)) {
          filter.creator = slackId
