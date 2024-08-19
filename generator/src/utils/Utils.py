@@ -129,13 +129,16 @@ def splitOverlengthReport(messages, isContentInCodeBlock=False, enablePagination
       return pages
    return reports
 
-def transformReport(messages, isNoContent=False, isContentInCodeBlock=False, enablePagination=False, enableSplitReport=True):
+def transformReport(messages, threadMessages=[], isNoContent=False, isContentInCodeBlock=False, enablePagination=False, enableSplitReport=True):
    if enableSplitReport:
       reports = splitOverlengthReport(messages, isContentInCodeBlock, enablePagination)
+      threadReports = splitOverlengthReport(threadMessages, isContentInCodeBlock, enablePagination)
    else:
       reports = messages
+      threadReports = threadMessages
    reports = [parse.quote(report) for report in reports]
-   return json.dumps({'messages': reports, 'isEmpty': isNoContent})
+   threads = [parse.quote(report) for report in threadReports]
+   return json.dumps({'messages': reports, 'isEmpty': isNoContent, 'thread': threads})
 
 @logExecutionTime
 def LoadSlashCommandUsage(fileName):

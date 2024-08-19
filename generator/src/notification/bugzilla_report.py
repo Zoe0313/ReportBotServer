@@ -57,6 +57,8 @@ class BugzillaSpider(object):
       self.foreUrl = "https://bugzilla.eng.vmware.com/{}"
       self.title = parse.unquote(args.title).strip('"')
       self.buglistUrl = args.url.strip('"')
+      self.isList2table = args.list2table == 'Yes'
+      self.isFoldMessage = args.foldMessage == 'Yes'
       self.session = requests.session()
       self.longUrl = ''
       self.indexQueryStr = ''
@@ -290,7 +292,7 @@ class BugzillaSpider(object):
          raise Exception(f"I can't find bug count on <{self.buglistUrl}|bugzilla page>. "
                          f"Maybe temporary bugzilla server down.")
 
-      message = []
+      message, threadMessage = [], []
       message.append("*Title: {0}*".format(self.title))
       bugCountInfoStr = bugCountInfos[0].strip().lower()
       if "one bug found" == bugCountInfoStr:
@@ -301,16 +303,21 @@ class BugzillaSpider(object):
       logger.info("bug count: {0}".format(bugCount))
       if bugCount > 0:
          bugCountInfo = "One bug found." if 1 == bugCount else "{0} bugs found.".format(bugCount)
+         bugCountInfo += ' <%s|link>' % self.buglistUrl
          message.append(bugCountInfo)
          detail = self.getBuglistDetail()
-         reports = splitOverlengthReport(detail, isContentInCodeBlock=False, enablePagination=True)
-         reports[0] = "\n".join(message) + "\n" + reports[0]
-         message = reports
+         detailReports = splitOverlengthReport(detail, isContentInCodeBlock=False, enablePagination=True)
+         if self.isFoldMessage:
+            threadMessage = detailReports
+            message = ["\n".join(message)]
+         else:
+            detailReports[0] = "\n".join(message) + "\n" + detailReports[0]
+            message = detailReports
       else:
          isNoContent = True
          message.append("No bugs currently.")
          message = ["\n".join(message)]
-      return message, isNoContent
+      return message, threadMessage, isNoContent
 
    def getBuglistDetail(self):
       # Keyword "#" will make downloading failed such as #buglistsort=pri,asc.
@@ -381,7 +388,11 @@ class BugzillaSpider(object):
    @logExecutionTime
    def parseHtml(self):
       self.longUrl = short2long(self.buglistUrl) if "vsanvia.vmware.com" in self.buglistUrl else self.buglistUrl
-      res = self.session.get(self.buglistUrl)
+      if self.isList2table:
+         self.longUrl = self.longUrl.replace('https://bugzilla.eng.vmware.com/buglist.cgi?',
+                                             'https://bugzilla.eng.vmware.com/report.cgi?'
+                                             'format=table&x_axis_field=component&y_axis_field=&z_axis_field=&query_format=report-table&')
+      res = self.session.get(self.longUrl)
       content = res.content.decode(errors='ignore')
       html = etree.HTML(content)
       return html
@@ -393,8 +404,8 @@ class BugzillaSpider(object):
       self.loginSystem()
       html = self.parseHtml()
       if "/buglist.cgi" in self.longUrl:  # query buglist
-         message, isNoContent = self.getBuglistReport(html)
-         return transformReport(messages=message, isNoContent=isNoContent, enableSplitReport=False)
+         message, thread, isNoContent = self.getBuglistReport(html)
+         return transformReport(messages=message, threadMessages=thread, isNoContent=isNoContent, enableSplitReport=False)
       elif "/report.cgi" in self.longUrl:  # tabular
          message, isNoContent = self.getTabularReport(html)
          return transformReport(messages=message, isNoContent=isNoContent, isContentInCodeBlock=False)
@@ -408,6 +419,8 @@ def parseArgs():
    parser = argparse.ArgumentParser(description='Generate bugzilla report')
    parser.add_argument('--title', type=str, required=True, help='Title of bugzilla report')
    parser.add_argument('--url', type=str, required=True, help='short link of bugzilla')
+   parser.add_argument('--list2table', type=str, required=True, help="change bugzilla list url into table url")
+   parser.add_argument('--foldMessage', type=str, required=True, help="fold PR list by displaying in thread")
    return parser.parse_args()
 
 if __name__ == "__main__":
