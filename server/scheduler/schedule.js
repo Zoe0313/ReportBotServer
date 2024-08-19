@@ -390,7 +390,7 @@ const ContentEvaluate = async (report) => {
    }
    try {
       const output = JSON.parse(stdout)
-      // Here output's format is {“messages”: [“……“, “……“], “isEmpty”: False, “thread”: [“……“, “……“]}
+      // Here output's format is {"messages": ["..."], "isEmpty": False, "webhookUserIds": "", "thread": ["..."]}
       if (typeof output === 'object' && Array.isArray(output.messages)) {
          const messages = output.messages?.map(message => unescape(message)) || []
          if (messages.length > 0) {

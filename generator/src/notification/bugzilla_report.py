@@ -391,7 +391,7 @@ class BugzillaSpider(object):
       if self.isList2table:
          self.longUrl = self.longUrl.replace('https://bugzilla.eng.vmware.com/buglist.cgi?',
                                              'https://bugzilla.eng.vmware.com/report.cgi?'
-                                             'format=table&x_axis_field=component&y_axis_field=&z_axis_field=&query_format=report-table&')
+                                             'format=table&action=wrap&x_axis_field=component&y_axis_field=&z_axis_field=&query_format=report-table&')
       res = self.session.get(self.longUrl)
       content = res.content.decode(errors='ignore')
       html = etree.HTML(content)
