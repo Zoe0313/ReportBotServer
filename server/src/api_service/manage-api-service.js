@@ -31,6 +31,8 @@ async function UpdateReportConfiguration(reqData, oldReport) {
          webhooks: requestData?.webhooks || [],
          reportSpecConfig: {
             bugzillaLink: requestData?.bugzilla?.bugzillaLink || null,
+            bugzillaList2Table: requestData?.bugzilla?.list2table ? 'Yes' : 'No',
+            foldBugzillaList: requestData?.bugzilla?.foldPRList ? 'Yes' : 'No',
             bugzillaAssignee: requestData.bugzillaAssignee?.bugzillaAssignees || []
          },
          repeatConfig: {

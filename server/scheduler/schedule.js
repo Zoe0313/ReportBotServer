@@ -120,20 +120,25 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       }
 
       if (report.reportType === 'bugzilla') {
+         const threadMessages = messageInfo.thread
          try {
             await axios({
                method: 'get', url: 'http://vsanvia.vmware.com/'
             })
          } catch (e) {
             logger.error(`vSAN via link is unstable. Error: ${JSON.stringify(e)}`)
-            const threadMessage = 'vSAN via short link service is in maintenance, please' +
-               ' use the <' + `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
-            // send thread message in Google Chat
-            for (const webhook in sendWebhooks) {
-               const threadName = tsMap[webhook]
+            const viaUnstableMessage = 'vSAN via short link service is in maintenance, ' +
+               'please use the <' + `${report.reportSpecConfig.bugzillaLink}` + '|full link>'
+            threadMessages.push(viaUnstableMessage)
+         }
+         // send thread message in Google Chat
+         for (const webhook in tsMap) {
+            const threadName = tsMap[webhook]
+            logger.debug('Send thread message, webhook: ' + threadName)
+            const webhookWithOpt = webhook +
+               '&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD'
+            AsyncForEach(threadMessages, async threadMessage => {
                const appMessage = { text: threadMessage, thread: { name: threadName } }
-               const webhookWithOpt = webhook +
-                  '&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD'
                try {
                   await axios.post(
                      webhookWithOpt,
@@ -144,7 +149,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
                   logger.error(`Fail to post message to Space thread ${threadName}` +
                      `since error: ${JSON.stringify(e)}`)
                }
-            }
+            })
          }
       }
 
@@ -232,6 +237,18 @@ const ContentEvaluate = async (report) => {
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} ` +
             `--title '${reportTitle}' ` +
             `--url '${report.reportSpecConfig.bugzillaLink}'`
+         if (report.reportSpecConfig?.bugzillaList2Table != null &&
+             report.reportSpecConfig?.bugzillaList2Table === 'Yes') {
+            command += ` --list2table 'Yes'`
+         } else {
+            command += ` --list2table 'No'`
+         }
+         if (report.reportSpecConfig?.foldBugzillaList != null &&
+             report.reportSpecConfig?.foldBugzillaList === 'Yes') {
+            command += ` --foldMessage 'Yes'`
+         } else {
+            command += ` --foldMessage 'No'`
+         }
          logger.debug(`execute the bugzilla report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
          break
@@ -369,23 +386,29 @@ const ContentEvaluate = async (report) => {
    // If the report type is text or nanny_reminder, we return the report content by array directly.
    if (report.reportType === 'text' || report.reportType === 'nanny_reminder') {
       stdout += mentionUserIds
-      return { messages: [stdout], isEmpty: false, webhookUserIds: gIdsStr }
+      return { messages: [stdout], isEmpty: false, webhookUserIds: gIdsStr, thread: [] }
    }
    try {
       const output = JSON.parse(stdout)
-      // Here output's format is {“messages”: [“……“, “……“], “isEmpty”: False}
+      // Here output's format is {“messages”: [“……“, “……“], “isEmpty”: False, “thread”: [“……“, “……“]}
       if (typeof output === 'object' && Array.isArray(output.messages)) {
          const messages = output.messages?.map(message => unescape(message)) || []
          if (messages.length > 0) {
             messages[messages.length - 1] += mentionUserIds
          }
-         return { messages: messages, isEmpty: output.isEmpty, webhookUserIds: gIdsStr }
+         const thread = output.thread?.map(message => unescape(message)) || []
+         return {
+            messages: messages,
+            isEmpty: output.isEmpty,
+            webhookUserIds: gIdsStr,
+            thread: thread
+         }
       }
    } catch (e) {
       logger.error(`Fail to parse report generator stdout:`)
       logger.error(e)
    }
-   return { messages: [stdout], isEmpty: false, webhookUserIds: gIdsStr }
+   return { messages: [stdout], isEmpty: false, webhookUserIds: gIdsStr, thread: [] }
 }
 
 const ScheduleOption = function (repeatConfig) {

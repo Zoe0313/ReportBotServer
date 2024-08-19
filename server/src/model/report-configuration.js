@@ -73,6 +73,14 @@ const ReportConfigurationSchema = new mongoose.Schema({
    },
    webhooks: { type: [String], required: true },
    reportSpecConfig: {
+      bugzillaList2Table: {
+         type: String,
+         enum: YES_OR_NO_ENUM
+      },
+      foldBugzillaList: {
+         type: String,
+         enum: YES_OR_NO_ENUM
+      },
       bugzillaLink: {
          type: String,
          required: function(v) {
