@@ -15,7 +15,7 @@ import logger from '../../common/logger.js'
 import { FormatDate, Merge } from '../../common/utils.js'
 import { GetMetrics } from './metrics.js'
 import {
-   UpdateFlattenMembers, GenerateNannyRoster
+   UpdateFlattenMembers
 } from '../bolt_service/init-blocks-data-helper.js'
 import { VMwareId2GoogleUserInfo } from '../../common/slack-helper.js'
 
