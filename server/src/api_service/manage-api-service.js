@@ -14,12 +14,16 @@ import {
 import logger from '../../common/logger.js'
 import { FormatDate, Merge } from '../../common/utils.js'
 import { GetMetrics } from './metrics.js'
-import { UpdateFlattenMembers } from '../bolt_service/init-blocks-data-helper.js'
+import {
+   UpdateFlattenMembers, GenerateNannyRoster
+} from '../bolt_service/init-blocks-data-helper.js'
+import { VMwareId2GoogleUserInfo } from '../../common/slack-helper.js'
 
 const CHANGE_REPORT_STATUS_ENUM = ['enable', 'disable']
 
 async function UpdateReportConfiguration(reqData, oldReport) {
    const ParseRequestData = async (requestData) => {
+      const nannyList = requestData?.nannyReminder?.nannyAssignees || []
       const reportObj = {
          title: requestData.title,
          creator: requestData.creator,
@@ -33,7 +37,11 @@ async function UpdateReportConfiguration(reqData, oldReport) {
             bugzillaLink: requestData?.bugzilla?.bugzillaLink || null,
             bugzillaList2Table: requestData?.bugzilla?.list2table ? 'Yes' : 'No',
             foldBugzillaList: requestData?.bugzilla?.foldPRList ? 'Yes' : 'No',
-            bugzillaAssignee: requestData.bugzillaAssignee?.bugzillaAssignees || []
+            bugzillaAssignee: requestData.bugzillaAssignee?.bugzillaAssignees || [],
+            text: requestData.text || null,
+            nannyCode: requestData?.nannyReminder?.nannyCode || null,
+            nannyAssignee: nannyList.length > 0 ? nannyList.join('\n') : null,
+            nannyRoster: requestData?.nannyReminder?.nannyRoster || null
          },
          repeatConfig: {
             repeatType: requestData.repeatConfig.repeatType,
@@ -256,6 +264,19 @@ function RegisterApiRouters(router) {
          result: true,
          message: `You are the system administrator of vSAN Bot service.`
       }
+   })
+
+   router.get('/service/googleinfo', async (ctx, next) => {
+      const vmwareId = ctx.query?.vmwareId || null
+      const gUserInfo = VMwareId2GoogleUserInfo(vmwareId)
+      // Mention nanny in Google Chat by <users/Google user ID>
+      if (gUserInfo.gid.length === 0) {
+         ctx.response.status = 404
+         ctx.response.body = { result: false, message: `Not Found by vmwareId ${vmwareId}` }
+         return
+      }
+      ctx.response.status = 200
+      ctx.response.body = gUserInfo
    })
 
    router.get('/report/configuration', async (ctx, next) => {

@@ -244,10 +244,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
          }
       },
       nannyCode: {
-         type: String,
-         required: function(v) {
-            return this.reportType === 'nanny_reminder'
-         }
+         type: String
       },
       nannyAssignee: {
          type: String,

@@ -307,7 +307,7 @@ export function LoadSlashCommandUsage(name) {
 
 export function VMwareId2GoogleUserInfo(vmwareId) {
    if (vmwareId.endsWith('null') || vmwareId.endsWith('undefined')) {
-      return ''
+      return { gid: '', broadcom_email: '', full_name: '' }
    }
    if (vSANUserIdCache[vmwareId] == null) {
       const idFile = path.join(path.resolve(), '..') + `/persist/config/google-user-id.json`
