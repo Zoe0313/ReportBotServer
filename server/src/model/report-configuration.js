@@ -81,6 +81,10 @@ const ReportConfigurationSchema = new mongoose.Schema({
          type: String,
          enum: YES_OR_NO_ENUM
       },
+      sendIfPRDiff: {
+         type: String,
+         enum: YES_OR_NO_ENUM
+      },
       bugzillaLink: {
          type: String,
          required: function(v) {

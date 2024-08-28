@@ -41,51 +41,46 @@ const AsyncForEach = async function (array, callback) {
 const NotificationExecutor = async (report, ContentEvaluate) => {
    let reportHistory = null
    try {
-      const mentionUsers = report.mentionUsers || []
-      logger.debug(`mentionusers: ${mentionUsers}`)
-
-      let isWebhookEmpty = false
+      // check the webhooks
       const sendWebhooks = Array.from(new Set(report.webhooks || []))
       if (sendWebhooks.length === 0) {
-         sendWebhooks.push(process.env.ISSUE_GCHAT_WEBHOOK)
-         isWebhookEmpty = true
+         console.warn(`*Webhook Empty* ID_${report._id}  Title: ${report.title}`)
+         return
       }
       logger.debug(`Send webhooks: ${JSON.stringify(sendWebhooks)}`)
+
+      // generate report in 10 minutes timeout
+      const messageInfo = await ContentEvaluate(report)
+      const messages = messageInfo.messages
+      logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messageInfo)}`)
+      const sendIfPRDiff = report.reportSpecConfig?.sendIfPRDiff || 'No'
+      logger.info(`report option skipEmptyReport:${report.skipEmptyReport} ` +
+         `sendIfPRDiff:${sendIfPRDiff}`)
+      // skip report by options in report configuration
+      if (report.skipEmptyReport === 'Yes' && messageInfo.isEmpty === true) {
+         logger.info('The option of skip empty report is Yes.')
+         return
+      } else if (sendIfPRDiff === 'Yes' && messageInfo.isEmpty === true) {
+         logger.info('The option of send report if existed PR difference from last is Yes.')
+         return
+      }
+      // initialize the report send history
       reportHistory = new ReportHistory({
          reportConfigId: report._id,
          title: report.title,
          creator: report.creator,
          reportType: report.reportType,
          conversations: sendWebhooks,
-         mentionUsers: mentionUsers,
+         mentionUsers: report.mentionUsers || [],
          sentTime: null,
          content: '',
          status: REPORT_HISTORY_STATUS.PENDING
       })
       await reportHistory.save()
-
-      // 10 mins timeout
-      const messageInfo = await ContentEvaluate(report)
-      const messages = messageInfo.messages
-      logger.info(`stdout of notification ${report.title}: ${JSON.stringify(messageInfo)}`)
-
-      const isSkipEmptyReport = report.skipEmptyReport
-      if (isSkipEmptyReport === 'Yes' && messageInfo.isEmpty === true) {
-         logger.info(`The option of skip empty report is ${isSkipEmptyReport} `)
-         reportHistory.content = JSON.stringify(messages[0])
-         reportHistory.status = REPORT_HISTORY_STATUS.SUCCEED
-         reportHistory.sentTime = new Date()
-         await reportHistory.save()
-         return
-      }
-
       // post reports to Google spaces
       const results = await Promise.all(
          sendWebhooks.map(webhook => {
             return AsyncForEach(messages, async message => {
-               if (isWebhookEmpty === true) {
-                  message = `[*Webhook Empty* ID_${report._id}]\n` + message
-               }
                const appMessage = { text: message }
                const webhookWithId = webhook + messageInfo.webhookUserIds
                try {
@@ -118,7 +113,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       if (tsMap.size === 0) {
          throw new Error('Sent notification to all spaces failed.')
       }
-
+      // If via short link service is unstable, send bugzilla full link in thread message
       if (report.reportType === 'bugzilla') {
          const threadMessages = messageInfo.thread
          try {
@@ -152,7 +147,6 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
             })
          }
       }
-
       // update status and content of report history
       reportHistory.sentTime = new Date()
       // reportHistory.tsMap = tsMap // validation error
@@ -249,6 +243,12 @@ const ContentEvaluate = async (report) => {
          } else {
             command += ` --foldMessage 'No'`
          }
+         if (report.reportSpecConfig?.sendIfPRDiff != null &&
+             report.reportSpecConfig?.sendIfPRDiff === 'Yes') {
+            command += ` --sendIfPRDiff 'Yes'`
+         } else {
+            command += ` --sendIfPRDiff 'No'`
+         }
          logger.debug(`execute the bugzilla report generator: ${command}`)
          stdout = await ExecCommand(command, timeout)
          break
@@ -308,7 +308,7 @@ const ContentEvaluate = async (report) => {
       case 'nanny_reminder': {
          const MentionNannys = (text, nannyVMwareIds, mentionKey) => {
             for (let i = 0; i < nannyVMwareIds.length; i++) {
-               const vmwareId = nannyVMwareIds[i]
+               const vmwareId = nannyVMwareIds[i].trim()
                let nannyMentionKey = `@${mentionKey}`
                let nannyFullNameKey = `${mentionKey}` + '-full-name'
                if (nannyVMwareIds.length > 1) {

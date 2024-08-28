@@ -37,6 +37,7 @@ async function UpdateReportConfiguration(reqData, oldReport) {
             bugzillaLink: requestData?.bugzilla?.bugzillaLink || null,
             bugzillaList2Table: requestData?.bugzilla?.list2table ? 'Yes' : 'No',
             foldBugzillaList: requestData?.bugzilla?.foldPRList ? 'Yes' : 'No',
+            sendIfPRDiff: requestData?.bugzilla?.sendIfDiff ? 'Yes' : 'No',
             bugzillaAssignee: requestData.bugzillaAssignee?.bugzillaAssignees || [],
             text: requestData.text || null,
             nannyCode: requestData?.nannyReminder?.nannyCode || null,

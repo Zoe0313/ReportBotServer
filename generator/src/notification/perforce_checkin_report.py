@@ -17,8 +17,6 @@ from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthR
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
    BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, JIRA_BROWSE_URL, BUGZILLA_BASE, REVIEWBOARD_REQUEST_URL
-from generator.src.utils.Logger import PerfLogger
-PerfLogger.info('import python packages and customized parameters, functions')
 
 ReviewIDPattern = re.compile(REVIEWBOARD_REQUEST_URL.format("(\d{7,})"), re.I)
 SUMMARY_MAX_LENGTH = 60

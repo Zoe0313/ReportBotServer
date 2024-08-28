@@ -15,7 +15,7 @@ import time
 import functools
 import datetime
 from urllib import parse
-from generator.src.utils.Logger import logger, PerfLogger
+from generator.src.utils.Logger import logger
 
 # In order to add some mention user names, we set this value less than 4000.
 MAX_CHAR_LENGTH_IN_ONE_REPORT = 3700
@@ -43,7 +43,7 @@ def logExecutionTime(func):
       callerFile = str(result[-2]).split(', ')[0].lstrip('<FrameSummary file ').split('/')[-1]
       callerLineNo = str(result[-2]).split(', ')[1].split(' in ')[0].replace('line ', '')
       output = '{}[:{}] - {} took {:.3f}s'.format(callerFile, callerLineNo, func.__name__, endTime - startTime)
-      PerfLogger.info(output)
+      logger.info(output)
       return res
    return wrapper
 

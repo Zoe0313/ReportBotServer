@@ -32,4 +32,3 @@ def createLogger(filename):
    return logger
 
 logger = createLogger(filename='slackbot-generator.log')
-PerfLogger = createLogger(filename='slackbot-generator-perf.log')

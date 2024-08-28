@@ -53,6 +53,17 @@ def writeMemoryFile(pklFile, data):
       with open(pklFile, 'wb') as f:
          pickle.dump(data, f)
 
+def readJsonFile(jsonPath):
+   if os.path.exists(jsonPath):
+      with FileLock(jsonPath + ".lock"):
+         with open(jsonPath, 'r') as f:
+            return json.load(f)
+
+def writeJsonFile(jsonPath, data):
+   with FileLock(jsonPath + ".lock"):
+      with open(jsonPath, 'w') as f:
+         json.dump(data, f)
+
 def getShortUrlsFromCacheFile(fileDir:str, fileKey:str, urlTailDict:dict):
    key = hashlib.sha256(fileKey.encode()).hexdigest()
    pklFile = os.path.join(fileDir, "{0}.pkl".format(key))
@@ -62,6 +73,17 @@ def getShortUrlsFromCacheFile(fileDir:str, fileKey:str, urlTailDict:dict):
       shortUrlDict[urlTail] = shortUrlDict.get(urlTail) if shortUrlDict.get(urlTail) else long2short(longUrl)
    writeMemoryFile(pklFile, shortUrlDict)
    return shortUrlDict
+
+def getLastPRsFromCacheFile(fileDir:str, fileKey:str):
+    key = hashlib.sha256(fileKey.encode()).hexdigest()
+    jsonFile = os.path.join(fileDir, "{0}.json".format(key))
+    prList = readJsonFile(jsonFile)
+    return prList if prList else []
+
+def updatePRsInCacheFile(fileDir:str, fileKey:str, prList:list):
+    key = hashlib.sha256(fileKey.encode()).hexdigest()
+    jsonFile = os.path.join(fileDir, "{0}.json".format(key))
+    writeJsonFile(jsonFile, prList)
 
 def queryMembersByLdap(managerName):
    '''
