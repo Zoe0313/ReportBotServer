@@ -387,7 +387,7 @@ def parseArgs():
    parser.add_argument('--url', type=str, required=True, help='short link of bugzilla')
    parser.add_argument('--list2table', type=str, required=True, help="change bugzilla list url into table url")
    parser.add_argument('--foldMessage', type=str, required=True, help="fold PR list by displaying in thread")
-   parser.add_argument('--sendIfPRDiff', type=str, required=True, help="send report if there are differences from the last PR list")
+   parser.add_argument('--sendIfPRDiff', type=str, required=True, help="skip report if current PR list is the same as the last")
    return parser.parse_args()
 
 if __name__ == "__main__":

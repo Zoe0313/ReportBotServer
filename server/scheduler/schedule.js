@@ -61,7 +61,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
          logger.info('The option of skip empty report is Yes.')
          return
       } else if (sendIfPRDiff === 'Yes' && messageInfo.isEmpty === true) {
-         logger.info('The option of send report if existed PR difference from last is Yes.')
+         logger.info('The option of skip report if no diff PRs is Yes.')
          return
       }
       // initialize the report send history
