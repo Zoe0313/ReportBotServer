@@ -265,6 +265,14 @@ class BugzillaSpider(object):
          isNoContent = True
          message.append("No bugs currently.")
          message = ["\n".join(message)]
+      if self.isSendPrDiff:
+         lastPRs = self.getLastPRs()
+         nowPRs = self.persistCurrentPRs(self.longUrl)
+         diffPRs = set(nowPRs) - set(lastPRs)
+         if len(diffPRs) == 0:
+            logger.info("No difference from last PRs")
+            return [], [], True
+         logger.info(f"Current PRs are difference from last PRs: {diffPRs}")
       return message, threadMessage, isNoContent
 
    def getBuglistDetail(self):
