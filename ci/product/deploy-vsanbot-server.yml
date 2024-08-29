@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: vsanbot-server
-          image: vsaninternaltools-docker-local.artifactory.eng.vmware.com/product/slackbot/vsanbot-server:release-now
+          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/vsanbot-server:release-now
           env:
             - name: POD_IP
               valueFrom:
