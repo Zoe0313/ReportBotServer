@@ -3,9 +3,7 @@ import cronParser from 'cron-parser'
 import parseUrl from 'parse-url'
 import axios from 'axios'
 import logger from '../../common/logger.js'
-import {
-   VerifyBotInChannel, GetUsersName
-} from '../../common/slack-helper.js'
+import { GetUsersName } from '../../common/slack-helper.js'
 import { PerforceInfo } from './perforce-info.js'
 
 const REPORT_STATUS = {
@@ -392,27 +390,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
       }
    },
    adminConfig: {
-      channels: {
-         type: [String],
-         validate: {
-            validator: async function(v) {
-               if (v == null) {
-                  return true
-               }
-               const channelIDs = v.map(channel => channel.split('/')[0])
-               const results = await Promise.all(
-                  channelIDs.map(channelID => VerifyBotInChannel(channelID)
-                     .then(inChannel => ({ channelID, inChannel }))
-                  )
-               )
-               const notInChannelList = results.filter(result => !result.inChannel)
-                  .map(result => result.channelID)
-               if (notInChannelList.length > 0) {
-                  throw new Error(`vSANSlackbot is NOT in the channel(s): ${notInChannelList.join(', ')}`)
-               }
-            }
-         }
-      }
+      channels: { type: [String] }
    }
 }, { timestamps: true })
 

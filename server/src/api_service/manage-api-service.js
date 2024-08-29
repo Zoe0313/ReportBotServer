@@ -172,6 +172,34 @@ function RegisterApiRouters(router) {
       }
    })
 
+   router.get('/api/v1/nanny', async (ctx, next) => {
+      const nannyCode = ctx.query?.code || null
+      if (nannyCode == null) {
+         ctx.response.status = 400
+         ctx.response.body = {
+            result: false,
+            message: 'Bad request: nanny code not given.'
+         }
+         return
+      }
+      logger.debug(`nanny code: ${nannyCode}`)
+      try {
+         const report = await ReportConfiguration.findOne({
+            'reportSpecConfig.nannyCode': nannyCode
+         })
+         ctx.response.status = 200
+         ctx.response.body = {
+            assignees: report.reportSpecConfig.nannyAssignee.split('\n'),
+            roster: report.reportSpecConfig.nannyRoster
+         }
+      } catch (error) {
+         const errorMsg = `Not found the nanny duty by code ${nannyCode}.`
+         logger.error(errorMsg + '\n' + error)
+         ctx.response.status = 404
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+   })
+
    router.get('/api/v1/team/members', async (ctx, next) => {
       const filterType = ctx.query?.filterType || null
       const filterName = ctx.query?.filterName || null
