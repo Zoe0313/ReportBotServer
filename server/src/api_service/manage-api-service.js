@@ -567,6 +567,40 @@ function RegisterApiRouters(router) {
          ctx.response.body = { result: false, message: errorMsg }
       }
    })
+
+   router.post('/report/:id/transfer', async (ctx, next) => {
+      const reportId = ctx.params.id
+      if (reportId == null) {
+         ctx.response.status = 400
+         ctx.response.body = { result: false, message: 'Bad request: report id not given.' }
+         return
+      }
+      const newOwner = ctx.query?.owner || null
+      const userInfo = await FindUserInfoByName(newOwner)
+      if (userInfo == null) {
+         ctx.response.status = 404
+         ctx.response.body = {
+            result: false,
+            message: `Not found: user info by vmware id ${newOwner}.`
+         }
+         return
+      }
+      try {
+         const vmwareId = userInfo.userName
+         const creator = userInfo.slackId
+         await ReportConfiguration.updateOne({ _id: reportId }, { vmwareId, creator })
+         ctx.response.status = 200
+         ctx.response.body = {
+            result: true,
+            message: `The notification owner has transfer to ${vmwareId}.`
+         }
+      } catch (error) {
+         const errorMsg = 'Fail to transfer notification owner.'
+         logger.error(errorMsg + '\n' + error)
+         ctx.response.status = 500
+         ctx.response.body = { result: false, message: errorMsg }
+      }
+   })
 }
 
 export {
