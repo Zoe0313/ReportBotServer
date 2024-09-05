@@ -473,13 +473,59 @@ paths:
           schema:
             $ref: '#/definitions/HTTPError'
       tags:
-        - private
-      summary: Send report immediately in test space to generate a report history of this report
+        - public
+      summary: Send report immediately in the google space by configured webhook.
       description: >
-        This API can be used to post one report in test space by report id.
-        This API only can be used by admins.
-
-
+        This API can be used to post one report in google space by report id.
+  /report/{id}/transfer:
+    post:
+      parameters:
+        - description: VMWare AD account
+          in: query
+          name: owner
+          required: true
+          type: string
+          example: ysixuan
+        - description: VMWare AD account
+          in: query
+          name: user
+          required: true
+          type: string
+          example: zhouhuang
+        - description: The uuid of report configuration
+          in: path
+          name: id
+          required: true
+          type: string
+          example: 662efda0eb69b4a81793d24d
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/HTTPInfo'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/HTTPError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/HTTPError'
+      tags:
+        - public
+      summary: Transfer your notification to other user.
+      description: >
+        This API can be used to transfer notification to other user.
   /api/v1/team/members:
     get:
       parameters:
