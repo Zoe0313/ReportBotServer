@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vsanbot-server
+spec:
+  selector:
+    matchLabels:
+      app: vsanbot-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vsanbot-server
+        environment: product
+    spec:
+      containers:
+        - name: vsanbot-server
+          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/vsanbot-server:release-now
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: PORT
+              value: "3000"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+          - name: bot-persist-storage
+            mountPath: /slackbot/persist
+          - name: build-toolchain
+            mountPath: /build/toolchain/
+          - name: build-apps
+            mountPath: /build/apps/
+          resources:
+            requests:
+              memory: "200Mi"
+              cpu: "100m"
+            limits:
+              memory: "500Mi"
+              cpu: "200m"
+      volumes:
+        - name: bot-persist-storage
+          persistentVolumeClaim:
+            claimName: pv-claim
+        - name: build-toolchain
+          nfs:
+            server: build-toolchain.eng.vmware.com
+            path: /toolchain
+        - name: build-apps
+          nfs:
+            server: build-apps.eng.vmware.com
+            path: /apps
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+          - 10.142.7.1
+        searches:
+          - eng.vmware.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vsanbot-server
+spec:
+  type: NodePort
+  selector:
+    app: vsanbot-server
+  ports:
+  - port: 443
+    targetPort: 3000
+    nodePort: 30819
