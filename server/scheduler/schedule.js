@@ -68,7 +68,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       reportHistory = new ReportHistory({
          reportConfigId: report._id,
          title: report.title,
-         creator: report.creator,
+         creator: report.vmwareId,
          reportType: report.reportType,
          conversations: sendWebhooks,
          mentionUsers: report.mentionUsers || [],

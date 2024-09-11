@@ -309,13 +309,12 @@ function RegisterApiRouters(router) {
    })
 
    router.get('/report/configuration', async (ctx, next) => {
-      const slackId = ctx.state.slackId
       const account = ctx.state.vmwareId
       const filter = {
          status: { $nin: [REPORT_STATUS.REMOVED] }
       }
-      if (!process.env.ADMIN_USER_ID.includes(slackId)) {
-         filter.creator = slackId
+      if (!process.env.ADMIN_VMWARE_ID.includes(account)) {
+         filter.vmwareId = account
       }
       try {
          const total = await ReportConfiguration.countDocuments(filter)
