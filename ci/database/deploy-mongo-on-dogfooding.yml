@@ -1,7 +1,31 @@
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-persistent-volume
+  namespace: vsan-bot-prod
+spec:
+  capacity:
+    storage: 100Gi
+  volumeMode: Filesystem
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /data/db
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - w3-vsan-sherpa-10-208-103-171.eng.vmware.com
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: mongo-prd
+  namespace: vsan-bot-prod
 spec:
   type: NodePort
   selector:
@@ -15,6 +39,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongo-prd
+  namespace: vsan-bot-prod
 spec:
   selector:
     matchLabels:
@@ -56,7 +81,7 @@ spec:
       name: mongo-persistent-storage-prd
     spec:
       accessModes: ["ReadWriteOnce"]
-      storageClassName: mongodb-storage
+      storageClassName: local-storage
       resources:
         requests:
           storage: 90Gi
