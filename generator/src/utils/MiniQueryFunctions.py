@@ -42,6 +42,28 @@ def short2long(short_url):
         logger.error("get long url error: ", e)
     return None
 
+def vsanviaLinkMigration():
+    response = requests.get(url='http://vsanvia.vmware.com/api/urls?user=svc.vsan-er')
+    if response.status_code == 200:
+        results = response.json()
+        urls = results['results']
+        print(f"The number of urls is {len(urls)}")
+        for url in urls:
+            url_id = url['pk']
+            original_url = url['original_url']
+            if 'bugzilla.eng.vmware.com' not in original_url:
+                continue
+            original_url = original_url.replace('bugzilla.eng.vmware.com', 'bugzilla-vcf.lvn.broadcom.net')
+            try:
+                payload = {'original_url': original_url}
+                response = requests.post(url=f'http://vsanvia.vmware.com/api/url/{url_id}',
+                                         data=json.dumps(payload))
+                data = response.json()
+                print('Succeed to update the long url:', data)
+            except Exception as e:
+                print(f'Fail to update the long url: {url_id} {original_url}')
+                print(e)
+
 def readMemoryFile(pklFile):
    if os.path.exists(pklFile):
       with FileLock(pklFile + ".lock"):
