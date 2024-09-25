@@ -14,6 +14,10 @@ spec:
         app: vsanbot-server
         environment: product
     spec:
+      securityContext:
+        runAsUser: 175345366
+        runAsGroup: 201
+        fsGroup: 201
       containers:
         - name: vsanbot-server
           image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/vsanbot-server:vdp
