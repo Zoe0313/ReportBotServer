@@ -27,11 +27,18 @@ RUN apt-get update
 RUN apt-get install -y vim
 
 # set perforce environment
-ENV P4PORT ssl:perforce.eng.vmware.com:1666
+ENV P4PORT ssl:perforce.vcfd.broadcom.net:1666
 
 WORKDIR slackbot
 
 COPY . .
+
+RUN useradd -u 175345366 xl061876
+RUN groupadd -g 201 mts
+RUN usermod -d /slackbot xl061876
+RUN usermod -g mts xl061876
+RUN chown xl061876:mts -R /slackbot
+USER xl061876
 
 WORKDIR server
 

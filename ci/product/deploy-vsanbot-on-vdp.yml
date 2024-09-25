@@ -2,22 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vsanbot-server
-  labels:
-    app.name: vsanbot-server
+  namespace: vsanperf-vsanbot
 spec:
   selector:
     matchLabels:
-      app.name: vsanbot-server
+      app: vsanbot-server
   replicas: 1
   template:
     metadata:
       labels:
-        app.name: vsanbot-server
+        app: vsanbot-server
         environment: product
     spec:
       containers:
         - name: vsanbot-server
-          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/vsanbot-server:release-now
+          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/vsanbot-server:vdp
           env:
             - name: POD_IP
               valueFrom:
@@ -33,12 +32,12 @@ spec:
           ports:
             - containerPort: 3000
           volumeMounts:
-          - name: slackbot-nfs
+          - name: lvn-dbc2403
             mountPath: /slackbot/persist
-          - name: apps-volume
-            mountPath: /build/apps
-          - name: toolchain-volume
-            mountPath: /build/toolchain
+          - name: build-apps
+            mountPath: /build/apps/
+          - name: build-toolchain
+            mountPath: /build/toolchain/
           resources:
             requests:
               memory: "200Mi"
@@ -46,36 +45,28 @@ spec:
             limits:
               memory: "500Mi"
               cpu: "200m"
-      securityContext:
-        runAsUser: 10001
-        runAsGroup: 10002
-        fsGroup: 10002
       volumes:
-        - name: slackbot-nfs
+        - name: lvn-dbc2403
           nfs:
-            server: pa-archive.eng.vmware.com
-            path: /slackbot-aas
-        - name: apps-volume
+            server: lvn-dbc2403.lvn.broadcom.net
+            path: /dbc/lvn-dbc2403/xl061876/public_html/slackbot/persist
+        - name: build-toolchain
           nfs:
-            server: build-apps.eng.vmware.com
-            path: /apps
-        - name: toolchain-volume
+            server: nvlinas101.lvn.broadcom.net
+            path: /ifs/nvlinas101/projects0371/toolchain
+        - name: build-apps
           nfs:
-            server: build-toolchain.eng.vmware.com
-            path: /toolchain
-      dnsConfig:
-        searches:
-          - eng.vmware.com
+            server: nvlinas101.lvn.broadcom.net
+            path: /ifs/nvlinas101/projects0371/apps
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: vsanbot-server
-  labels:
-    app.name: vsanbot-server
+  namespace: vsanperf-vsanbot
 spec:
   selector:
-    app.name: vsanbot-server
+    app: vsanbot-server
   ports:
   - protocol: TCP
     port: 443
@@ -85,11 +76,12 @@ apiVersion: projectcontour.io/v1
 kind: HTTPProxy
 metadata:
   name: vsanbot-server
+  namespace: vsanperf-vsanbot
   annotations:
     kubernetes.io/ingress.class: "vdp-contour-int"
 spec:
   virtualhost:
-    fqdn: vsanbot.vdp.oc.vmware.com
+    fqdn: vsanbot.vdp.lvn.broadcom.net
     tls:
       secretName: infra-system/vdp-int-domain-tls
   routes:

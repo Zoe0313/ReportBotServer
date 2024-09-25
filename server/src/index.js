@@ -29,12 +29,9 @@ ConnectMongoDatabase(async () => {
    logger.info(`next invocation of p4 members update is ${flattenMembersJob.nextInvocation()}`)
    const updateTeamGroupJob = RegisterTeamGroupScheduler()
    logger.info(`next invocation of team group members update is ${updateTeamGroupJob.nextInvocation()}`)
-   const updateVsanNannyJob = RegisterVSANNannyScheduler()
-   logger.info(`next invocation of vsan nannys update is ${updateVsanNannyJob.nextInvocation()}`)
    if (process.env.NODE_ENV !== 'development') {
       updatePerforceInfoJob.invoke()
       updateTeamGroupJob.invoke()
-      updateVsanNannyJob.invoke()
    }
 })
 
