@@ -12,8 +12,7 @@ import { ConnectMongoDatabase } from '../common/db-utils.js'
 import { ReportConfiguration, REPORT_STATUS } from './model/report-configuration.js'
 import {
    RegisterScheduler, RegisterPerforceInfoScheduler,
-   RegisterPerforceMembersScheduler, RegisterTeamGroupScheduler,
-   RegisterVSANNannyScheduler
+   RegisterPerforceMembersScheduler, RegisterTeamGroupScheduler
 } from './scheduler-adapter.js'
 import { RegisterApiRouters } from './api_service/manage-api-service.js'
 import logger from '../common/logger.js'
