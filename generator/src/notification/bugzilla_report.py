@@ -66,13 +66,10 @@ class BugzillaSpider(object):
       self.countQueryStr = ''
 
    def parseUrl(self, bugzillaLink):
-      if "via.vmw.com" in bugzillaLink:
-         raise Exception(f'Unsupported via link: {bugzillaLink}. Please use original bugzilla link directly.')
-
-      longUrl = short2long(bugzillaLink) if "vsanvia.vmware.com" in bugzillaLink else bugzillaLink
+      longUrl = short2long(bugzillaLink) if "vsanvia.broadcom.net" in bugzillaLink else bugzillaLink
       if self.isList2table:
-         longUrl = longUrl.replace('https://bugzilla.eng.vmware.com/buglist.cgi?',
-                                   'https://bugzilla.eng.vmware.com/report.cgi?'
+         longUrl = longUrl.replace('https://bugzilla-vcf.lvn.broadcom.net/buglist.cgi?',
+                                   'https://bugzilla-vcf.lvn.broadcom.net/report.cgi?'
                                    'format=table&action=wrap&x_axis_field=component&y_axis_field=&z_axis_field=&query_format=report-table&')
       return longUrl
 

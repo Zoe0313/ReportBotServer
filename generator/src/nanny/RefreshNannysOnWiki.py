@@ -8,13 +8,13 @@ RefreshNannysOnWiki.py
 Description:
   Refresh nanny list from wiki page
 Function:
-- VSAN Nanny: https://wiki.eng.vmware.com/VSAN/Nanny#Vsan-nanny_Duty_Roster on Monday 9:30am.
+- VSAN Nanny: https://wiki.lvn.broadcom.net/VSAN/Nanny#Vsan-nanny_Duty_Roster on Monday 9:30am.
   Save the list in persist/config/vsan-nanny.csv
 Tips:
 - If login failed, please confirm the login user and password are valid or not.
   Or the wiki api maybe changed again.
 - If you forgot your wiki password, please "Change password" on
-  https://wiki.eng.vmware.com/Special:Preferences
+  https://wiki.lvn.broadcom.net/Special:Preferences
 '''
 
 import os
@@ -34,7 +34,7 @@ WIKI_LOGIN_PASSWORD = os.environ.get('WIKI_LOGIN_PASSWORD', '')
 @logExecutionTime
 def RefreshVSanNannyList():
     S = requests.Session()
-    URL = "https://wiki.eng.vmware.com/wiki/api.php"
+    URL = "https://wiki.lvn.broadcom.net/wiki/api.php"
     response = S.get(
         url=URL,
         params={

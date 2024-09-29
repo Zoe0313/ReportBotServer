@@ -17,7 +17,7 @@ from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD
 from generator.src.utils.Utils import logExecutionTime
 
-BUGZILLA_DOMAIN_NAME = "https://bugzilla.eng.vmware.com/"
+BUGZILLA_DOMAIN_NAME = "https://bugzilla-vcf.lvn.broadcom.net/"
 DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/bugzilla-report")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 

@@ -24,13 +24,13 @@ class BugzillaAssigneeSpider(object):
       self.userList = args.users.split(",")
       headerList = ['Pri', 'Status', 'ETA', 'FixBy', 'Summary']
       self.columnDict = {header: len(header) for header in headerList}
-      self.assigneeQueryUrl = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/assignee/{0}"
-      self.bugIdQueryUrl = "https://bugzilla-rest.eng.vmware.com/rest/v1/bug/{0}"
-      self.showBugUrl = "https://bugzilla.eng.vmware.com/show_bug.cgi?id={0}"
+      self.assigneeQueryUrl = "https://bugzilla-rest.lvn.broadcom.net/rest/v1/bug/assignee/{0}"
+      self.bugIdQueryUrl = "https://bugzilla-rest.lvn.broadcom.net/rest/v1/bug/{0}"
+      self.showBugUrl = "https://bugzilla-vcf.lvn.broadcom.net/show_bug.cgi?id={0}"
       btAccountInfo = base64.b64encode("{0}:{1}".format(SERVICE_ACCOUNT, SERVICE_PASSWORD).encode())
       self.session = requests.session()
       self.session.headers.update({'Authorization': 'Basic {0}'.format(str(btAccountInfo, 'utf-8')),
-                                   'Host': 'bugzilla-rest.eng.vmware.com'})
+                                   'Host': 'bugzilla-rest.lvn.broadcom.net'})
 
    @logExecutionTime
    @noIntervalPolling

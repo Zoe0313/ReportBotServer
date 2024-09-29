@@ -8,8 +8,8 @@ jira_report.py
 - JIRA API:
    refer to https://developer.atlassian.com/server/jira/platform/jira-rest-api-examples/
 - Response data fields:
-   "id"         used in query issue detail by API https://jira.eng.vmware.com/rest/api/2/issue/5451714
-   "key"        jira number link, e.g. <https://jira.eng.vmware.com/browse/STORVMC-3922|STORVMC-3922>
+   "id"         used in query issue detail by API https://vmw-jira.broadcom.com/rest/api/2/issue/5451714
+   "key"        jira number link, e.g. <https://vmw-jira.broadcom.com/browse/STORVMC-3922|STORVMC-3922>
    "summary"    show first 60 chars others replaced by ...
    "priority"   priority.name, e.g. Normal
    "status"     status.name, e.g. Needs Review
@@ -42,9 +42,9 @@ from generator.src.utils.Utils import splitOverlengthReport, transformReport
 DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/jira")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-JIRA_PAGE_URL = 'https://jira.eng.vmware.com/issues/?jql='
-JIRA_SEARCH_API = 'https://jira.eng.vmware.com/rest/api/2/search'
-JIRA_ISSUE_API = 'https://jira.eng.vmware.com/rest/api/2/issue/'
+JIRA_PAGE_URL = 'https://vmw-jira.broadcom.com/issues/?jql='
+JIRA_SEARCH_API = 'https://vmw-jira.broadcom.com/rest/api/2/search'
+JIRA_ISSUE_API = 'https://vmw-jira.broadcom.com/rest/api/2/issue/'
 SUMMARY_MAX_LENGTH = 60
 MAX_TOTAL_RESULT_SIZE = 50
 DisplayFields = {'key': 'Jira ID',
@@ -92,7 +92,7 @@ class JiraReport(object):
          -H "Authorization: Basic xxxxxx" \
          -H "Content-Type: application/json" \
          --data '{"jql":jql,"startAt":0,"maxResults":50,"fields":["id","key"]}' \
-         "https://jira.eng.vmware.com/rest/api/2/search"
+         "https://vmw-jira.broadcom.com/rest/api/2/search"
       response data:
       {
          startAt: 0,
@@ -101,7 +101,7 @@ class JiraReport(object):
          issues: [
             {
                id: "5451714",
-               self: "https://jira.eng.vmware.com/rest/api/2/issue/5451714",
+               self: "https://vmw-jira.broadcom.com/rest/api/2/issue/5451714",
                key: "STORVMC-3922"
             }, ......
          ]

@@ -20,6 +20,7 @@ import {
 } from '../src/slashcommand/nanny-generator.js'
 // check timezone
 import moment from 'moment-timezone'
+import https from 'https'
 
 dotenv.config()
 const systemTz = moment.tz.guess()
@@ -117,9 +118,8 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       if (report.reportType === 'bugzilla') {
          const threadMessages = messageInfo.thread
          try {
-            await axios({
-               method: 'get', url: 'http://vsanvia.vmware.com/'
-            })
+            const agent = new https.Agent({ rejectUnauthorized: false })
+            await axios.get('https://vsanvia.broadcom.net/', { httpsAgent: agent })
          } catch (e) {
             logger.error(`vSAN via link is unstable. Error: ${JSON.stringify(e)}`)
             const viaUnstableMessage = 'vSAN via short link service is in maintenance, ' +

@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import cronParser from 'cron-parser'
 import parseUrl from 'parse-url'
 import axios from 'axios'
+import https from 'https'
 import logger from '../../common/logger.js'
 import { GetUsersName } from '../../common/slack-helper.js'
 import { PerforceInfo } from './perforce-info.js'
@@ -94,13 +95,14 @@ const ReportConfigurationSchema = new mongoose.Schema({
                   return true
                }
                let link = v
-               if (v.includes('vsanvia.vmware.com')) {
+               if (v.includes('vsanvia.broadcom.net')) {
                   try {
                      const res = await axios.get(v, {
                         maxRedirects: 0,
                         validateStatus: function (status) {
                            return status >= 200 && status <= 303
-                        }
+                        },
+                        httpsAgent: new https.Agent({ rejectUnauthorized: false })
                      })
                      if (res.headers.location != null) {
                         link = res.headers.location
@@ -117,7 +119,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
                   }
                }
                const url = parseUrl(link)
-               if (url.resource === 'bugzilla.eng.vmware.com') {
+               if (url.resource === 'bugzilla-vcf.lvn.broadcom.net') {
                   if (url.protocol === 'https') {
                      if ((url.pathname === '/report.cgi' && url.search.includes('format=table')) ||
                         (url.pathname === '/buglist.cgi')) {

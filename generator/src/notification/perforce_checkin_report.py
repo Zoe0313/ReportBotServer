@@ -44,7 +44,7 @@ class PerforceSpider(object):
    def LoginSystem(self):
       os.environ['P4CONFIG'] = ""
       os.environ['P4USER'] = SERVICE_ACCOUNT
-      os.environ['P4PORT'] = "ssl:perforce.eng.vmware.com:1666"
+      os.environ['P4PORT'] = "ssl:perforce.vcfd.broadcom.net:1666"
       cmdStr = "echo 'yes' | /build/apps/bin/p4 trust"
       stdout, stderr, returncode = runCmd(cmdStr)
       assert returncode == 0, "Failed to execute command:{}".format(cmdStr)

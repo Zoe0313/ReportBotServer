@@ -8,22 +8,22 @@ RefreshNannysOnPage.py
 Description:
   Refresh nanny list from confluence page
 Page:
-- DOM: https://confluence.eng.vmware.com/display/VSAN/DOM-Nanny
+- DOM: https://vmw-confluence.broadcom.com/display/VSAN/DOM-Nanny
   Saved in persist/config/dom-nanny.csv
-- CMMDs: https://confluence.eng.vmware.com/pages/viewpage.action?spaceKey=SABU&title=Guru+Duty
+- CMMDs: https://vmw-confluence.broadcom.com/pages/viewpage.action?spaceKey=SABU&title=Guru+Duty
   Saved in persist/config/cmmds-nanny.csv
-- CLOM: https://confluence.eng.vmware.com/display/VSAN/CLOM-Nanny
+- CLOM: https://vmw-confluence.broadcom.com/display/VSAN/CLOM-Nanny
   Saved in persist/config/clom-nanny.csv
-- LSOM2: https://confluence.eng.vmware.com/pages/viewpage.action?spaceKey=LSOM2&title=LSOM2+nanny
+- LSOM2: https://vmw-confluence.broadcom.com/pages/viewpage.action?spaceKey=LSOM2&title=LSOM2+nanny
   Saved in persist/config/lsom2-nanny.csv
 Other:
 - VDFS: Nanny bot owned by xiangyu
 - Our team nanny bot: vsan-health-nanny, VCF, SH FVT, VMPool
 - Unknown:
-  - zDOM: https://confluence.eng.vmware.com/display/VSAN/zDOM-Nanny
+  - zDOM: https://vmw-confluence.broadcom.com/display/VSAN/zDOM-Nanny
     The nanny duty list saves in gitlab(private):
       https://gitlab.eng.vmware.com/abhayj/scripts/-/blob/master/vmware/roster/zdom_raw.txt
-  - LSOM: https://confluence.eng.vmware.com/display/VSAN/LSOM+Nanny have table but the duty roster is too old.
+  - LSOM: https://vmw-confluence.broadcom.com/display/VSAN/LSOM+Nanny have table but the duty roster is too old.
 '''
 
 import os
@@ -38,8 +38,8 @@ projectPath = os.path.abspath(__file__).split("/generator")[0]
 persistDir = os.path.join(projectPath, "persist/config")
 os.makedirs(persistDir, exist_ok=True)
 
-PAGE_API = 'https://confluence.eng.vmware.com/rest/api/content'
-USER_API = 'https://confluence.eng.vmware.com/rest/api/user'
+PAGE_API = 'https://vmw-confluence.broadcom.com/rest/api/content'
+USER_API = 'https://vmw-confluence.broadcom.com/rest/api/user'
 
 CONFLUENCE_PAGE_TOKEN = os.environ.get('CONFLUENCE_PAGE_TOKEN', '')
 
