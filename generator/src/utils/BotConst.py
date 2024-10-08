@@ -26,7 +26,10 @@ BUGZILLA_BASE = "https://bugzilla-rest.lvn.broadcom.net/rest/v1/bug/"
 
 BUGZILLA_BY_ASSIGNEE = "https://bugzilla-rest.lvn.broadcom.net/rest/v1/bug/query?lastChangeDays=15&assignee="
 
-# service account 'svc.vsan-er' is used to login bugzilla and perforce system
+# service account 'svc-vsan-er' is used to login perforce system
+PERFORCE_ACCOUNT = os.environ.get('P4USER')
+PERFORCE_PASSWORD = os.environ.get('P4PASSWORD')
+# service account 'svc.vsan-er' is used to login bugzilla
 SERVICE_ACCOUNT = os.environ.get('SERVICE_ACCOUNT')
 SERVICE_PASSWORD = os.environ.get('SERVICE_PASSWORD')
 # Basic token for querying JIRA API (base64 "{SERVICE_ACCOUNT}:{SERVICE_PASSWORD}")
