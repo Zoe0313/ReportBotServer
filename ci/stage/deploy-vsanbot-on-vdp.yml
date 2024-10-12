@@ -2,22 +2,25 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vsanbot-server-stage
-  labels:
-    app.name: vsanbot-server-stage
+  namespace: vsanperf-vsanbot
 spec:
   selector:
     matchLabels:
-      app.name: vsanbot-server-stage
+      app: vsanbot-server-stage
   replicas: 1
   template:
     metadata:
       labels:
-        app.name: vsanbot-server-stage
+        app: vsanbot-server-stage
         environment: stage
     spec:
+      securityContext:
+        runAsUser: 175345366
+        runAsGroup: 201
+        fsGroup: 201
       containers:
         - name: vsanbot-server-stage
-          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/stage/slackbot/vsanbot-server:release-now
+          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/stage/slackbot/vsanbot-server:vdp
           env:
             - name: POD_IP
               valueFrom:
@@ -28,17 +31,17 @@ spec:
             - name: MONGO_PORT
               value: "27017"
             - name: PORT
-              value: "3000"
+              value: "3001"
           imagePullPolicy: Always
           ports:
-            - containerPort: 3000
+            - containerPort: 3001
           volumeMounts:
-          - name: slackbot-nfs
+          - name: lvn-dbc2403
             mountPath: /slackbot/persist
-          - name: apps-volume
-            mountPath: /build/apps
-          - name: toolchain-volume
-            mountPath: /build/toolchain
+          - name: build-apps
+            mountPath: /build/apps/
+          - name: build-toolchain
+            mountPath: /build/toolchain/
           resources:
             requests:
               memory: "200Mi"
@@ -46,50 +49,43 @@ spec:
             limits:
               memory: "500Mi"
               cpu: "200m"
-      securityContext:
-        runAsUser: 10001
-        runAsGroup: 10002
-        fsGroup: 10002
       volumes:
-        - name: slackbot-nfs
+        - name: lvn-dbc2403
           nfs:
-            server: pa-archive.eng.vmware.com
-            path: /slackbot-aas
-        - name: apps-volume
+            server: lvn-dbc2403.lvn.broadcom.net
+            path: /dbc/lvn-dbc2403/xl061876/public_html/slackbot/persist
+        - name: build-toolchain
           nfs:
-            server: build-apps.eng.vmware.com
-            path: /apps
-        - name: toolchain-volume
+            server: nvlinas101.lvn.broadcom.net
+            path: /ifs/nvlinas101/projects0371/toolchain
+        - name: build-apps
           nfs:
-            server: build-toolchain.eng.vmware.com
-            path: /toolchain
-      dnsConfig:
-        searches:
-          - eng.vmware.com
+            server: nvlinas101.lvn.broadcom.net
+            path: /ifs/nvlinas101/projects0371/apps
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: vsanbot-server-stage
-  labels:
-    app.name: vsanbot-server-stage
+  namespace: vsanperf-vsanbot
 spec:
   selector:
-    app.name: vsanbot-server-stage
+    app: vsanbot-server-stage
   ports:
   - protocol: TCP
     port: 443
-    targetPort: 3000
+    targetPort: 3001
 ---
 apiVersion: projectcontour.io/v1
 kind: HTTPProxy
 metadata:
   name: vsanbot-server-stage
+  namespace: vsanperf-vsanbot
   annotations:
     kubernetes.io/ingress.class: "vdp-contour-int"
 spec:
   virtualhost:
-    fqdn: vsanbot-staging.vdp.oc.vmware.com
+    fqdn: vsanbot-stg.vdp.lvn.broadcom.net
     tls:
       secretName: infra-system/vdp-int-domain-tls
   routes:
@@ -99,4 +95,4 @@ spec:
         - name: vsanbot-server-stage
           port: 443
       timeoutPolicy:
-        response: 480s
+        response: 60s

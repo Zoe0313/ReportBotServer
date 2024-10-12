@@ -14,6 +14,7 @@ import requests
 from urllib import parse
 import argparse
 from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport, transformReport
+from generator.src.utils.MiniQueryFunctions import QueryUserById
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
    PERFORCE_ACCOUNT, PERFORCE_PASSWORD, BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, \
@@ -71,7 +72,7 @@ class PerforceSpider(object):
       message = []
       isNoContent = (len(result) == 0)
       if len(result) > 0:
-         result = sorted(result, key=lambda data: (data['assignee'], data['CLN'], data['checkinTime']))
+         result = sorted(result, key=lambda data: (data['username'], data['CLN'], data['checkinTime']))
          if self.isNeedCheckinApproved:
             # With Approval
             withApprovedResult = list(filter(lambda data: data['approved'] == 'with', result))
@@ -105,7 +106,7 @@ class PerforceSpider(object):
       if len(checkinDatas) == 0:
          return message
       # New column order: User  Bug Link  CLN  Time  Review URL  Summary
-      UserColumnLength = max(max([len(data['assignee']) for data in checkinDatas]), len("User"))
+      UserColumnLength = max(max([len(data['username']) for data in checkinDatas]), len("User"))
       BugNumberColumnLength = max(max([len(data['bugIDs']) for data in checkinDatas]), len("Bug Link"))
       ReviewURLColumnLength = max(max([len(data['reviewIDs']) for data in checkinDatas]), len("Review URL"))
       columnLength = {"User": UserColumnLength, "Bug Link": BugNumberColumnLength, "CLN": 8,
@@ -116,7 +117,7 @@ class PerforceSpider(object):
       message.append('```' + headerFormatter.format("User", "Bug Link", "CLN", "Time", "Review URL", "Summary"))
       userName = ''
       for data in checkinDatas:
-         user = data['assignee']
+         user = data['username']
          cln = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(data['CLN']), data['CLN'])
          checkinTime = data['checkinTime']
          summary = data['summary']
@@ -228,9 +229,16 @@ class PerforceSpider(object):
                   isCheckinApproved = True
          elif record.startswith("Review URL:"):
             reviewIDs = list(set(ReviewIDPattern.findall(record)))[:2]
+
+      userInfo = QueryUserById(user)
+      if userInfo.get('mail') is not None:
+         account = userInfo['mail'].rstrip("@broadcom.com")
+      else:
+         account = user
       return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime,
               'approved': 'with' if isCheckinApproved else 'without', 'summary': summary,
-              'bugIDs': ",".join(bugIDs), 'reviewIDs': ",".join(reviewIDs)}
+              'bugIDs': ",".join(bugIDs), 'reviewIDs': ",".join(reviewIDs),
+              'username': account}
 
    @logExecutionTime
    def CheckCheckinApproved(self, PRs):
