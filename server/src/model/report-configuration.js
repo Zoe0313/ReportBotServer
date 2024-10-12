@@ -401,20 +401,10 @@ const ReportConfiguration = mongoose.model('ReportConfiguration', ReportConfigur
 // get direct reporters username of given members through LDAP API
 const GetDirectReporters = async (members) => {
    return await Promise.all(members.map(member => {
-      const body = {
-         _source: ['username'],
-         from: 0,
-         size: 1000,
-         query: {
-            match: {
-               direct_manager_username: member
-            }
-         }
-      }
-      return axios.post('https://ldap-data.vdp.oc.vmware.com/ldap/_search', body)
+      return axios.get('https://nimbus-api.vdp.lvn.broadcom.net/api/v1/users/' + member)
          .then(res => {
             // avoid someone report to himself in case causing endless loop
-            return res.data.hits?.hits?.map(hit => hit._source.username)
+            return res.data.direct_reports
                ?.filter(user => !members.includes(user)) || []
          })
    })).then(membersList => membersList.flat())
@@ -427,51 +417,46 @@ const FlattenMembers = async (membersFilters, selectedTeamsMembers) => {
    }
    logger.debug(`flatten members from members filters ${JSON.stringify(membersFilters)}`)
    // sort filters to make all include filters be in front of exclude filters
-   const members = (await Promise.all(membersFilters.sort((filter1, filter2) => {
-      if (filter1.condition === 'include') return -1
-      else return 1
-   }).map(membersFilter => {
-      if (membersFilter.type === 'selected') {
-         // get users name from users slack id
-         return GetUsersName(membersFilter.members).then(selectedMembers => {
-            return {
-               condition: membersFilter.condition,
-               members: selectedMembers
-            }
-         })
-      } else if (membersFilter.type === 'direct_reporters') {
-         return GetUsersName(membersFilter.members).then(selectedMembers => {
-            return GetDirectReporters(selectedMembers)
-               .then(directReporters => ({
+   const members = (await Promise.all(
+      membersFilters
+         .sort((filter1, filter2) => filter1.condition === 'include' ?  -1 : 1)
+         .map(async membersFilter => {
+            if (membersFilter.type === 'selected') {
+               // get users name from users slack id
+               return {
                   condition: membersFilter.condition,
-                  // including direct reporters and selected members
+                  members: [].concat(membersFilter.members)
+               }
+            } else if (membersFilter.type === 'direct_reporters') {
+               const selectedMembers = [].concat(membersFilter.members)
+               const directReporters = await GetDirectReporters(selectedMembers)
+               return {
+                  condition: membersFilter.condition,
                   members: directReporters.concat(selectedMembers)
-               }))
-         })
-      } else if (membersFilter.type === 'all_reporters') {
-         // recursive function of getting all reports by given members
-         const getAllReporters = async (members, startTime) => {
-            if (members == null || members.length === 0 ||
-               // if timeout, then return directly
-               new Date().getTime() - startTime > 10 * 60 * 1000) {
-               return []
-            }
-            const directReporters = await GetDirectReporters(members)
-            // including all reporters and selected members
-            return members.concat(await getAllReporters(directReporters, startTime))
-         }
-         return GetUsersName(membersFilter.members).then(selectedMembers => {
-            return getAllReporters(selectedMembers, new Date().getTime()).then(allReporters => {
+               }
+            } else if (membersFilter.type === 'all_reporters') {
+               // recursive function of getting all reports by given members
+               const getAllReporters = async (members, startTime) => {
+                  const timeElapsed = () => new Date().getTime() - startTime
+                  // if timeout, then return directly
+                  if (members == null || members.length === 0 || timeElapsed() > 10 * 60 * 1000) {
+                     return []
+                  }
+                  const directReporters = await GetDirectReporters(members)
+                  // including all reporters and selected members
+                  return members.concat(await getAllReporters(directReporters, startTime))
+               }
+               const selectedMembers = [].concat(membersFilter.members)
+               const allReporters = await getAllReporters(selectedMembers, new Date().getTime())
                return {
                   condition: membersFilter.condition,
                   members: allReporters
                }
-            })
+            } else {
+               throw new Error('invalid member filter type')
+            }
          })
-      } else {
-         throw new Error('invalid member filter type')
-      }
-   }))).reduce((acc, curVal) => {
+   )).reduce((acc, curVal) => {
       // calculate all included members at first
       if (curVal.condition === 'include') {
          return [...new Set(acc.concat(curVal.members))]

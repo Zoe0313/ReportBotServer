@@ -28,78 +28,153 @@ const TeamGroup = mongoose.model('TeamGroup', TeamGroupSchema)
 const UpdateTeamGroup = async () => {
    const initTeams = [
       {
-         code: 'vsan',
-         name: 'vsan engineers',
+         code: 'vsan-all',
+         name: 'vsan members',
          membersFilters: [{
             condition: 'include',
             type: 'all_reporters',
-            // include ninadk(WABQS3KK9), pudis(WABQY8DF1) all
-            members: ['WABQS3KK9', 'WABQY8DF1']
+            // include Ninad Kulkarni(nk017170), Satish Pudi(sp026337), Fanny Wong(fw036298) all
+            members: ['nk017170', 'sp026337', 'fw036298']
+         },
+         {
+            condition: 'exclude',
+            type: 'selected',
+            // exclude service account
+            members: ['vsan-lsom-svc', 'vsan-st', 'svc-vsan-er',
+               'svc-vsanci', 'svc-vsanfvt1', 'svc-portal-vsanst',
+               'svc.vsan-st', 'svc.readylabs-st', 'vsancert.program',
+               'vsanperf', 'humbug-deployer', 'svc-vmpool',
+               'svc-vmpool-stg', 'vsanperfsvc', 'mgmtsherpa',
+               'galileosvc', 'svc-vcfsherpa-auto1', 'svc-blrsrmvrst',
+               'svc.srmvrtestuser1', 'vsan-cert-suite', 'vsancert',
+               'svc-vcffvt-zilly-1', 'svc-at-vsanst', 'svc-vsan-cov',
+               'svc-vsan-bugs']
          },
          {
             condition: 'include',
             type: 'selected',
-            // include amdurm(WAA2WLE72), daip(WABL9CTK8), adesai(WABLDKJPQ),
-            // wenguangw(WAAGMNVHS), ochen(WCJQY2KSM) all
-            members: ['WAA2WLE72', 'WABL9CTK8', 'WABLDKJPQ', 'WAAGMNVHS', 'WCJQY2KSM']
+            // include developers Matt Amdur(ma001135), Peng Dai(pd006857), Asit Desai(ad007523),
+            // Wenguang Wang(ww035649), Oswald Chen(oc005573) all
+            members: ['ma001135', 'pd006857', 'ad007523', 'ww035649',
+               'oc005573', 'sy036818', 'az037818', 'jf009278', 'gx036572']
          }]
       },
       {
-         code: 'vsan-zdom',
-         name: 'vsan zdom engineers',
+         code: 'vsan-dev',
+         name: 'vsan developers',
          membersFilters: [{
             condition: 'include',
+            type: 'all_reporters',
+            // include Ninad Kulkarni(nk017170), Satish Pudi(sp026337), Fanny Wong(fw036298) all
+            members: ['nk017170', 'sp026337', 'fw036298']
+         },
+         {
+            condition: 'exclude',
             type: 'selected',
-            // include eknauft(WAAPCHAHY), yanglo(W0145V47RAA), Mounesh(WDS8JMT0W),
-            // yifanwa(WTX92HK6C), sgazit(W014FJUL2SE), exiang(WABQZCQB1), wenguangw(WAAGMNVHS),
-            // lixi(WC8H2UHL3), quanxingl(U01NP81JFAT), qinkaif(W014M0JJ3HV), abhayj(WAA329J48),
-            // cgadhiraju(WABQZ5LUF), neil(WGVJ12HBP), jzuo(W016VN9LMML), sriramp(WAATJ7EAH),
-            // amax(WABL7HU14), prenauld(WAA319ZK2), igarewal(WAATJCM2R), pyanxing(U027ZJLEW04),
-            // whuiyuan(U03LMAKD6TB), yunh(U03LB0EPNN8) all
-            members: ['WAAPCHAHY', 'W0145V47RAA', 'WDS8JMT0W', 'WTX92HK6C', 'W014FJUL2SE',
-               'WABQZCQB1', 'WAAGMNVHS', 'WC8H2UHL3', 'U01NP81JFAT', 'W014M0JJ3HV', 'WAA329J48',
-               'WABQZ5LUF', 'WGVJ12HBP', 'W016VN9LMML', 'WAATJ7EAH', 'WABL7HU14', 'WAA319ZK2',
-               'WAATJCM2R', 'U027ZJLEW04', 'U03LMAKD6TB', 'U03LB0EPNN8']
+            // exclude service account
+            members: ['vsan-lsom-svc', 'vsan-st', 'svc-vsan-er',
+               'svc-vsanci', 'svc-vsanfvt1', 'svc-portal-vsanst',
+               'svc.vsan-st', 'svc.readylabs-st', 'vsancert.program',
+               'vsanperf', 'humbug-deployer', 'svc-vmpool',
+               'svc-vmpool-stg', 'vsanperfsvc', 'mgmtsherpa',
+               'galileosvc', 'svc-vcfsherpa-auto1', 'svc-blrsrmvrst',
+               'svc.srmvrtestuser1', 'vsan-cert-suite', 'vsancert',
+               'svc-vcffvt-zilly-1', 'svc-at-vsanst', 'svc-vsan-cov',
+               'svc-vsan-bugs']
+         },
+         {
+            condition: 'exclude',
+            type: 'all_reporters',
+            // exclude tester from Huang Zhou(zh013529), Venkata Pendiyala(vp025371), Rounak Pramanik(rp026182) all reporters
+            members: ['zh013529', 'vp025371', 'rp026182']
+         },
+         {
+            condition: 'include',
+            type: 'selected',
+            // include developers Matt Amdur(ma001135), Peng Dai(pd006857), Asit Desai(ad007523),
+            // Wenguang Wang(ww035649), Oswald Chen(oc005573), Sixuan Yang(sy036818),
+            // Alvin Zhang(az037818), Jianan Feng(jf009278), Grace Xu(gx036572) all
+            members: ['ma001135', 'pd006857', 'ad007523', 'ww035649',
+               'oc005573', 'sy036818', 'az037818', 'jf009278', 'gx036572']
          }]
       },
       {
-         code: 'vsan-fs',
-         name: 'vsan vdfs engineers',
+         code: 'figo-all',
+         name: 'Figo team members',
          membersFilters: [{
             condition: 'include',
+            type: 'all_reporters',
+            // Figo Feng(ff009279)
+            members: ['ff009279']
+         },
+         {
+            condition: 'exclude',
             type: 'selected',
-            // include aguo(WAA2ZMETS), xfan(WF4MRCQ1Z), jagnyadattat(U02P5TRU1GX),
-            // rshiju(U02DGP7TTEF), sbhargo(U02LKCG6L13), xiangyu(WEC01CSN9), gracex(W012RS6KKRT),
-            // wmanman(U02NYP2FMR8), sriramp(WAATJ7EAH), gmaneesh(U05AW7QJ90U), neil(WGVJ12HBP),
-            // rshreesha(WQ5B4VC2H), huangxin(WAAPFKZCJ), wxinyan(WEVJ18N9X) all
-            members: ['WAA2ZMETS', 'WF4MRCQ1Z', 'U02P5TRU1GX', 'U02DGP7TTEF', 'U02LKCG6L13',
-               'WEC01CSN9', 'W012RS6KKRT', 'U02NYP2FMR8', 'WAATJ7EAH', 'U05AW7QJ90U', 'WGVJ12HBP',
-               'WQ5B4VC2H', 'WAAPFKZCJ', 'WEVJ18N9X']
+            // exclude service account
+            members: ['vsanperf', 'humbug-deployer', 'svc-vmpool',
+               'svc-vmpool-stg', 'vsanperfsvc']
          }]
       },
       {
-         code: 'vsan-clom',
-         name: 'vsan clom engineers',
+         code: 'figo-dev',
+         name: 'Figo team developers',
          membersFilters: [{
             condition: 'include',
+            type: 'all_reporters',
+            // Figo Feng(ff009279)
+            members: ['ff009279']
+         },
+         {
+            condition: 'exclude',
             type: 'selected',
-            // include somnaths2(U03E58K06AV), thornycrofto(WAALJ36G3), bthummar(WAAGPASLU),
-            // mkothapalli(U02ECQY3YCC), haoyuez1(U03KU4PSW31), rbhuleskar(W018KD7DYL9),
-            // nkandru(WGB3MNVMZ), zhxia(WHRT5SP8C), broughtonm(U0375UE17PD),
-            // daingades(U03BSCCV3H6), narendrasi(W01A575R2DP) all
-            members: ['U03E58K06AV', 'WAALJ36G3', 'WAAGPASLU', 'U02ECQY3YCC', 'U03KU4PSW31',
-               'W018KD7DYL9', 'WGB3MNVMZ', 'WHRT5SP8C', 'U0375UE17PD', 'U03BSCCV3H6', 'W01A575R2DP']
+            // exclude service account
+            members: ['vsanperf', 'humbug-deployer', 'svc-vmpool',
+               'svc-vmpool-stg', 'vsanperfsvc']
+         },
+         {
+            condition: 'exclude',
+            type: 'all_reporters',
+            // exclude tester from Huang Zhou(zh013529)
+            members: ['zh013529']
+         },
+         {
+            condition: 'include',
+            type: 'selected',
+            // include developers: Sixuan Yang(sy036818), Alvin Zhang(az037818), Jianan Feng(jf009278),
+            // Grace Xu(gx036572) all
+            members: ['sy036818', 'az037818', 'jf009278', 'gx036572']
          }]
       },
       {
-         code: 'vsan-health',
-         name: 'vsan health nanny engineers',
+         code: 'vdfs',
+         name: 'vsan vdfs team',
          membersFilters: [{
             condition: 'include',
             type: 'selected',
-            // include yuwu(WAAPJ22V8), ckaijia(W016T23BXQE), sifanl(WAAPHLDCJ),
-            // fjianan(W011WS3LJ2G), zhangal(W01431TEJ1E) all
-            members: ['WAAPJ22V8', 'W016T23BXQE', 'WAAPHLDCJ', 'W011WS3LJ2G', 'W01431TEJ1E']
+            // include Liuhua Chen, Isabell Huang, Charlene Tu, Joseph Huang,
+            // Xinyan Wu, Leo Fan, Sunil Bhargo, Essen Yu,
+            // Shiju Rajan, Albert Guo, Jagnya Datta Tripathy, Grace Xu,
+            // Maneesh Kumar Gunda, Shreesha Rao, Xin Huang all
+            members: ['lc005566', 'ih013474', 'ct034015', 'jh013465',
+               'xw036471', 'lf009146', 'sb003280', 'ey037167',
+               'sr026871', 'ag011741', 'jt033903', 'gx036572',
+               'mg011689', 'sr027275', 'xh013519']
+         }]
+      },
+      {
+         code: 'zdom',
+         name: 'vsan zdom team',
+         membersFilters: [{
+            condition: 'include',
+            type: 'selected',
+            // include Qinkai Fan, Yun Hong, Quanxing Liu, Enning Xiang,
+            // Chandrakanth Gadhiraju, Alvin Zuo, Pascal Renauld, Yifan Wang,
+            // Xin Li, Salit Gazit, Ishvar Garewal, Maxime Austruy,
+            // Long Yang all
+            members: ['qf009140', 'yh013235', 'ql018865', 'ex036513',
+               'cg009972', 'az038102', 'pr027640', 'yw035675',
+               'xl018554', 'sg010452', 'ig010290', 'ma001888',
+               'ly036806']
          }]
       }
    ]
@@ -121,7 +196,7 @@ const UpdateTeamGroup = async () => {
       const members = await FlattenMembers(team.membersFilters)
       team.members = members
       await team.save()
-      logger.info(`saved team ${team.name} members ${JSON.stringify(team.members)}`)
+      logger.info(`saved team ${team.name} members, size: ${team.members.length}`)
    }))
 }
 

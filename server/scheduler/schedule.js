@@ -7,6 +7,7 @@ import {
 } from '../src/model/report-configuration.js'
 import { UpdateP4Branches } from '../src/model/perforce-info.js'
 import { UpdateTeamGroup } from '../src/model/team-group.js'
+import { UpdateMailList } from '../src/model/mail-info.js'
 import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
 import {
    GetUsersName, VMwareId2GoogleUserInfo
@@ -587,7 +588,8 @@ const RegisterPerforceMembersScheduler = function () {
 
 const RegisterTeamGroupScheduler = function () {
    const job = schedule.scheduleJob('20 21 * * *', async function () {
-      UpdateTeamGroup()
+      await UpdateTeamGroup()
+      await UpdateMailList()
    })
    return job
 }

@@ -18,7 +18,7 @@ from perforce_diff_parser import PerforceDiffParser, ReviewLinkNotFound
 from review_diff_parser import ReviewDiffParser
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, transformReport
 from generator.src.utils.Logger import logger
-from generator.src.utils.BotConst import PERFORCE_DESCRIBE_URL, REVIEWBOARD_REQUEST_URL
+from generator.src.utils.BotConst import PERFORCE_DESCRIBE_URL, REVIEWBOARD_URL
 
 # restful API: post message to a given channel id
 POST_MESSAGE_API_BY_CHANNEL = "https://slackbot.vela.decc.vmware.com/api/v1/channel/{0}/messages"
@@ -161,7 +161,7 @@ class PerforceReviewCheckSpider(object):
          message.append("*The following change(s) submitted are different with the last review revision:*")
          for info in unEqualList:
             p4Link = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(info[0]), info[0])
-            reviewLink = "<{0}|{1}>".format(REVIEWBOARD_REQUEST_URL.format(info[1]), info[1])
+            reviewLink = "<{0}|{1}>".format(REVIEWBOARD_URL + info[1], info[1])
             message.append("      #{0}  {1}  {2}  {3}".format(p4Link, reviewLink, info[2], info[3]))
       return message
 

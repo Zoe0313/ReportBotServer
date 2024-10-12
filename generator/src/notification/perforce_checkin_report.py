@@ -16,16 +16,17 @@ import argparse
 from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport, transformReport
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
-   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, JIRA_BROWSE_URL, BUGZILLA_BASE, REVIEWBOARD_REQUEST_URL
+   PERFORCE_ACCOUNT, PERFORCE_PASSWORD, BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, \
+   JIRA_BROWSE_URL, BUGZILLA_BASE, REVIEWBOARD_URL
 
-ReviewIDPattern = re.compile(REVIEWBOARD_REQUEST_URL.format("(\d{7,})"), re.I)
+ReviewIDPattern = re.compile(REVIEWBOARD_URL + "(\d{7,})", re.I)
 SUMMARY_MAX_LENGTH = 60
 INVAILD_ID = '--'
 
 class PerforceSpider(object):
    @logExecutionTime
    def __init__(self, args):
-      self.p4Path = '/build/apps/bin/p4 -u {}'.format(SERVICE_ACCOUNT)
+      self.p4Path = '/build/apps/bin/p4 -u {}'.format(PERFORCE_ACCOUNT)
       self.title = parse.unquote(args.title).strip('"')
       self.branchList = args.branches.split(",")
       # perforce use UTC7 time. The UTC7 time is 7 hours later than the system time.
@@ -43,12 +44,12 @@ class PerforceSpider(object):
    @logExecutionTime
    def LoginSystem(self):
       os.environ['P4CONFIG'] = ""
-      os.environ['P4USER'] = SERVICE_ACCOUNT
+      os.environ['P4USER'] = PERFORCE_ACCOUNT
       os.environ['P4PORT'] = "ssl:perforce.vcfd.broadcom.net:1666"
       cmdStr = "echo 'yes' | /build/apps/bin/p4 trust"
       stdout, stderr, returncode = runCmd(cmdStr)
       assert returncode == 0, "Failed to execute command:{}".format(cmdStr)
-      cmdStr = "echo '{0}' | {1} login".format(SERVICE_PASSWORD, self.p4Path)
+      cmdStr = "echo '{0}' | {1} login".format(PERFORCE_PASSWORD, self.p4Path)
       isLogin = False
       for i in range(1, 4):
          stdout, stderr, returncode = runCmd(cmdStr)
@@ -139,7 +140,7 @@ class PerforceSpider(object):
          ReviewURLColumnLength = columnLength["Review URL"]
          if len(data['reviewIDs']) > 0 and len(data['reviewIDs'].split(",")) > 0:
             reviewIDs = data['reviewIDs'].split(",")
-            ReviewURLs = ["<%s|%s>" % (REVIEWBOARD_REQUEST_URL.format(reviewID), reviewID) for reviewID in reviewIDs]
+            ReviewURLs = ["<%s|%s>" % (REVIEWBOARD_URL + reviewID, reviewID) for reviewID in reviewIDs]
             displayReviewURL = ",".join(ReviewURLs)
             ReviewURLColumnLength = len(displayReviewURL) + columnLength["Review URL"] - len(data['reviewIDs'])
          if userName == user:

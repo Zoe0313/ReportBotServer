@@ -16,7 +16,7 @@ const PerforceInfoSchema = new mongoose.Schema({
 const PerforceInfo = mongoose.model('PerforceInfo', PerforceInfoSchema)
 
 const P4Login = async () => {
-   const cmd = `echo ${process.env.SERVICE_PASSWORD} | /build/apps/bin/p4 -u ${process.env.SERVICE_ACCOUNT} login`
+   const cmd = `echo ${process.env.P4PASSWORD} | /build/apps/bin/p4 -u ${process.env.P4USER} login`
    await ExecCommand(cmd, 10 * 60 * 1000)
    logger.info('p4 login')
 }
@@ -39,7 +39,7 @@ const UpdateP4Branches = async () => {
    const perforceInfos = await PerforceInfo.find()
    const projects = perforceInfos.map(info => info.project)
    const stdoutList = await Promise.all(projects.map(project => {
-      const cmd = `/build/apps/bin/p4 -u ${process.env.SERVICE_ACCOUNT} dirs //depot/${project}/*`
+      const cmd = `/build/apps/bin/p4 -u ${process.env.P4USER} dirs //depot/${project}/*`
       return ExecCommand(cmd, 10 * 60 * 1000).catch(e => {
          logger.error(`can't get branches for project ${project} for error ${JSON.stringify(e)}`)
          return null
