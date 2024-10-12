@@ -2,12 +2,15 @@ import mongoose from 'mongoose'
 import path from 'path'
 import fs from 'fs'
 import { performance } from 'perf_hooks'
+import { matchSorter } from 'match-sorter'
 import {
    ReportConfiguration, FlattenMembers, REPORT_STATUS
 } from '../model/report-configuration.js'
 import { ReportHistory } from '../model/report-history.js'
 import { TeamGroup } from '../model/team-group.js'
 import { FindUserInfoByName } from '../model/user-info.js'
+import { PerforceInfo } from '../model/perforce-info.js'
+import { MailInfo } from '../model/mail-info.js'
 import {
    RegisterScheduler, UnregisterScheduler, InvokeNow
 } from '../scheduler-adapter.js'
@@ -236,33 +239,24 @@ function RegisterApiRouters(router) {
          return
       }
       if (filterType === 'manager') {
-         const managerName = filterName
-         logger.debug(`manager name: ${managerName}`)
+         const managerOktaId = filterName
+         logger.debug(`manager okta id: ${managerOktaId}`)
          let reporterType = 'direct_reporters'
          if (includeIndirectReport === true) {
             reporterType = 'all_reporters'
          }
          try {
-            const managerInfo = await FindUserInfoByName(managerName)
-            if (managerInfo == null) {
-               ctx.response.status = 404
-               ctx.response.body = {
-                  result: false,
-                  message: `Bad request: not find manager info by ${managerName}.`
-               }
-               return
-            }
             const membersFilters = [{
                condition: 'include',
                type: reporterType,
-               members: [managerInfo.slackId]
+               members: [managerOktaId]
             }]
             const members = await FlattenMembers(membersFilters)
             if (members.length <= 1) {
                ctx.response.status = 400
                ctx.response.body = {
                   result: false,
-                  message: 'Bad request: the given manager name is an individual engineer, ' +
+                  message: 'Bad request: the given okta id is an individual engineer, ' +
                      'no one reports to him/her.'
                }
                return
@@ -270,14 +264,75 @@ function RegisterApiRouters(router) {
             ctx.response.status = 200
             ctx.response.body = members
          } catch (error) {
-            let errorMsg = `Failed to get direct reporters of ${managerName} team.`
+            let errorMsg = `Failed to get direct reporters of ${managerOktaId} team.`
             if (includeIndirectReport === true) {
-               errorMsg = `Failed to get all reporters of ${managerName} team.`
+               errorMsg = `Failed to get all reporters of ${managerOktaId} team.`
             }
             logger.error(errorMsg + '\n' + error)
             ctx.response.status = 500
             ctx.response.body = { result: false, message: errorMsg }
          }
+      }
+   })
+
+   router.get('/api/v1/perforce/branches', async (ctx, next) => {
+      const keyword = ctx.query?.branch || null
+      logger.info(`keyword: ${keyword}, get all perforce branches in db`)
+      try {
+         const t0 = performance.now()
+         const allBranches = (await PerforceInfo.find())
+            .map(perforceInfo => {
+               return perforceInfo.branches
+                  .map(branch => `${perforceInfo.project}/${branch}`)
+            }).flat()
+         logger.debug(`get branches in db cost ${performance.now() - t0}`)
+         if (allBranches != null && allBranches.length > 0) {
+            const sortedBranchesWithLimit = matchSorter(allBranches, keyword).slice(0, 20)
+            ctx.response.status = 200
+            ctx.response.body = sortedBranchesWithLimit
+         } else {
+            ctx.response.status = 404
+            ctx.response.body = {
+               result: false,
+               message: `Not found the branch by keyword ${keyword}.`
+            }
+         }
+      } catch (error) {
+         logger.error('Failed to query branches in db:\n' + error)
+         ctx.response.status = 500
+         ctx.response.body = {
+            result: false,
+            message: `Failed to query branches in db by ${keyword}.`
+         }
+      }
+   })
+
+   router.get('/api/v1/user', async (ctx, next) => {
+      const queryName = ctx.query?.name || null
+      if (queryName == null) {
+         ctx.response.status = 400
+         ctx.response.body = {
+            result: false,
+            message: 'Bad request: user query info not given.'
+         }
+         return
+      }
+      try {
+         const filter = {
+            $or: [
+               { oktaId: queryName },
+               { mail: queryName.split('@')[0] + '@broadcom.com' },
+               { vmwareId: queryName }
+            ]
+         }
+         const info = await MailInfo.findOne(filter)
+         ctx.response.status = 200
+         ctx.response.body = info
+      } catch (error) {
+         const errorMsg = `Fail to find the user info by ${queryName}.`
+         logger.error(errorMsg + '\n' + error)
+         ctx.response.status = 404
+         ctx.response.body = { result: false, message: errorMsg }
       }
    })
 
@@ -293,19 +348,6 @@ function RegisterApiRouters(router) {
          result: true,
          message: `You are the system administrator of vSAN Bot service.`
       }
-   })
-
-   router.get('/service/googleinfo', async (ctx, next) => {
-      const vmwareId = ctx.query?.vmwareId || null
-      const gUserInfo = VMwareId2GoogleUserInfo(vmwareId)
-      // Mention nanny in Google Chat by <users/Google user ID>
-      if (gUserInfo.gid.length === 0) {
-         ctx.response.status = 404
-         ctx.response.body = { result: false, message: `Not Found by vmwareId ${vmwareId}` }
-         return
-      }
-      ctx.response.status = 200
-      ctx.response.body = gUserInfo
    })
 
    router.get('/report/configuration', async (ctx, next) => {

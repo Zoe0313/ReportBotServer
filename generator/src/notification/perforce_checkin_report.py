@@ -14,18 +14,20 @@ import requests
 from urllib import parse
 import argparse
 from generator.src.utils.Utils import runCmd, logExecutionTime, splitOverlengthReport, transformReport
+from generator.src.utils.MiniQueryFunctions import QueryUserById
 from generator.src.utils.Logger import logger
 from generator.src.utils.BotConst import SERVICE_ACCOUNT, SERVICE_PASSWORD, \
-   BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, JIRA_BROWSE_URL, BUGZILLA_BASE, REVIEWBOARD_REQUEST_URL
+   PERFORCE_ACCOUNT, PERFORCE_PASSWORD, BUGZILLA_DETAIL_URL, PERFORCE_DESCRIBE_URL, \
+   JIRA_BROWSE_URL, BUGZILLA_BASE, REVIEWBOARD_URL
 
-ReviewIDPattern = re.compile(REVIEWBOARD_REQUEST_URL.format("(\d{7,})"), re.I)
+ReviewIDPattern = re.compile(REVIEWBOARD_URL + "(\d{7,})", re.I)
 SUMMARY_MAX_LENGTH = 60
 INVAILD_ID = '--'
 
 class PerforceSpider(object):
    @logExecutionTime
    def __init__(self, args):
-      self.p4Path = '/build/apps/bin/p4 -u {}'.format(SERVICE_ACCOUNT)
+      self.p4Path = '/build/apps/bin/p4 -u {}'.format(PERFORCE_ACCOUNT)
       self.title = parse.unquote(args.title).strip('"')
       self.branchList = args.branches.split(",")
       # perforce use UTC7 time. The UTC7 time is 7 hours later than the system time.
@@ -43,12 +45,12 @@ class PerforceSpider(object):
    @logExecutionTime
    def LoginSystem(self):
       os.environ['P4CONFIG'] = ""
-      os.environ['P4USER'] = SERVICE_ACCOUNT
+      os.environ['P4USER'] = PERFORCE_ACCOUNT
       os.environ['P4PORT'] = "ssl:perforce.vcfd.broadcom.net:1666"
       cmdStr = "echo 'yes' | /build/apps/bin/p4 trust"
       stdout, stderr, returncode = runCmd(cmdStr)
       assert returncode == 0, "Failed to execute command:{}".format(cmdStr)
-      cmdStr = "echo '{0}' | {1} login".format(SERVICE_PASSWORD, self.p4Path)
+      cmdStr = "echo '{0}' | {1} login".format(PERFORCE_PASSWORD, self.p4Path)
       isLogin = False
       for i in range(1, 4):
          stdout, stderr, returncode = runCmd(cmdStr)
@@ -70,7 +72,7 @@ class PerforceSpider(object):
       message = []
       isNoContent = (len(result) == 0)
       if len(result) > 0:
-         result = sorted(result, key=lambda data: (data['assignee'], data['CLN'], data['checkinTime']))
+         result = sorted(result, key=lambda data: (data['username'], data['CLN'], data['checkinTime']))
          if self.isNeedCheckinApproved:
             # With Approval
             withApprovedResult = list(filter(lambda data: data['approved'] == 'with', result))
@@ -104,7 +106,7 @@ class PerforceSpider(object):
       if len(checkinDatas) == 0:
          return message
       # New column order: User  Bug Link  CLN  Time  Review URL  Summary
-      UserColumnLength = max(max([len(data['assignee']) for data in checkinDatas]), len("User"))
+      UserColumnLength = max(max([len(data['username']) for data in checkinDatas]), len("User"))
       BugNumberColumnLength = max(max([len(data['bugIDs']) for data in checkinDatas]), len("Bug Link"))
       ReviewURLColumnLength = max(max([len(data['reviewIDs']) for data in checkinDatas]), len("Review URL"))
       columnLength = {"User": UserColumnLength, "Bug Link": BugNumberColumnLength, "CLN": 8,
@@ -115,7 +117,7 @@ class PerforceSpider(object):
       message.append('```' + headerFormatter.format("User", "Bug Link", "CLN", "Time", "Review URL", "Summary"))
       userName = ''
       for data in checkinDatas:
-         user = data['assignee']
+         user = data['username']
          cln = "<{0}|{1}>".format(PERFORCE_DESCRIBE_URL.format(data['CLN']), data['CLN'])
          checkinTime = data['checkinTime']
          summary = data['summary']
@@ -139,7 +141,7 @@ class PerforceSpider(object):
          ReviewURLColumnLength = columnLength["Review URL"]
          if len(data['reviewIDs']) > 0 and len(data['reviewIDs'].split(",")) > 0:
             reviewIDs = data['reviewIDs'].split(",")
-            ReviewURLs = ["<%s|%s>" % (REVIEWBOARD_REQUEST_URL.format(reviewID), reviewID) for reviewID in reviewIDs]
+            ReviewURLs = ["<%s|%s>" % (REVIEWBOARD_URL + reviewID, reviewID) for reviewID in reviewIDs]
             displayReviewURL = ",".join(ReviewURLs)
             ReviewURLColumnLength = len(displayReviewURL) + columnLength["Review URL"] - len(data['reviewIDs'])
          if userName == user:
@@ -227,9 +229,16 @@ class PerforceSpider(object):
                   isCheckinApproved = True
          elif record.startswith("Review URL:"):
             reviewIDs = list(set(ReviewIDPattern.findall(record)))[:2]
+
+      userInfo = QueryUserById(user)
+      if userInfo.get('mail') is not None:
+         account = userInfo['mail'].rstrip("@broadcom.com")
+      else:
+         account = user
       return {'assignee': user, 'CLN': cln, 'checkinTime': checkinTime,
               'approved': 'with' if isCheckinApproved else 'without', 'summary': summary,
-              'bugIDs': ",".join(bugIDs), 'reviewIDs': ",".join(reviewIDs)}
+              'bugIDs': ",".join(bugIDs), 'reviewIDs': ",".join(reviewIDs),
+              'username': account}
 
    @logExecutionTime
    def CheckCheckinApproved(self, PRs):

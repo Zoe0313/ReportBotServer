@@ -41,6 +41,21 @@ def short2long(short_url):
         logger.error("get long url error: ", e)
     return None
 
+def QueryUserById(oktaId):
+   if os.environ.get('STAGE') == 'product':
+      API = 'https://vsanbot.vdp.lvn.broadcom.net/api/v1/user?name='
+   elif os.environ.get('STAGE') == 'stage':
+      API = 'https://vsanbot-stg.vdp.lvn.broadcom.net/api/v1/user?name='
+   else:
+      API = 'https://127.0.0.1:3001/api/v1/user?name='
+   try:
+      res = requests.get(API + oktaId)
+      if res.status_code == 200:
+         return res.json()
+   except Exception as e:
+      print("Fail to query 'api/v1/user?name={0}', error: {1}".format(oktaId, e))
+   return {}
+
 def readMemoryFile(pklFile):
    if os.path.exists(pklFile):
       with FileLock(pklFile + ".lock"):

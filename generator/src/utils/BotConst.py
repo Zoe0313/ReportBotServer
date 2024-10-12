@@ -42,8 +42,8 @@ CONTENT_TYPE_JSON = "application/json"
 
 # used in perforce review check report
 # perforce describe url
-PERFORCE_DESCRIBE_URL = "https://p4swarm.eng.vmware.com/perforce_1666/changes/{0}"
+PERFORCE_DESCRIBE_URL = "https://swarm-vmw.devops.broadcom.net/perforce_1666/changes/{0}"
 # review board request url
-REVIEWBOARD_REQUEST_URL = "https://reviewboard.eng.vmware.com/r/{0}/"
+REVIEWBOARD_URL = "https://reviewboard.lvn.broadcom.net/r/"
 # vsancore describe url
 JIRA_BROWSE_URL = "https://vmw-jira.broadcom.com/browse/{0}"
