@@ -22,6 +22,8 @@ spec:
         - name: vsanbot-server-stage
           image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/stage/slackbot/vsanbot-server:vdp
           env:
+            - name: STAGE
+              value: "stage"
             - name: POD_IP
               valueFrom:
                 fieldRef:

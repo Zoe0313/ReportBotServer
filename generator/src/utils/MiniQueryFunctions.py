@@ -42,9 +42,9 @@ def short2long(short_url):
     return None
 
 def QueryUserById(oktaId):
-   if os.environ.get('NODE_ENV') == 'production':
+   if os.environ.get('STAGE') == 'product':
       API = 'https://vsanbot.vdp.lvn.broadcom.net/api/v1/user?name='
-   elif os.environ.get('NODE_ENV') == 'development':
+   elif os.environ.get('STAGE') == 'stage':
       API = 'https://vsanbot-stg.vdp.lvn.broadcom.net/api/v1/user?name='
    else:
       API = 'https://127.0.0.1:3001/api/v1/user?name='
