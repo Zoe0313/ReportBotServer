@@ -8,7 +8,7 @@ import {
 } from '../model/report-configuration.js'
 import { ReportHistory } from '../model/report-history.js'
 import { TeamGroup } from '../model/team-group.js'
-import { FindUserInfoByName } from '../model/user-info.js'
+import { QueryUserInfoByName } from '../model/mail-info.js'
 import { PerforceInfo } from '../model/perforce-info.js'
 import { MailInfo } from '../model/mail-info.js'
 import {
@@ -30,7 +30,6 @@ async function UpdateReportConfiguration(reqData, oldReport) {
       const reportObj = {
          title: requestData.title,
          creator: requestData.creator,
-         vmwareId: requestData.vmwareId,
          status: requestData.status,
          reportType: requestData.reportType,
          mentionUsers: requestData.mentionUsers || [],
@@ -95,20 +94,19 @@ function RegisterApiRouters(router) {
          return
       }
       const ipAddr = ctx.request.ip
-      const vmwareId = ctx.query?.user || null
-      console.log('request param user:', vmwareId)
-      const userInfo = await FindUserInfoByName(vmwareId)
+      const account = ctx.query?.user || null
+      console.log('request param user:', account)
+      const userInfo = await QueryUserInfoByName(account)
       if (userInfo == null) {
          const errorMsg = 'Authorization failure'
          ctx.response.status = 401
          ctx.response.body = { result: false, message: errorMsg }
          return
       }
-      ctx.state.slackId = userInfo.slackId
-      ctx.state.vmwareId = userInfo.userName
+      ctx.state.account = userInfo.mail.split('@')[0]
       ctx.state.ipAddr = ipAddr
       await next()
-      logger.debug(`${userInfo.userName} did "${method} ${url}" took ${performance.now() - t0}ms cost`)
+      logger.debug(`${userInfo.mail} did "${method} ${url}" took ${performance.now() - t0}ms cost`)
    })
 
    router.get('/api/v1/server/health', (ctx, next) => {
@@ -239,13 +237,21 @@ function RegisterApiRouters(router) {
          return
       }
       if (filterType === 'manager') {
-         const managerOktaId = filterName
-         logger.debug(`manager okta id: ${managerOktaId}`)
+         const managerAccount = filterName
+         logger.debug(`filter manager account: ${managerAccount}`)
          let reporterType = 'direct_reporters'
          if (includeIndirectReport === true) {
             reporterType = 'all_reporters'
          }
+         const managerInfo = await QueryUserInfoByName(managerAccount)
+         if (managerInfo == null) {
+            const errorMsg = `Failed to find the manager info by ${managerAccount}.`
+            ctx.response.status = 404
+            ctx.response.body = { result: false, message: errorMsg }
+            return
+         }
          try {
+            const managerOktaId = managerInfo.oktaId
             const membersFilters = [{
                condition: 'include',
                type: reporterType,
@@ -264,10 +270,8 @@ function RegisterApiRouters(router) {
             ctx.response.status = 200
             ctx.response.body = members
          } catch (error) {
-            let errorMsg = `Failed to get direct reporters of ${managerOktaId} team.`
-            if (includeIndirectReport === true) {
-               errorMsg = `Failed to get all reporters of ${managerOktaId} team.`
-            }
+            const errorMsg = `Failed to get ${reporterType.replace('_', ' ')} ` +
+               `of manager ${managerAccount}.`
             logger.error(errorMsg + '\n' + error)
             ctx.response.status = 500
             ctx.response.body = { result: false, message: errorMsg }
@@ -337,26 +341,29 @@ function RegisterApiRouters(router) {
    })
 
    router.get('/service/admins', async (ctx, next) => {
-      const account = ctx.state.vmwareId
-      if (!process.env.ADMIN_VMWARE_ID.includes(account)) {
+      const account = ctx.state.account
+      if (!process.env.ADMIN_USER_ID.includes(account)) {
          ctx.response.status = 404
-         ctx.response.body = { result: false, message: `${account} is not system administrator.` }
+         ctx.response.body = {
+            result: false,
+            message: `${account} is not bot service administrator.`
+         }
          return
       }
       ctx.response.status = 200
       ctx.response.body = {
          result: true,
-         message: `You are the system administrator of vSAN Bot service.`
+         message: `You are the bot service administrator.`
       }
    })
 
    router.get('/report/configuration', async (ctx, next) => {
-      const account = ctx.state.vmwareId
+      const account = ctx.state.account
       const filter = {
          status: { $nin: [REPORT_STATUS.REMOVED] }
       }
-      if (!process.env.ADMIN_VMWARE_ID.includes(account)) {
-         filter.vmwareId = account
+      if (!process.env.ADMIN_USER_ID.includes(account)) {
+         filter.creator = account
       }
       try {
          const total = await ReportConfiguration.countDocuments(filter)
@@ -388,7 +395,7 @@ function RegisterApiRouters(router) {
          return
       }
       try {
-         reqData.creator = ctx.state.slackId
+         reqData.creator = ctx.state.account
          const report = await UpdateReportConfiguration(reqData, null)
          RegisterScheduler(report)
          logger.info(`Create successful. ID: ${report._id}`)
@@ -617,23 +624,22 @@ function RegisterApiRouters(router) {
          return
       }
       const newOwner = ctx.query?.owner || null
-      const userInfo = await FindUserInfoByName(newOwner)
+      const userInfo = await QueryUserInfoByName(newOwner)
       if (userInfo == null) {
          ctx.response.status = 404
          ctx.response.body = {
             result: false,
-            message: `Not found: user info by vmware id ${newOwner}.`
+            message: `Failed to find user info by ${newOwner}.`
          }
          return
       }
       try {
-         const vmwareId = userInfo.userName
-         const creator = userInfo.slackId
-         await ReportConfiguration.updateOne({ _id: reportId }, { vmwareId, creator })
+         const creator = userInfo.mail.split('@')[0]
+         await ReportConfiguration.updateOne({ _id: reportId }, { creator })
          ctx.response.status = 200
          ctx.response.body = {
             result: true,
-            message: `The notification owner has transfer to ${vmwareId}.`
+            message: `The notification owner has transfer to ${creator}.`
          }
       } catch (error) {
          const errorMsg = 'Fail to transfer notification owner.'

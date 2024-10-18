@@ -51,4 +51,17 @@ const UpdateMailList = async () => {
    logger.info(`Fetch data for all vsan user is completed. size: ${userCount}`)
 }
 
-export { MailInfo, UpdateMailList }
+const QueryUserInfoByName = async (account) => {
+   if (account == null || account === '' || typeof account == 'undefined') {
+      return null
+   }
+   const mailAccount = account.split('@')[0] + '@broadcom.com'
+   const mailInfo = await MailInfo.findOne({ mail: mailAccount })
+   if (mailInfo == null || mailInfo.oktaId == null) {
+      logger.debug(`Fail to query mail info by ${mailAccount} in db.mailinfos`)
+      return null
+   }
+   return mailInfo
+}
+
+export { MailInfo, UpdateMailList, QueryUserInfoByName }

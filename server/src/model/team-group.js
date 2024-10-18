@@ -33,8 +33,8 @@ const UpdateTeamGroup = async () => {
          membersFilters: [{
             condition: 'include',
             type: 'all_reporters',
-            // include Ninad Kulkarni(nk017170), Satish Pudi(sp026337), Fanny Wong(fw036298) all
-            members: ['nk017170', 'sp026337', 'fw036298']
+            // include Ninad Kulkarni(nk017170), Satish Pudi(sp026337) all, exclude Fanny Wong(fw036298)
+            members: ['nk017170', 'sp026337']
          },
          {
             condition: 'exclude',
@@ -65,8 +65,8 @@ const UpdateTeamGroup = async () => {
          membersFilters: [{
             condition: 'include',
             type: 'all_reporters',
-            // include Ninad Kulkarni(nk017170), Satish Pudi(sp026337), Fanny Wong(fw036298) all
-            members: ['nk017170', 'sp026337', 'fw036298']
+            // include Ninad Kulkarni(nk017170), Satish Pudi(sp026337) all, exclude Fanny Wong(fw036298) all
+            members: ['nk017170', 'sp026337']
          },
          {
             condition: 'exclude',
