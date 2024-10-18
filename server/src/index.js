@@ -31,20 +31,21 @@ ConnectMongoDatabase(async () => {
    if (process.env.NODE_ENV !== 'development') {
       updatePerforceInfoJob.invoke()
    }
-   updateTeamGroupJob.invoke()
+//   updateTeamGroupJob.invoke()
 })
 
 const app = new Koa()
 app.use(serve('src/static'))
 app.use(koaBody())
-const router = new Router()
 
-router.get(['/', '/reports', '/history'], (ctx, next) => {
+const UIRouter = new Router()
+UIRouter.get(['/', '/reports'], (ctx, next) => {
    ctx.body = fs.readFileSync('src/static/index.html', 'utf8')
    next()
 })
 
-RegisterApiRouters(router)
+const APIRouter = new Router()
+RegisterApiRouters(APIRouter)
 
 app.use(async (ctx, next) => {
    try {
@@ -76,8 +77,10 @@ app.on('error', error => {
 const swaggerPath = path.join(path.resolve(), 'doc/swagger/server')
 console.log(swaggerPath)
 
-app.use(router.routes())
-   .use(router.allowedMethods())
+app.use(UIRouter.routes())
+   .use(UIRouter.allowedMethods())
+   .use(APIRouter.routes())
+   .use(APIRouter.allowedMethods())
    .use(mount('/api/v1/', serve(swaggerPath)))
 
 const serverCallback = app.callback()
