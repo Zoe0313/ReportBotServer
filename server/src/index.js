@@ -31,7 +31,7 @@ ConnectMongoDatabase(async () => {
    if (process.env.NODE_ENV !== 'development') {
       updatePerforceInfoJob.invoke()
    }
-//   updateTeamGroupJob.invoke()
+   updateTeamGroupJob.invoke()
 })
 
 const app = new Koa()
