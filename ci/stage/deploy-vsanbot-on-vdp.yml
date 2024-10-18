@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vsanbot-server-stage
-  namespace: vsanperf-vsanbot
+  name: vsanbot-server
+  namespace: vsandevstg-vsanbot
 spec:
   selector:
     matchLabels:
-      app: vsanbot-server-stage
+      app: vsanbot-server
   replicas: 1
   template:
     metadata:
       labels:
-        app: vsanbot-server-stage
+        app: vsanbot-server
         environment: stage
     spec:
       securityContext:
@@ -19,7 +19,7 @@ spec:
         runAsGroup: 201
         fsGroup: 201
       containers:
-        - name: vsanbot-server-stage
+        - name: vsanbot-server
           image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/stage/slackbot/vsanbot-server:vdp
           env:
             - name: STAGE
@@ -68,11 +68,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: vsanbot-server-stage
-  namespace: vsanperf-vsanbot
+  name: vsanbot-server
+  namespace: vsandevstg-vsanbot
 spec:
   selector:
-    app: vsanbot-server-stage
+    app: vsanbot-server
   ports:
   - protocol: TCP
     port: 443
@@ -81,20 +81,20 @@ spec:
 apiVersion: projectcontour.io/v1
 kind: HTTPProxy
 metadata:
-  name: vsanbot-server-stage
-  namespace: vsanperf-vsanbot
+  name: vsanbot-server
+  namespace: vsandevstg-vsanbot
   annotations:
     kubernetes.io/ingress.class: "vdp-contour-int"
 spec:
   virtualhost:
-    fqdn: vsanbot-stg.vdp.lvn.broadcom.net
+    fqdn: vsanbot.vdp-stg.lvn.broadcom.net
     tls:
       secretName: infra-system/vdp-int-domain-tls
   routes:
     - conditions:
         - prefix: /
       services:
-        - name: vsanbot-server-stage
+        - name: vsanbot-server
           port: 443
       timeoutPolicy:
         response: 60s
