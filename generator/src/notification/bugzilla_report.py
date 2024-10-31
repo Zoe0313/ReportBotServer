@@ -265,11 +265,12 @@ class BugzillaSpider(object):
       if self.isSendPrDiff:
          lastPRs = self.getLastPRs()
          nowPRs = self.persistCurrentPRs(self.longUrl)
-         diffPRs = set(nowPRs) - set(lastPRs)
-         if len(diffPRs) == 0:
-            logger.info("No difference from last PRs")
+         nowPRSet = set(nowPRs)
+         lastPRSet = set(lastPRs)
+         if nowPRSet == lastPRSet:
+            logger.info("Current PRs are no difference from last PRs")
             return [], [], True
-         logger.info(f"Current PRs are difference from last PRs: {diffPRs}")
+         logger.info(f"Current PRs {nowPRSet} are difference from last PRs {lastPRSet}")
       return message, threadMessage, isNoContent
 
    def getBuglistDetail(self):
@@ -339,11 +340,12 @@ class BugzillaSpider(object):
       if self.isSendPrDiff:
          lastPRs = self.getLastPRs()
          nowPRs = self.persistCurrentPRs(totalBugzillaListUrl)
-         diffPRs = set(nowPRs) - set(lastPRs)
-         if len(diffPRs) == 0:
-            logger.info("No difference from last PRs")
+         nowPRSet = set(nowPRs)
+         lastPRSet = set(lastPRs)
+         if nowPRSet == lastPRSet:
+            logger.info("Current PRs are no difference from last PRs")
             return [], True
-         logger.info(f"Current PRs are difference from last PRs: {diffPRs}")
+         logger.info(f"Current PRs {nowPRSet} are difference from last PRs {lastPRSet}")
       return message, isNoContent
 
    def getLastPRs(self):
@@ -392,4 +394,3 @@ if __name__ == "__main__":
    spider = BugzillaSpider(args)
    ret = spider.getReport()
    print(ret)
-   logger.info(ret)
