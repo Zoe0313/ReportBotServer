@@ -304,19 +304,3 @@ export function LoadSlashCommandUsage(name) {
       return usage
    }
 }
-
-export function VMwareId2GoogleUserInfo(vmwareId) {
-   if (vmwareId.endsWith('null') || vmwareId.endsWith('undefined')) {
-      return { gid: '', broadcom_email: '', full_name: '' }
-   }
-   if (vSANUserIdCache[vmwareId] == null) {
-      const idFile = path.join(path.resolve(), '..') + `/persist/config/google-user-id.json`
-      vSANUserIdCache = JSON.parse(fs.readFileSync(idFile))
-   }
-   try {
-      return vSANUserIdCache[vmwareId]
-   } catch (e) {
-      logger.error(`Failed to get user info by vmwareId ${vmwareId} due to ${JSON.stringify(e)}`)
-   }
-   return { gid: '', broadcom_email: '', full_name: '' }
-}

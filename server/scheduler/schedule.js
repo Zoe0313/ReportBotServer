@@ -7,11 +7,8 @@ import {
 } from '../src/model/report-configuration.js'
 import { UpdateP4Branches } from '../src/model/perforce-info.js'
 import { UpdateTeamGroup } from '../src/model/team-group.js'
-import { UpdateMailList } from '../src/model/mail-info.js'
+import { UpdateMailList, QueryUserInfoByName } from '../src/model/mail-info.js'
 import { ParseDateWithTz, ExecCommand } from '../common/utils.js'
-import {
-   GetUsersName, VMwareId2GoogleUserInfo
-} from '../common/slack-helper.js'
 import logger from '../common/logger.js'
 import path from 'path'
 import cronParser from 'cron-parser'
@@ -38,6 +35,30 @@ const AsyncForEach = async function (array, callback) {
       results = await callback(array[index])
    }
    return results
+}
+
+const GetUserVmwareIds = async (users) => {
+   const results = await Promise.all(users.map(async (user) => {
+      const mailInfo = await QueryUserInfoByName(user)
+      if (mailInfo == null) {
+         logger.debug(`Fail to query VMware ID by broadcom mail ${user} in db.mailinfos`)
+         return null
+      }
+      return mailInfo.vmwareId
+   }))
+   return results.filter(value => value != null)
+}
+
+const GetUserGIds = async (users) => {
+   const results = await Promise.all(users.map(async (user) => {
+      const mailInfo = await QueryUserInfoByName(user)
+      if (mailInfo == null) {
+         logger.debug(`Fail to query GId by broadcom mail ${user} in db.mailinfos`)
+         return null
+      }
+      return mailInfo.gid
+   }))
+   return results.filter(value => value != null)
 }
 
 const NotificationExecutor = async (report, ContentEvaluate) => {
@@ -70,7 +91,7 @@ const NotificationExecutor = async (report, ContentEvaluate) => {
       reportHistory = new ReportHistory({
          reportConfigId: report._id,
          title: report.title,
-         creator: report.vmwareId,
+         creator: report.creator,
          reportType: report.reportType,
          conversations: sendWebhooks,
          mentionUsers: report.mentionUsers || [],
@@ -291,8 +312,7 @@ const ContentEvaluate = async (report) => {
       }
       case 'bugzilla_by_assignee': {
          scriptPath = projectRootPath + '/generator/src/notification/bugzilla_assignee_report.py'
-         let assignees = await GetUsersName(report.reportSpecConfig.bugzillaAssignee)
-         assignees = assignees.filter(value => value != null)
+         const assignees = await GetUserVmwareIds(report.reportSpecConfig.bugzillaAssignee)
          if (assignees.length > 0) {
             command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
                --title '${reportTitle}' \
@@ -307,26 +327,23 @@ const ContentEvaluate = async (report) => {
          break
       }
       case 'nanny_reminder': {
-         const MentionNannys = (text, nannyVMwareIds, mentionKey) => {
-            for (let i = 0; i < nannyVMwareIds.length; i++) {
-               const vmwareId = nannyVMwareIds[i].trim()
+         const MentionNannys = async (text, nannyAccounts, mentionKey) => {
+            for (let i = 0; i < nannyAccounts.length; i++) {
+               const account = nannyAccounts[i].trim()
                let nannyMentionKey = `@${mentionKey}`
                let nannyFullNameKey = `${mentionKey}` + '-full-name'
-               if (nannyVMwareIds.length > 1) {
+               if (nannyAccounts.length > 1) {
                   nannyMentionKey = nannyMentionKey + `${i + 1}`
                   nannyFullNameKey = nannyFullNameKey + `${i + 1}`
                }
-               const gUserInfo = VMwareId2GoogleUserInfo(vmwareId)
-               // Mention nanny in Google Chat by <users/Google user ID>
-               if (gUserInfo.gid.length > 0) {
-                  text = text.replace(nannyMentionKey, `<users/${gUserInfo.gid}>`)
+               const mailInfo = await QueryUserInfoByName(account)
+               if (mailInfo == null) {
+                  text = text.replace(nannyMentionKey, `@${account}`)
+                     .replace(nannyFullNameKey, `@${account}`)
                } else {
-                  text = text.replace(nannyMentionKey, `@${vmwareId}`)
-               }
-               if (gUserInfo.full_name.length > 0) {
-                  text = text.replace(nannyFullNameKey, gUserInfo.full_name)
-               } else {
-                  text = text.replace(nannyFullNameKey, `@${vmwareId}`)
+                  // Mention nanny in Google Chat by <users/Google user ID>
+                  text = text.replace(nannyMentionKey, `<users/${mailInfo.gid}>`)
+                     .replace(nannyFullNameKey, mailInfo.fullName)
                }
             }
             return text
@@ -337,17 +354,16 @@ const ContentEvaluate = async (report) => {
          const nextTimeNannys = assignees[1].split(',')
          let resultText = stdout
          if (stdout.indexOf('this-nanny') >= 0) {
-            resultText = MentionNannys(resultText, thisTimeNannys, 'this-nanny')
+            resultText = await MentionNannys(resultText, thisTimeNannys, 'this-nanny')
          }
          if (stdout.indexOf('next-nanny') >= 0) {
-            resultText = MentionNannys(resultText, nextTimeNannys, 'next-nanny')
+            resultText = await MentionNannys(resultText, nextTimeNannys, 'next-nanny')
          }
          stdout = resultText
          break
       }
       case 'jira_list': {
-         let assignees = await GetUsersName([report.creator])
-         assignees = assignees.filter(value => value != null)
+         const assignees = await GetUserVmwareIds([report.creator])
          let creatorName = ''
          if (assignees.length > 0) {
             creatorName = assignees[0]
@@ -375,10 +391,7 @@ const ContentEvaluate = async (report) => {
    let mentionUserIds = '' // shown by google chat format: <users/user ID>
    let gIdsStr = '' // used in google chat webhook
    if (report.mentionUsers != null && report.mentionUsers.length > 0) { // need to mention user in message
-      const vmwareIds = await GetUsersName(report.mentionUsers)
-      const googleUserIds = vmwareIds.map(vmwareId => {
-         return VMwareId2GoogleUserInfo(vmwareId).gid
-      }).filter(value => value.length > 0)
+      const googleUserIds = await GetUserGIds(report.mentionUsers)
       mentionUserIds = '\n' + googleUserIds.map(userId => {
          return `<users/${userId}>`
       }).join(', ')

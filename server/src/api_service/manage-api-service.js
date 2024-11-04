@@ -20,7 +20,6 @@ import { GetMetrics } from './metrics.js'
 import {
    UpdateFlattenMembers
 } from '../bolt_service/init-blocks-data-helper.js'
-import { VMwareId2GoogleUserInfo } from '../../common/slack-helper.js'
 
 const CHANGE_REPORT_STATUS_ENUM = ['enable', 'disable']
 

@@ -4,7 +4,6 @@ import parseUrl from 'parse-url'
 import axios from 'axios'
 import https from 'https'
 import logger from '../../common/logger.js'
-import { GetUsersName } from '../../common/slack-helper.js'
 import { PerforceInfo } from './perforce-info.js'
 
 const REPORT_STATUS = {

@@ -46,7 +46,7 @@ definitions:
         properties:
           bugzillaLink:
             type: string
-            example: "https://via.vmw.com/CjU20C"
+            example: "https://vsanvia.broadcom.net/CjU20"
       repeatConfig:
         properties:
           tz:
@@ -145,12 +145,12 @@ paths:
   /report/configuration:
     get:
       parameters:
-      - description: VMWare AD account
+      - description: Broadcom email account
         in: query
         name: user
         required: true
         type: string
-        example: zhouhuang
+        example: zhou.huang
       produces:
       - application/json
       responses:
