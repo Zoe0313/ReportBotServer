@@ -41,7 +41,10 @@ os.makedirs(persistDir, exist_ok=True)
 PAGE_API = 'https://vmw-confluence.broadcom.com/rest/api/content'
 USER_API = 'https://vmw-confluence.broadcom.com/rest/api/user'
 
-CONFLUENCE_PAGE_TOKEN = os.environ.get('CONFLUENCE_PAGE_TOKEN', '')
+# confluence page personal token used in updating nannys on confluence page
+# request on page https://vmw-confluence.broadcom.net/plugins/personalaccesstokens/usertokens.action
+# but the token can't be used.
+CONFLUENCE_PAGE_TOKEN = 'NTgxMTA2MzI1NDMzOg0jLT2NF/Y12Hw1FV+qY/swEus9'
 
 def GetPageID(title, spaceKey):
     response = requests.get(
