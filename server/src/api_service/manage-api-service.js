@@ -18,7 +18,7 @@ import logger from '../../common/logger.js'
 import { FormatDate, Merge } from '../../common/utils.js'
 import { GetMetrics } from './metrics.js'
 import {
-   UpdateFlattenMembers
+   UpdateFlattenMembers, GenerateNannyRoster
 } from '../bolt_service/init-blocks-data-helper.js'
 
 const CHANGE_REPORT_STATUS_ENUM = ['enable', 'disable']
@@ -197,6 +197,56 @@ function RegisterApiRouters(router) {
          logger.error(errorMsg + '\n' + error)
          ctx.response.status = 404
          ctx.response.body = { result: false, message: errorMsg }
+      }
+   })
+
+   router.post('/api/v1/nanny', async (ctx, next) => {
+      const nannyCode = ctx.query?.code || null
+      const nannyAssignees = ctx.query?.nannys || null
+      if (nannyCode == null || nannyAssignees == null) {
+         ctx.response.status = 400
+         ctx.response.body = {
+            result: false,
+            message: 'Bad request: nanny code or assignees not given.'
+         }
+         return
+      }
+      logger.debug(`nanny code: ${nannyCode}, nanny assignees: ${nannyAssignees}`)
+      try {
+         await ReportConfiguration.updateOne(
+            {'reportSpecConfig.nannyCode': nannyCode},
+            {'reportSpecConfig.nannyAssignee': nannyAssignees}
+         )
+         const report = await ReportConfiguration.findOne({
+            'reportSpecConfig.nannyCode': nannyCode
+         })
+         if (report == null) {
+            ctx.response.status = 404
+            ctx.response.body = {
+               result: false,
+               message: `Not found: report configuration by nanny code ${nannyCode}`
+            }
+            return
+         }
+         const tz = report.repeatConfig.tz
+         const nannyRoster = await GenerateNannyRoster(report, false, tz)
+         await ReportConfiguration.updateOne(
+            {'reportSpecConfig.nannyCode': nannyCode},
+            {'reportSpecConfig.nannyRoster': nannyRoster}
+         )
+         ctx.response.status = 200;
+         ctx.response.body = { result: true, message: 'Nanny assignees updated.' }
+      } catch (e) {
+         if (e instanceof mongoose.Error.ValidationError) {
+            const errorMsg = e.errors
+            ctx.response.status = 400
+            ctx.response.body = { result: false, message: `Bad request: ${JSON.stringify(errorMsg)}` }
+         } else {
+            ctx.response.status = 500
+            ctx.response.body = { result: false, message: 'Internal Server Error' }
+         }
+         logger.error('Fail to update nanny assignees, error:')
+         logger.error(e)
       }
    })
 

@@ -8,22 +8,22 @@ RefreshNannysOnPage.py
 Description:
   Refresh nanny list from confluence page
 Page:
-- DOM: https://vmw-confluence.broadcom.com/display/VSAN/DOM-Nanny
+- DOM: https://vmw-confluence.broadcom.net/display/VSAN/DOM-Nanny
   Saved in persist/config/dom-nanny.csv
-- CMMDs: https://vmw-confluence.broadcom.com/pages/viewpage.action?spaceKey=SABU&title=Guru+Duty
+- CMMDs: https://vmw-confluence.broadcom.net/pages/viewpage.action?spaceKey=SABU&title=Guru+Duty
   Saved in persist/config/cmmds-nanny.csv
-- CLOM: https://vmw-confluence.broadcom.com/display/VSAN/CLOM-Nanny
+- CLOM: https://vmw-confluence.broadcom.net/display/VSAN/CLOM-Nanny
   Saved in persist/config/clom-nanny.csv
-- LSOM2: https://vmw-confluence.broadcom.com/pages/viewpage.action?spaceKey=LSOM2&title=LSOM2+nanny
+- LSOM2: https://vmw-confluence.broadcom.net/pages/viewpage.action?spaceKey=LSOM2&title=LSOM2+nanny
   Saved in persist/config/lsom2-nanny.csv
 Other:
 - VDFS: Nanny bot owned by xiangyu
 - Our team nanny bot: vsan-health-nanny, VCF, SH FVT, VMPool
 - Unknown:
-  - zDOM: https://vmw-confluence.broadcom.com/display/VSAN/zDOM-Nanny
+  - zDOM: https://vmw-confluence.broadcom.net/display/VSAN/zDOM-Nanny
     The nanny duty list saves in gitlab(private):
       https://gitlab.eng.vmware.com/abhayj/scripts/-/blob/master/vmware/roster/zdom_raw.txt
-  - LSOM: https://vmw-confluence.broadcom.com/display/VSAN/LSOM+Nanny have table but the duty roster is too old.
+  - LSOM: https://vmw-confluence.broadcom.net/display/VSAN/LSOM+Nanny have table but the duty roster is too old.
 '''
 
 import os
@@ -38,18 +38,17 @@ projectPath = os.path.abspath(__file__).split("/generator")[0]
 persistDir = os.path.join(projectPath, "persist/config")
 os.makedirs(persistDir, exist_ok=True)
 
-PAGE_API = 'https://vmw-confluence.broadcom.com/rest/api/content'
-USER_API = 'https://vmw-confluence.broadcom.com/rest/api/user'
+PAGE_API = 'https://vmw-confluence.broadcom.net/rest/api/content'
+USER_API = 'https://vmw-confluence.broadcom.net/rest/api/user'
 
-# confluence page personal token used in updating nannys on confluence page
+# confluence page personal token
 # request on page https://vmw-confluence.broadcom.net/plugins/personalaccesstokens/usertokens.action
-# but the token can't be used.
-CONFLUENCE_PAGE_TOKEN = 'NTgxMTA2MzI1NDMzOg0jLT2NF/Y12Hw1FV+qY/swEus9'
+CONFLUENCE_PAGE_TOKEN = 'Bearer NDM0MTg1NDk3MDEwOkFNOdEbhCnywMmfJeLtR3pL0u6s'
 
 def GetPageID(title, spaceKey):
     response = requests.get(
         url=PAGE_API,
-        headers={'Authorization': f'Bearer {CONFLUENCE_PAGE_TOKEN}'},
+        headers={'Authorization': CONFLUENCE_PAGE_TOKEN},
         params={'title': title, 'spaceKey': spaceKey, 'expand': 'history'}
     )
     pageId = None
@@ -65,7 +64,7 @@ def GetPageContent(pageID):
     content = None
     response = requests.get(
         url=PAGE_API + "/{}".format(pageID),
-        headers={'Authorization': f'Bearer {CONFLUENCE_PAGE_TOKEN}'},
+        headers={'Authorization': CONFLUENCE_PAGE_TOKEN},
         params={'expand': 'body.storage'})
     if response.status_code == 200:
         data = response.json()
@@ -78,11 +77,23 @@ def GetPageContent(pageID):
 def GetUsernameByKey(userKey):
     response = requests.get(
         url=USER_API,
-        headers={'Authorization': f'Bearer {CONFLUENCE_PAGE_TOKEN}'},
+        headers={'Authorization': CONFLUENCE_PAGE_TOKEN},
         params={'key': userKey})
     if response.status_code == 200:
         data = response.json()
         return data['username']
+
+def GetMailAccountById(oktaID):
+    account = oktaID
+    try:
+        url = "https://nimbus-api.vdp.lvn.broadcom.net/api/v1/users/" + oktaID
+        response = requests.get(url)
+        if response.status_code == 200:
+            mail = response.json().get('mail', '')
+            account = mail.split('@')[0]
+    except:
+        pass
+    return account
 
 def FormatDate(dateList):
     date = dateList[0]
@@ -121,8 +132,9 @@ def RefreshDOMNannyList():
             continue
         weekBeginDay, nannyFrontName = elements[i], elements[i+1]
         nannyName = DOMNannyDict[nannyFrontName] if DOMNannyDict.get(nannyFrontName) else nannyFrontName
+        mailAccount = GetMailAccountById(nannyName)
         WeekBegins.append(weekBeginDay)
-        NannyNames.append(nannyName)
+        NannyNames.append(mailAccount)
     WeekBegins = FormatDate(WeekBegins)
     df = pd.DataFrame({'Week': WeekBegins, 'Nanny': NannyNames})
     if df.empty:
@@ -145,7 +157,8 @@ def RefreshCMMDsNannyList():
     for userKey in userKeys:
         if not userKey2name.get(userKey):
             userKey2name[userKey] = GetUsernameByKey(userKey)
-        NannyNames.append(userKey2name[userKey])
+        mailAccount = GetMailAccountById(userKey2name[userKey])
+        NannyNames.append(mailAccount)
     WeekBegins = FormatDate(WeekBegins)
     df = pd.DataFrame({'Week': WeekBegins, 'Nanny': NannyNames})
     if df.empty:
@@ -170,8 +183,9 @@ def RefreshCLOMNannyList():
             continue
         weekBeginDay, nannyFrontName = elements[i], elements[i+1]
         nannyName = CLOMNannyDict[nannyFrontName] if CLOMNannyDict.get(nannyFrontName) else nannyFrontName
+        mailAccount = GetMailAccountById(nannyName)
         WeekBegins.append(weekBeginDay)
-        NannyNames.append(nannyName)
+        NannyNames.append(mailAccount)
     WeekBegins = FormatDate(WeekBegins)
     df = pd.DataFrame({'Week': WeekBegins, 'Nanny': NannyNames})
     if df.empty:
@@ -193,9 +207,11 @@ def RefreshLSOM2NannyList():
     for userKey in userKeys:
         if not userKey2name.get(userKey):
             userKey2name[userKey] = GetUsernameByKey(userKey)
-        NannyNames.append(userKey2name[userKey])
+        mailAccount = GetMailAccountById(userKey2name[userKey])
+        NannyNames.append(mailAccount)
     WeekBegins = FormatDate(WeekBegins)
     df = pd.DataFrame({'Week': WeekBegins, 'Nanny': NannyNames})
+    df = df.sort_values(by='Week')
     if df.empty:
         raise Exception('LSOM2-Nanny list is empty.')
     csvFile = os.path.join(persistDir, "lsom2-nanny.csv")
@@ -207,3 +223,34 @@ def RefreshNannysOnPage():
     RefreshCMMDsNannyList()
     RefreshCLOMNannyList()
     RefreshLSOM2NannyList()
+
+def GetLatestNannys(csvFile):
+    today = datetime.datetime.today()
+    monday = today - datetime.timedelta(days=today.weekday())
+    monday = datetime.datetime.strptime(monday.strftime("%Y-%m-%d"), "%Y-%m-%d")
+    csvFile = os.path.join(persistDir, csvFile)
+    df = pd.read_csv(csvFile)
+    df['Week'] = pd.to_datetime(df['Week'])
+    filtered_df = df[df['Week'] >= monday]
+    nannys = filtered_df['Nanny'].values.tolist()
+    if len(nannys) > 0:
+        thisWeekNanny = nannys[0]
+        if nannys.count(thisWeekNanny) > 1:
+            index = nannys.index(thisWeekNanny, 1)
+            nannys = nannys[:index]
+    return nannys
+
+def UpdateNannyReportConfiguration(nannyCode, csvFile):
+    nannys = GetLatestNannys(csvFile)
+    nannyAssignee = "\n".join(nannys)
+    print(f'Update nanny assignees {nannys} by code {nannyCode}')
+    url = f"https://vsanbot.vdp.lvn.broadcom.net/api/v1/nanny?code={nannyCode}&nannys={nannyAssignee}"
+    response = requests.post(url)
+    print(response.status_code)
+    print(response.json())
+
+def UpdateAll():
+    UpdateNannyReportConfiguration("dom", "dom-nanny.csv")
+    UpdateNannyReportConfiguration("cmmds", "cmmds-nanny.csv")
+    UpdateNannyReportConfiguration("clom", "clom-nanny.csv")
+    UpdateNannyReportConfiguration("lsom2", "lsom2-nanny.csv")
