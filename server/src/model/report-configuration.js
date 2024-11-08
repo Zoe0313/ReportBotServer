@@ -4,7 +4,6 @@ import parseUrl from 'parse-url'
 import axios from 'axios'
 import https from 'https'
 import logger from '../../common/logger.js'
-import { GetUsersName } from '../../common/slack-helper.js'
 import { PerforceInfo } from './perforce-info.js'
 
 const REPORT_STATUS = {
@@ -53,8 +52,7 @@ const PerforceCheckInMembersFilterSchema = new mongoose.Schema({
 
 const ReportConfigurationSchema = new mongoose.Schema({
    title: { type: String, required: true },
-   creator: { type: String, required: true }, // Slack ID
-   vmwareId: { type: String, required: true }, // VMWare ID
+   creator: { type: String, required: true }, // the account of <account>@broadcom.com
    status: { type: String, enum: STATUS_ENUM, required: true },
    reportType: { type: String, enum: REPORT_TYPE_ENUM, required: true },
    conversations: [String],

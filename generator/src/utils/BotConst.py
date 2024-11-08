@@ -32,8 +32,13 @@ PERFORCE_PASSWORD = os.environ.get('P4PASSWORD')
 # service account 'svc.vsan-er' is used to login bugzilla
 SERVICE_ACCOUNT = os.environ.get('SERVICE_ACCOUNT')
 SERVICE_PASSWORD = os.environ.get('SERVICE_PASSWORD')
-# Basic token for querying JIRA API (base64 "{SERVICE_ACCOUNT}:{SERVICE_PASSWORD}")
-JIRA_BASIC_TOKEN = base64.b64encode(f"{SERVICE_ACCOUNT}:{SERVICE_PASSWORD}".encode("ascii")).decode("ascii")
+
+# jira personal access token
+# request on page https://vmw-jira.broadcom.net/secure/ViewProfile.jspa
+JIRA_ACCESS_TOKEN = "Bearer MTUyNzU4MzExOTU1OjI9ZG2gnDxj21FJ8q66Pwv4Mdo0"
+# confluence page personal token
+# request on page https://vmw-confluence.broadcom.net/plugins/personalaccesstokens/usertokens.action
+CONFLUENCE_ACCESS_TOKEN = 'Bearer NzU1NTgwNzY1NjU2Oia8sey1Ji+lYgX5wSKjf0yQZUga'
 
 # content type
 CONTENT_TYPE_JSON_UTF = "application/json;charset=utf-8"
