@@ -33,6 +33,7 @@ import datetime
 from lxml import etree
 import pandas as pd
 from generator.src.utils.Utils import logExecutionTime
+from generator.src.utils.BotConst import CONFLUENCE_ACCESS_TOKEN
 
 projectPath = os.path.abspath(__file__).split("/generator")[0]
 persistDir = os.path.join(projectPath, "persist/config")
@@ -41,14 +42,10 @@ os.makedirs(persistDir, exist_ok=True)
 PAGE_API = 'https://vmw-confluence.broadcom.net/rest/api/content'
 USER_API = 'https://vmw-confluence.broadcom.net/rest/api/user'
 
-# confluence page personal token
-# request on page https://vmw-confluence.broadcom.net/plugins/personalaccesstokens/usertokens.action
-CONFLUENCE_PAGE_TOKEN = 'Bearer NDM0MTg1NDk3MDEwOkFNOdEbhCnywMmfJeLtR3pL0u6s'
-
 def GetPageID(title, spaceKey):
     response = requests.get(
         url=PAGE_API,
-        headers={'Authorization': CONFLUENCE_PAGE_TOKEN},
+        headers={'Authorization': CONFLUENCE_ACCESS_TOKEN},
         params={'title': title, 'spaceKey': spaceKey, 'expand': 'history'}
     )
     pageId = None
@@ -64,7 +61,7 @@ def GetPageContent(pageID):
     content = None
     response = requests.get(
         url=PAGE_API + "/{}".format(pageID),
-        headers={'Authorization': CONFLUENCE_PAGE_TOKEN},
+        headers={'Authorization': CONFLUENCE_ACCESS_TOKEN},
         params={'expand': 'body.storage'})
     if response.status_code == 200:
         data = response.json()
@@ -77,7 +74,7 @@ def GetPageContent(pageID):
 def GetUsernameByKey(userKey):
     response = requests.get(
         url=USER_API,
-        headers={'Authorization': CONFLUENCE_PAGE_TOKEN},
+        headers={'Authorization': CONFLUENCE_ACCESS_TOKEN},
         params={'key': userKey})
     if response.status_code == 200:
         data = response.json()

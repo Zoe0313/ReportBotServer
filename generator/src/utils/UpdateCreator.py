@@ -5,9 +5,15 @@
 '''
 Module docstring.  
 UpdateCreator.py
+
+unset vmwareId please use $unset: {"vmwareId": ""}
 '''
 import requests
 import pymongo
+
+MONGO_DB = "slackbot"
+MONGO_URI = "mongodb://service:66i*22AZxnrIvsFiLqu&mB3D68kt6xkU8iTQDvCPaJpD0t9n6h@vsanperf-vsanbot-db.vdp.lvn.broadcom.net:27017/" + MONGO_DB
+userInfos = dict()
 
 def get_account(vmwareId):
    url = 'https://vsanbot.vdp.lvn.broadcom.net/api/v1/user?name=' + vmwareId
@@ -15,80 +21,122 @@ def get_account(vmwareId):
    if res.status_code == 200:
       account = res.json()['mail'].split('@')[0]
       return account
-   raise Exception('Not find account by vmwareId:', vmwareId)
+   print('Not find account by vmwareId:', vmwareId)
+   return vmwareId
 
-MONGO_DB = "zoe-slackbot"
-MONGO_URI = "mongodb://service:66i*22AZxnrIvsFiLqu&mB3D68kt6xkU8iTQDvCPaJpD0t9n6h@vsanperf-vsanbot-db.vdp.lvn.broadcom.net:27017/" + MONGO_DB
+def get_bc_account(vmwareId):
+   if not userInfos.get(vmwareId):
+      userInfos[vmwareId] = get_account(vmwareId)
+   account = userInfos[vmwareId]
+   return account
+
 with pymongo.MongoClient(MONGO_URI) as client:
    print("Login " + MONGO_URI)
    db = client[MONGO_DB]
+
    collection = db['reportconfigurations']
 
-   # Update creator and unset vmwareId
-   userInfos = dict()
-   # documents1 = collection.find({"vmwareId": {"$exists": True}})
-   documents1 = collection.find({"creator": {"$exists": True}})
-   for doc in documents1:
-      reportId = doc['_id']
+   # Update creator
+   documents = collection.find({"vmwareId": {"$exists": True}})
+   exist_vmware_id_count = 0
+   for doc in documents:
+      title = doc['title']
       try:
-         # # update creator
-         # vmwareId = doc['vmwareId']
-         # print("-----")
-         # print(reportId, doc['creator'], doc['vmwareId'], doc['title'])
-         # if not userInfos.get(vmwareId):
-         #    userInfos[vmwareId] = get_account(vmwareId)
+         reportId = doc['_id']
+         creator = doc['creator']
+         vmwareId = doc['vmwareId']
+         status = doc['status']
+         account = get_bc_account(vmwareId)
+         print('Update creator "{}" into {} by vmwareId {} for report {} [{}]'.format(
+            creator, account, vmwareId, title, status))
+         result_set = collection.update_one(
+            {"_id": reportId}, {"$set": {"creator": account}}
+         )
+         print(result_set.matched_count, result_set.modified_count)
+         check_result = collection.find_one({"_id": reportId})
+         print('check result:', check_result['creator'], check_result['vmwareId'])
+         print("-----")
+      except Exception as e:
+         print(f'Fail to update creator for {title}, error:', e)
+      exist_vmware_id_count += 1
+   print('exist vmware id count:', exist_vmware_id_count)
+   print("="*20)
 
-         # account = userInfos[vmwareId]
-         # result_set = collection.update_one(
-         #    {"_id": reportId},
-         #    {"$set": {"creator": account}}
-         # )
-         # print('set creator:', result_set.matched_count, result_set.modified_count)
-         # # unset vmwareId
-         # result_unset = collection.update_one(
-         #    {"_id": reportId},
-         #    {"$unset": {"vmwareId": ""}}
-         # )
-         # print('unset vmwareId:', result_unset.matched_count, result_unset.modified_count)
-         # update mentionUsers
+   # Update mentionUsers
+   documents = collection.find({"creator": {"$exists": True}})
+   for doc in documents:
+      title = doc['title']
+      try:
+         reportId = doc['_id']
+         status = doc['status']
          mentionUsers = doc['mentionUsers']
          mention_accounts = []
          for mention_vmwareId in mentionUsers:
             print(f'mention user vmwareId: {mention_vmwareId}')
-            if not userInfos.get(mention_vmwareId):
-               userInfos[mention_vmwareId] = get_account(mention_vmwareId)
-            mention_account = userInfos[mention_vmwareId]
+            mention_account = get_bc_account(mention_vmwareId)
             mention_accounts.append(mention_account)
          if len(mention_accounts) > 0:
+            print('Update mentionUsers "{}" into {} for report {} [{}]'.format(
+               mentionUsers, mention_accounts, title, status))
             result_set = collection.update_one(
-               {"_id": reportId},
-               {"$set": {"mentionUsers": mention_accounts}}
+               {"_id": reportId}, {"$set": {"mentionUsers": mention_accounts}}
             )
-
-         # check result
-         check_result = collection.find_one({"_id": reportId})
-         print(check_result['_id'], check_result['creator'], check_result.get('mentionUsers'), check_result['title'])
+            print(result_set.matched_count, result_set.modified_count)
+            check_result = collection.find_one({"_id": reportId})
+            print('check result:', check_result['mentionUsers'])
+            print("-----")
       except Exception as e:
-         print(f'{reportId} Error:', e)
+         print(f'Fail to update mention users for {title}, error:', e)
 
-   # documents2 = collection.find({"reportType": "bugzilla_by_assignee"})
-   # for doc in documents2:
-   #    try:
-   #       # update reportSpecConfig.bugzillaAssignee
-   #       bugzillaAssignees = doc['reportSpecConfig.bugzillaAssignee']
-   #       bugzilla_accounts = []
-   #       for bugzilla_vmwareId in bugzillaAssignees:
-   #          print(f'bugzilla assignee vmwareId: {bugzilla_vmwareId}')
-   #          if not userInfos.get(bugzilla_vmwareId):
-   #             userInfos[bugzilla_vmwareId] = get_account(bugzilla_vmwareId)
-   #          bugzilla_account = userInfos[bugzilla_vmwareId]
-   #          bugzilla_accounts.append(bugzilla_account)
-   #       if len(bugzilla_accounts) > 0:
-   #          result_set = collection.update_one(
-   #             {"_id": reportId},
-   #             {"$set": {"reportSpecConfig.bugzillaAssignee": bugzilla_accounts}}
-   #          )
-   #       check_result = collection.find_one({"_id": reportId})
-   #       print(check_result['_id'], check_result['reportSpecConfig']['bugzillaAssignee'])
-   #    except Exception as e:
-   #       print(f'{reportId} Error:', e)
+   # Update bugzilla assignee
+   documents = collection.find({"reportType": "bugzilla_by_assignee"})
+   for doc in documents:
+      title = doc['title']
+      try:
+         reportId = doc['_id']
+         status = doc['status']
+         bugzillaAssignees = doc['reportSpecConfig']['bugzillaAssignee']
+         bugzilla_accounts = []
+         for bugzilla_vmwareId in bugzillaAssignees:
+            print(f'bugzilla assignee vmwareId: {bugzilla_vmwareId}')
+            bugzilla_account = get_bc_account(bugzilla_vmwareId)
+            bugzilla_accounts.append(bugzilla_account)
+         if len(bugzilla_accounts) > 0:
+            print('Update bugzillaAssignee "{}" into {} for report {} [{}]'.format(
+               bugzillaAssignees, bugzilla_accounts, title, status))
+            result_set = collection.update_one(
+               {"_id": reportId}, {"$set": {"reportSpecConfig.bugzillaAssignee": bugzilla_accounts}}
+            )
+            print(result_set.matched_count, result_set.modified_count)
+            check_result = collection.find_one({"_id": reportId})
+            print('check result:', check_result['reportSpecConfig']['bugzillaAssignee'])
+            print("-----")
+      except Exception as e:
+         print(f'Fail to update bugzilla assignees for {title}, error:', e)
+
+   # Update nanny assignees
+   documents = collection.find({"reportType": "nanny_reminder", "reportSpecConfig.nannyCode":"vcf"})
+   for doc in documents:
+      title = doc['title']
+      try:
+         reportId = doc['_id']
+         status = doc['status']
+         nannyAssignees = doc['reportSpecConfig']['nannyAssignee'].split('\n')
+         nanny_accounts = []
+         for nanny_vmwareId in nannyAssignees:
+            print(f'nanny assignee vmwareId: {nanny_vmwareId}')
+            nanny_account = get_bc_account(nanny_vmwareId)
+            nanny_accounts.append(nanny_account)
+         if len(nanny_accounts) > 0:
+            nanny_account_str = "\n".join(nanny_accounts)
+            print('Update nannyAssignee "{}" into {} for report {} [{}]'.format(
+               doc['reportSpecConfig']['nannyAssignee'], nanny_account_str, title, status))
+            result_set = collection.update_one(
+               {"_id": reportId}, {"$set": {"reportSpecConfig.nannyAssignee": nanny_account_str}}
+            )
+            print(result_set.matched_count, result_set.modified_count)
+            check_result = collection.find_one({"_id": reportId})
+            print('check result:', check_result['reportSpecConfig']['nannyCode'], check_result['reportSpecConfig']['nannyAssignee'])
+            print("-----")
+      except Exception as e:
+         print(f'Fail to update nanny assignees for {title}, error:', e)
