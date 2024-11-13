@@ -33,6 +33,9 @@ PERFORCE_PASSWORD = os.environ.get('P4PASSWORD')
 SERVICE_ACCOUNT = os.environ.get('SERVICE_ACCOUNT')
 SERVICE_PASSWORD = os.environ.get('SERVICE_PASSWORD')
 
+# summary string limit length
+SUMMARY_MAX_LENGTH = 60
+
 # jira personal access token
 # request on page https://vmw-jira.broadcom.net/secure/ViewProfile.jspa
 JIRA_ACCESS_TOKEN = "Bearer MTUyNzU4MzExOTU1OjI9ZG2gnDxj21FJ8q66Pwv4Mdo0"

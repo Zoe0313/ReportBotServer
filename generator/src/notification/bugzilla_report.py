@@ -14,7 +14,7 @@ import math
 import argparse
 import pandas as pd
 from generator.src.notification.bugzilla_web_parser import BugzillaUtils, BUGZILLA_DOMAIN_NAME, DOWNLOAD_DIR
-from generator.src.utils.BotConst import BUGZILLA_DETAIL_URL
+from generator.src.utils.BotConst import BUGZILLA_DETAIL_URL, SUMMARY_MAX_LENGTH
 from generator.src.utils.Utils import logExecutionTime, noIntervalPolling, splitOverlengthReport, transformReport
 from generator.src.utils.MiniQueryFunctions import short2long, \
    getShortUrlsFromCacheFile, getLastPRsFromCacheFile, updatePRsInCacheFile
@@ -48,9 +48,6 @@ LettersWidth = {'a': 2, 'b': 2, 'c': 2, 'd': 2, 'e': 2, 'f': 1.5, 'g': 2, 'h': 2
                 '$': 2.5, '%': 3, '&': 3, "'": 0.5, '(': 1, ')': 1, '*': 1.5, '+': 2, ',': 1, '-': 1,
                 '.': 0.5, '/': 1.5, ':': 0.5, ';': 1, '<': 2, '=': 2.5, '>': 2, '?': 1.5, '@': 3, '[': 1,
                 '\\': 2, ']': 1, '^': 2, '_': 2, '`': 1, '{': 1, '|': 0.5, '}': 1, '~': 2.5}
-
-# bug summary str limit length
-SUMMARY_MAX_LENGTH = 57
 
 class BugzillaSpider(object):
    def __init__(self, args):

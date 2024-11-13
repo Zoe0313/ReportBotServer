@@ -275,6 +275,51 @@ const ReportConfigurationSchema = new mongoose.Schema({
             type: String,
             required: function(v) {
                return this.reportType === 'jira_list'
+            },
+            validate: {
+               validator: async function(queryStr) {
+                  if (queryStr == null) {
+                     return true
+                  }
+                  try {
+                     const fields = this.reportSpecConfig.jira.fields
+                     logger.debug(`input fields=${fields}`)
+                     const res = await axios({
+                        method: 'get',
+                        url: 'https://vmw-jira.broadcom.net/rest/api/2/search',
+                        headers: {
+                           Authorization: `Bearer ${process.env.JIRA_ACCESS_TOKEN}`
+                        },
+                        data: {
+                           jql: queryStr,
+                           startAt: 0,
+                           maxResults: 1,
+                           fields: fields.length === 0 ? ['id', 'key'] : fields
+                        }
+                     })
+                     if (res.status === 200) {
+                        if (fields.length > 0 && res.data?.total > 0) {
+                           const issueFields = res.data?.issues[0]?.fields
+                           if (issueFields != null && typeof issueFields !== 'undefined') {
+                              const notFoundFields = fields.filter(field => {
+                                 return !Object.prototype.hasOwnProperty.call(issueFields, field)
+                              })
+                              if (notFoundFields.length > 0) {
+                                 throw new Error(`not found fields "${notFoundFields.toString()}"`)
+                              }
+                           } else {
+                              throw new Error(`not found fields "${fields.toString()}"`)
+                           }
+                        }
+                        return true
+                     }
+                  } catch (e) {
+                     logger.warn(e)
+                     throw new Error(`Failed to parse the JQL because ${e.message}. ` +
+                        'Please check your JQL in https://vmw-jira.broadcom.net/issues?jql=' +
+                        ' or adjust your custom fields.')
+                  }
+               }
             }
          },
          fields: {

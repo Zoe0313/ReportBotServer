@@ -31,21 +31,17 @@ import argparse
 import itertools
 from collections import defaultdict
 from typing import Dict, Union, Any
-import requests
 import json
 from urllib import parse
-from generator.src.utils.BotConst import JIRA_ACCESS_TOKEN, CONTENT_TYPE_JSON, \
-   BUGZILLA_DETAIL_URL, JIRA_BROWSE_URL
+from jira_api_util import queryIssuesByJql
+from generator.src.utils.BotConst import BUGZILLA_DETAIL_URL, JIRA_BROWSE_URL, SUMMARY_MAX_LENGTH
 from generator.src.utils.Logger import logger
 from generator.src.utils.Utils import splitOverlengthReport, transformReport
 
 DOWNLOAD_DIR = os.path.join(os.path.abspath(__file__).split("/generator")[0], "persist/tmp/jira")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-JIRA_PAGE_URL = 'https://vmw-jira.broadcom.com/issues/?jql='
-JIRA_SEARCH_API = 'https://vmw-jira.broadcom.com/rest/api/2/search'
-JIRA_ISSUE_API = 'https://vmw-jira.broadcom.com/rest/api/2/issue/'
-SUMMARY_MAX_LENGTH = 60
+JIRA_PAGE_URL = 'https://vmw-jira.broadcom.net/issues/?jql='
 MAX_TOTAL_RESULT_SIZE = 50
 DisplayFields = {'key': 'Jira ID',
                  'issuetype': 'Type',
@@ -79,63 +75,20 @@ class JiraReport(object):
       logger.debug('user define jql: {}'.format(self.jql))
       logger.debug('user define fields: {}'.format(fields))
       logger.debug('user define group by field: {}'.format(self.groupbyField))
-      self.session = requests.session()
-      self.session.headers = {'Authorization': JIRA_ACCESS_TOKEN,
-                              'Content-Type': CONTENT_TYPE_JSON}
       self.totalSize = 0
-
-   def SearchIssues(self, startAt=0):
-      '''
-      JIRA API - searching for issues using post
-      curl \
-         -X POST \
-         -H "Authorization: Basic xxxxxx" \
-         -H "Content-Type: application/json" \
-         --data '{"jql":jql,"startAt":0,"maxResults":50,"fields":["id","key"]}' \
-         "https://vmw-jira.broadcom.com/rest/api/2/search"
-      response data:
-      {
-         startAt: 0,
-         maxResults: 50,
-         total: 73,
-         issues: [
-            {
-               id: "5451714",
-               self: "https://vmw-jira.broadcom.com/rest/api/2/issue/5451714",
-               key: "STORVMC-3922"
-            }, ......
-         ]
-      }
-      '''
-      jql = self.jql.replace('currentUser()', self.creator)
-      logger.debug('startAt={}'.format(startAt))
-      requestData = {'jql': jql, 'startAt': startAt, 'fields': self.fields}
-      response = self.session.post(url=JIRA_SEARCH_API, data=json.dumps(requestData))
-      if response.status_code == 200:
-         datas = response.json()
-         startAt, maxResults, total, issues = datas['startAt'], datas['maxResults'], datas['total'], datas['issues']
-         return startAt, maxResults, total, issues
-      errorMessage = response.json().get('errorMessages', 'not found')
-      raise Exception('Search issues by jql "{}" occur error: {}'.format(jql, errorMessage))
 
    def GetAllIssues(self):
       logger.debug('Search jira list fields: {}'.format(self.fields))
-      issueList: list[dict[str: Any]] = []
-      startAt, maxResults, total, issues = self.SearchIssues()
-      issueList.extend(issues)
-      self.totalSize = total
-      if self.groupbyField == 'none':
-         total = min(MAX_TOTAL_RESULT_SIZE, total)
-      while len(issueList) < total:
-         startAt, maxResults, _, issues = self.SearchIssues(startAt=startAt + maxResults)
-         issueList.extend(issues)
+      jql = self.jql.replace('currentUser()', self.creator)
+      issueList = queryIssuesByJql(jql, self.fields)
+      self.totalSize = len(issueList)
+      logger.debug('The number of overall issue is', self.totalSize)
       if self.groupbyField == 'none':
          issueList = issueList[:MAX_TOTAL_RESULT_SIZE]
-      logger.debug('issue count={}'.format(len(issueList)))
-      details: list[dict[str, str]] = []
+      details = []
       for issue in issueList:
          detail = {}
-         issueFields = issue.get('fields', [])
+         issueFields = issue.get('fields', {})
          for field in self.fields:
             if field in ('id', 'key'):
                detail[field] = issue[field]

@@ -371,7 +371,7 @@ const ContentEvaluate = async (report) => {
             throw new Error(`Fail to generate jira list report because of ` +
                `${report.creator} not find in db.userinfos`)
          }
-         scriptPath = projectRootPath + '/generator/src/notification/jira_list_report.py'
+         scriptPath = projectRootPath + '/generator/src/notification/jira_report.py'
          command = `PYTHONPATH=${projectRootPath} python3 ${scriptPath} \
             --title '${reportTitle}' \
             --jql '${escape(report.reportSpecConfig.jira.jql)}' \
