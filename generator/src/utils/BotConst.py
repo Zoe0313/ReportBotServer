@@ -36,9 +36,9 @@ SERVICE_PASSWORD = os.environ.get('SERVICE_PASSWORD')
 # summary string limit length
 SUMMARY_MAX_LENGTH = 60
 
-# jira personal access token
+# jira personal access token from svc-vsan-er
 # request on page https://vmw-jira.broadcom.net/secure/ViewProfile.jspa
-JIRA_ACCESS_TOKEN = "Bearer MTUyNzU4MzExOTU1OjI9ZG2gnDxj21FJ8q66Pwv4Mdo0"
+JIRA_ACCESS_TOKEN = "Bearer MDYzMTc0MzQ2Nzk2OmefkMSq92VjO7wU+qpZjZmbGirt"
 # confluence page personal token
 # request on page https://vmw-confluence.broadcom.net/plugins/personalaccesstokens/usertokens.action
 CONFLUENCE_ACCESS_TOKEN = 'Bearer NzU1NTgwNzY1NjU2Oia8sey1Ji+lYgX5wSKjf0yQZUga'

@@ -282,7 +282,6 @@ const ReportConfigurationSchema = new mongoose.Schema({
                      return true
                   }
                   try {
-                     const fields = this.reportSpecConfig.jira.fields
                      logger.debug(`input fields=${fields}`)
                      const res = await axios({
                         method: 'get',
@@ -294,7 +293,7 @@ const ReportConfigurationSchema = new mongoose.Schema({
                            jql: queryStr,
                            startAt: 0,
                            maxResults: 1,
-                           fields: fields.length === 0 ? ['id', 'key'] : fields
+                           fields: ['id', 'key']
                         }
                      })
                      if (res.status === 200) {
